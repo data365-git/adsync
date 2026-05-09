@@ -27,11 +27,13 @@ export function SheetsUpsertConfig({
   const keyFields = Array.isArray(config.keyFields) ? (config.keyFields as string[]) : [];
   const mappedFields = Array.isArray(config.mappedFields) ? (config.mappedFields as string[]) : [];
 
+  // Derive available output fields from the previous step's first sample row
+  // (sampleOutput is an array of rows in Phase 1.6).
   const availableFields = React.useMemo(() => {
     if (!prevStepModuleType) return [];
     const mod = getModule(prevStepModuleType);
-    if (!mod) return [];
-    return Object.keys(mod.sampleOutput);
+    if (!mod || mod.sampleOutput.length === 0) return [];
+    return Object.keys(mod.sampleOutput[0] ?? {});
   }, [prevStepModuleType]);
 
   const [keyFieldInput, setKeyFieldInput] = React.useState("");

@@ -6,6 +6,7 @@ import { AlertCircleIcon, RotateCcwIcon } from "lucide-react";
 import { api } from "~/trpc/react";
 import { MOCK_RUNS } from "~/server/mocks/data";
 import { Button } from "~/components/ui/button";
+import { ScenarioDetailSkeleton } from "./ScenarioDetailSkeleton";
 import type { Scenario } from "~/server/mocks/types";
 
 interface ScenarioDetailClientProps {
@@ -17,7 +18,7 @@ export function ScenarioDetailClient({ id }: ScenarioDetailClientProps) {
 
   const {
     data: scenario,
-    isLoading,
+    isPending,
     isError,
     error,
     refetch,
@@ -29,9 +30,12 @@ export function ScenarioDetailClient({ id }: ScenarioDetailClientProps) {
     [id],
   );
 
-  // Loading state — loading.tsx handles the skeleton; during hydration this renders null
-  if (isLoading) {
-    return null;
+  // Loading state — render the skeleton in-component so we cover the gap
+  // between the route's loading.tsx boundary unmounting (post-hydration) and
+  // the artificial 600ms tRPC delay landing. Without this guard there is a
+  // ~1.5s white flash.
+  if (isPending) {
+    return <ScenarioDetailSkeleton />;
   }
 
   // Error state with retry + back navigation

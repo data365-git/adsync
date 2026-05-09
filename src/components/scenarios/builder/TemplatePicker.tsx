@@ -20,8 +20,9 @@ export function TemplatePicker({ selectedTemplateId: _selectedTemplateId }: Temp
   }
 
   function handleFromScratch() {
-    // Navigate to /scenarios/new without template param (empty builder)
-    router.push("/scenarios/new");
+    // ?template=scratch tells /scenarios/new to render the empty builder
+    // instead of looping back to the template picker.
+    router.push("/scenarios/new?template=scratch");
   }
 
   return (

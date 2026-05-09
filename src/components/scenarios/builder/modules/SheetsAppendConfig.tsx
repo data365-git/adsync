@@ -25,12 +25,13 @@ export function SheetsAppendConfig({
   const tabName = typeof config.tabName === "string" ? config.tabName : "";
   const mappedFields = Array.isArray(config.mappedFields) ? (config.mappedFields as string[]) : [];
 
-  // Get available output fields from previous step's module
+  // Get available output fields from previous step's module — derive from
+  // the first sample row (sampleOutput is an array of rows in Phase 1.6).
   const availableFields = React.useMemo(() => {
     if (!prevStepModuleType) return [];
     const mod = getModule(prevStepModuleType);
-    if (!mod) return [];
-    return Object.keys(mod.sampleOutput);
+    if (!mod || mod.sampleOutput.length === 0) return [];
+    return Object.keys(mod.sampleOutput[0] ?? {});
   }, [prevStepModuleType]);
 
   return (

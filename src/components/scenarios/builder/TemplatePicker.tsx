@@ -63,7 +63,7 @@ export function TemplatePicker({ selectedTemplateId: _selectedTemplateId }: Temp
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold">{template.name}</p>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
                       {stepCount} step{stepCount !== 1 ? "s" : ""}
                     </span>
                   </div>

@@ -369,7 +369,7 @@ export function ScenarioBuilder({
                 </li>
 
                 {idx > 0 && !isLast && (
-                  <li aria-hidden="true">
+                  <li className="list-none">
                     <StepConnector />
                     <AddStepButton
                       insertAtPosition={step.position + 1}
@@ -382,7 +382,7 @@ export function ScenarioBuilder({
             );
           })}
 
-          <li aria-hidden="true">
+          <li className="list-none">
             <StepConnector />
             <AddStepButton
               insertAtPosition={steps.length + 1}

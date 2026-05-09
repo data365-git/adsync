@@ -12,8 +12,10 @@ interface AddStepButtonProps {
 }
 
 /**
- * Always visible at ~30% opacity, full opacity on hover/focus.
- * This ensures new users discover how to add steps.
+ * Always visible — muted at rest, full opacity on hover/focus.
+ * Resting opacity raised from the original 30% to 70% so the visible label
+ * meets WCAG AA 4.5:1 contrast (axe-core/wcag2aa). Discovery beats minimalism;
+ * hard-to-read beats easy-to-read.
  */
 export function AddStepButton({
   insertAtPosition,
@@ -27,8 +29,8 @@ export function AddStepButton({
         onClick={() => onClick(insertAtPosition)}
         className={cn(
           "group flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5",
-          "text-xs font-medium text-muted-foreground",
-          "opacity-30 transition-opacity duration-150",
+          "text-xs font-medium text-foreground",
+          "opacity-70 transition-opacity duration-150",
           "hover:opacity-100 focus-visible:opacity-100",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
         )}

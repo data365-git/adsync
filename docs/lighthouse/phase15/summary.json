@@ -1,0 +1,44 @@
+[
+  {
+    "route": "/scenarios",
+    "theme": "light",
+    "performance": 0.94,
+    "accessibility": 1,
+    "bestPractices": 0.96
+  },
+  {
+    "route": "/scenarios",
+    "theme": "dark",
+    "performance": 0.92,
+    "accessibility": 1,
+    "bestPractices": 0.96
+  },
+  {
+    "route": "/scenarios/new",
+    "theme": "light",
+    "performance": 0.95,
+    "accessibility": 0.99,
+    "bestPractices": 1
+  },
+  {
+    "route": "/scenarios/new",
+    "theme": "dark",
+    "performance": 0.93,
+    "accessibility": 0.99,
+    "bestPractices": 1
+  },
+  {
+    "route": "/scenarios/scn_custom_01",
+    "theme": "light",
+    "performance": 0.93,
+    "accessibility": 1,
+    "bestPractices": 1
+  },
+  {
+    "route": "/scenarios/scn_custom_01",
+    "theme": "dark",
+    "performance": 0.94,
+    "accessibility": 1,
+    "bestPractices": 1
+  }
+]

@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { InfoIcon } from "lucide-react";
 import { api } from "~/trpc/react";
+import { getModule } from "~/lib/modules";
 import type { ModuleType } from "~/server/mocks/types";
 import { BuilderHeader } from "./BuilderHeader";
 import { StepCard, validateStepConfig, type DraftStep } from "./StepCard";
@@ -46,6 +47,31 @@ export function defaultConfigFor(moduleType: ModuleType): Record<string, unknown
     case "sheets.upsert":
       return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: [] };
   }
+}
+
+/**
+ * When swapping the trigger module, keep config keys that exist in BOTH the
+ * old and new module's `configSchema`; default-fill the rest. Same module ⇒
+ * config is preserved as-is. Currently only `timezone` survives schedule ↔
+ * schedule swaps, but the logic generalises to any future trigger fields.
+ */
+export function preserveCompatibleTriggerConfig(
+  oldType: ModuleType,
+  newType: ModuleType,
+  oldConfig: Record<string, unknown>,
+): Record<string, unknown> {
+  if (oldType === newType) return oldConfig;
+  const oldMod = getModule(oldType);
+  const newMod = getModule(newType);
+  if (!oldMod || !newMod) return defaultConfigFor(newType);
+  const oldKeys = new Set(oldMod.configSchema.map((f) => f.key));
+  const preserved: Record<string, unknown> = {};
+  for (const field of newMod.configSchema) {
+    if (oldKeys.has(field.key) && field.key in oldConfig) {
+      preserved[field.key] = oldConfig[field.key];
+    }
+  }
+  return { ...defaultConfigFor(newType), ...preserved };
 }
 
 export function computeMissingTooltip(steps: DraftStep[]): string | null {
@@ -110,6 +136,9 @@ export function ScenarioBuilder({
   const [testResults, setTestResults] = React.useState<TestStepResult[]>([]);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalInsertAt, setModalInsertAt] = React.useState(1);
+  const [modalMode, setModalMode] = React.useState<"insert" | "replace-trigger">(
+    "insert",
+  );
   const [liftedStepId, setLiftedStepId] = React.useState<string | null>(null);
 
   const createMutation = api.scenarios.create.useMutation();
@@ -130,11 +159,38 @@ export function ScenarioBuilder({
   const actionSteps = steps.slice(1);
 
   function openModuleLibrary(insertAt: number) {
+    setModalMode("insert");
     setModalInsertAt(insertAt);
     setModalOpen(true);
   }
 
+  function openTriggerLibrary() {
+    setModalMode("replace-trigger");
+    setModalInsertAt(1);
+    setModalOpen(true);
+  }
+
   function handleSelectModule(moduleType: ModuleType, insertAt: number) {
+    if (modalMode === "replace-trigger") {
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.position === 1
+            ? {
+                ...s,
+                moduleType,
+                config: preserveCompatibleTriggerConfig(
+                  s.moduleType,
+                  moduleType,
+                  s.config,
+                ),
+              }
+            : s,
+        ),
+      );
+      setModalOpen(false);
+      setModalMode("insert");
+      return;
+    }
     const newStep: DraftStep = {
       id: newStepId(),
       position: insertAt,
@@ -291,7 +347,7 @@ export function ScenarioBuilder({
         onOpenChange={setModalOpen}
         insertAtPosition={modalInsertAt}
         onSelectModule={handleSelectModule}
-        isTriggerSlot={modalInsertAt === 1}
+        isTriggerSlot={modalMode === "replace-trigger" || modalInsertAt === 1}
       />
 
       <BuilderHeader
@@ -356,6 +412,7 @@ export function ScenarioBuilder({
                       onToggleExpand={() => handleToggleExpand(step.id)}
                       onConfigChange={(config) => handleConfigChange(step.id, config)}
                       onDelete={() => handleDeleteStep(step.id)}
+                      onChangeTrigger={openTriggerLibrary}
                       prevStepModuleType={prevStep?.moduleType}
                       isLifted={liftedStepId === step.id}
                       showErrors={showErrors}

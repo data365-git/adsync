@@ -85,6 +85,7 @@ import {
   TabsContent,
 } from "~/components/ui/tabs";
 import { BuilderHeader } from "~/components/scenarios/builder/BuilderHeader";
+import { preserveCompatibleTriggerConfig } from "~/components/scenarios/builder/ScenarioBuilder";
 import { StepCard, validateStepConfig, type DraftStep } from "~/components/scenarios/builder/StepCard";
 import { StepConnector } from "~/components/scenarios/builder/StepConnector";
 import { AddStepButton } from "~/components/scenarios/builder/AddStepButton";
@@ -175,6 +176,9 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   const [testResults, setTestResults] = React.useState<TestStepResult[]>([]);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalInsertAt, setModalInsertAt] = React.useState(2);
+  const [modalMode, setModalMode] = React.useState<"insert" | "replace-trigger">(
+    "insert",
+  );
   const [liftedStepId, setLiftedStepId] = React.useState<string | null>(null);
 
   const updateMutation = api.scenarios.update.useMutation();
@@ -200,11 +204,44 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   const actionSteps = steps.slice(1);
 
   function openModuleLibrary(insertAt: number) {
+    setModalMode("insert");
     setModalInsertAt(insertAt);
     setModalOpen(true);
   }
 
+  function openTriggerLibrary() {
+    setModalMode("replace-trigger");
+    setModalInsertAt(1);
+    setModalOpen(true);
+  }
+
   function handleSelectModule(moduleType: ModuleType, insertAt: number) {
+    if (modalMode === "replace-trigger") {
+      setSteps((prev) =>
+        prev.map((s) =>
+          s.position === 1
+            ? {
+                ...s,
+                moduleType,
+                config: preserveCompatibleTriggerConfig(
+                  s.moduleType,
+                  moduleType,
+                  s.config,
+                ),
+              }
+            : s,
+        ),
+      );
+      // Auto-expand the trigger so the new config is immediately visible.
+      setExpandedStepIds((prev) => {
+        const triggerStep = steps.find((s) => s.position === 1);
+        if (!triggerStep) return prev;
+        return new Set([...prev, triggerStep.id]);
+      });
+      setModalOpen(false);
+      setModalMode("insert");
+      return;
+    }
     const newStep: DraftStep = {
       id: newStepId(),
       position: insertAt,
@@ -395,6 +432,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
                     onToggleExpand={() => handleToggleExpand(step.id)}
                     onConfigChange={(config) => handleConfigChange(step.id, config)}
                     onDelete={() => handleDeleteStep(step.id)}
+                    onChangeTrigger={openTriggerLibrary}
                     prevStepModuleType={prevStep?.moduleType}
                     isLifted={liftedStepId === step.id}
                     showErrors={showErrors}
@@ -466,7 +504,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         onOpenChange={setModalOpen}
         insertAtPosition={modalInsertAt}
         onSelectModule={handleSelectModule}
-        isTriggerSlot={modalInsertAt === 1}
+        isTriggerSlot={modalMode === "replace-trigger" || modalInsertAt === 1}
       />
 
       {/* Builder header */}

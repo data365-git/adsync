@@ -1,9 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDownIcon, Trash2Icon } from "lucide-react";
+import { ChevronDownIcon, ReplaceIcon, Trash2Icon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { getModule } from "~/lib/modules";
 import type { ModuleType } from "~/server/mocks/types";
 import {
@@ -33,6 +39,12 @@ interface ModuleConfigShellProps {
   onToggleExpand: () => void;
   onDelete?: () => void;
   isDeleteDisabled?: boolean;
+  /**
+   * When provided (typically for the position-1 trigger step), render a
+   * "Change trigger" button instead of the delete button. Clicking it should
+   * open the module library filtered to triggers.
+   */
+  onChangeTrigger?: () => void;
   /** Drag handle element to render in header */
   dragHandle?: React.ReactNode;
   children: React.ReactNode;
@@ -47,6 +59,7 @@ export function ModuleConfigShell({
   onToggleExpand,
   onDelete,
   isDeleteDisabled,
+  onChangeTrigger,
   dragHandle,
   children,
   hasError,
@@ -106,7 +119,29 @@ export function ModuleConfigShell({
             />
           </button>
 
-          {/* Delete */}
+          {/* Change trigger (position-1 only) — replaces the delete slot */}
+          {onChangeTrigger && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={onChangeTrigger}
+                      aria-label="Change trigger module"
+                    >
+                      <ReplaceIcon className="size-3.5 text-muted-foreground" />
+                    </Button>
+                  }
+                />
+                <TooltipContent side="top">Change trigger</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* Delete (non-trigger steps only) */}
           {onDelete && (
             <Button
               type="button"

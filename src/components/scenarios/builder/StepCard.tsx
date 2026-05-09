@@ -101,6 +101,11 @@ interface StepCardProps {
   onToggleExpand: () => void;
   onConfigChange: (config: Record<string, unknown>) => void;
   onDelete: () => void;
+  /**
+   * For position-1 trigger steps only — opens the module library filtered to
+   * triggers so the user can swap one trigger module for another.
+   */
+  onChangeTrigger?: () => void;
   /** Module type of the step directly before this one (for FieldMappingPicker) */
   prevStepModuleType?: ModuleType;
   /** Drag state */
@@ -120,6 +125,7 @@ export function StepCard({
   onToggleExpand,
   onConfigChange,
   onDelete,
+  onChangeTrigger,
   prevStepModuleType,
   isDragging,
   isLifted,
@@ -226,6 +232,7 @@ export function StepCard({
         onToggleExpand={onToggleExpand}
         onDelete={isTrigger ? undefined : onDelete}
         isDeleteDisabled={isTrigger}
+        onChangeTrigger={isTrigger ? onChangeTrigger : undefined}
         dragHandle={dragHandle}
         hasError={showErrors && hasError}
       >

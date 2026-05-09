@@ -13,7 +13,7 @@ import { TableCell, TableRow } from "~/components/ui/table";
 import { RunStatusBadge } from "~/components/runs/RunStatusBadge";
 import { formatDuration } from "~/lib/utils";
 import type { Run } from "~/server/mocks/types";
-import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
+import { MOCK_AD_ACCOUNTS, MOCK_SCENARIOS } from "~/server/mocks/data";
 
 const TRIGGER_LABEL: Record<Run["trigger"], string> = {
   manual: "Manual",
@@ -45,6 +45,9 @@ interface RunRowProps {
 export function RunRow({ run }: RunRowProps) {
   const account = MOCK_AD_ACCOUNTS.find((a) => a.id === run.adAccountId);
   const accountLabel = account?.label ?? run.adAccountId;
+  const scenario = MOCK_SCENARIOS.find((s) => s.id === run.scenarioId);
+  const scenarioName = scenario?.name ?? run.scenarioId;
+  const isQuickSetup = scenario?.kind === "QUICK_SETUP";
 
   const relativeTime = formatDistanceToNow(run.startedAt, { addSuffix: true });
   const absoluteTime = format(run.startedAt, "MMM d, yyyy 'at' h:mm:ss a");
@@ -76,6 +79,24 @@ export function RunRow({ run }: RunRowProps) {
             <TooltipContent side="top">{absoluteTime}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
+      </TableCell>
+
+      {/* Scenario */}
+      <TableCell>
+        <div className="flex items-center gap-1.5">
+          <Link
+            href={`/scenarios/${run.scenarioId}`}
+            className="max-w-[12rem] truncate text-sm text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            title={scenarioName}
+          >
+            {scenarioName}
+          </Link>
+          {isQuickSetup ? (
+            <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted/50 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              Quick
+            </span>
+          ) : null}
+        </div>
       </TableCell>
 
       {/* Account */}

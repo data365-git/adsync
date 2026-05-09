@@ -50,3 +50,7 @@ yarn-error.log*
 
 # claude code harness
 .claude/
+
+# Lighthouse per-route JSON reports — regenerate on demand, only summary tracked
+docs/lighthouse/**/*.json
+!docs/lighthouse/**/summary.json

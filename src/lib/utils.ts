@@ -78,15 +78,18 @@ export function formatCron(expr: string): string {
 }
 
 export function getStatusColor(status: RunStatus): string {
+  // Text uses darker shades (700 in light, 300 in dark) so the small `text-xs`
+  // badge text meets WCAG AA 4.5:1 contrast against the tinted background.
+  // Background and border keep the saturated `--status-*` tokens for brand colour.
   switch (status) {
     case "queued":
-      return "bg-status-queued/10 text-status-queued border-status-queued/30";
+      return "bg-status-queued/10 text-slate-700 dark:text-slate-300 border-status-queued/30";
     case "running":
-      return "bg-status-running/10 text-status-running border-status-running/30";
+      return "bg-status-running/10 text-blue-700 dark:text-blue-300 border-status-running/30";
     case "success":
-      return "bg-status-success/10 text-status-success border-status-success/30";
+      return "bg-status-success/10 text-green-700 dark:text-green-300 border-status-success/30";
     case "failed":
-      return "bg-status-failed/10 text-status-failed border-status-failed/30";
+      return "bg-status-failed/10 text-red-700 dark:text-red-300 border-status-failed/30";
   }
 }
 

@@ -63,6 +63,7 @@ export function RunsTable({
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>When</TableHead>
+            <TableHead>Scenario</TableHead>
             <TableHead>Account</TableHead>
             <TableHead>Trigger</TableHead>
             <TableHead>Status</TableHead>
@@ -83,6 +84,10 @@ export function RunsTable({
                 {/* When */}
                 <td className="p-2">
                   <Skeleton className="h-5 w-24" />
+                </td>
+                {/* Scenario */}
+                <td className="p-2">
+                  <Skeleton className="h-5 w-36" />
                 </td>
                 {/* Account */}
                 <td className="p-2">
@@ -112,7 +117,7 @@ export function RunsTable({
             ))
           ) : runs.length === 0 ? (
             <tr>
-              <td colSpan={7}>
+              <td colSpan={8}>
                 <RunsEmptyState
                   hasFilters={hasFilters}
                   onClearFilters={onClearFilters}

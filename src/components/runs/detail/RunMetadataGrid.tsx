@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 import { formatDuration } from "~/lib/utils";
 import type { Run } from "~/server/mocks/types";
+import { MOCK_SCENARIOS } from "~/server/mocks/data";
 
 interface MetadataItemProps {
   label: string;
@@ -45,6 +48,28 @@ interface RunMetadataGridProps {
   run: Run;
 }
 
+function ScenarioCellValue({ run }: { run: Run }) {
+  const scenario = MOCK_SCENARIOS.find((s) => s.id === run.scenarioId);
+  const name = scenario?.name ?? run.scenarioId;
+  const isQuickSetup = scenario?.kind === "QUICK_SETUP";
+  return (
+    <div className="flex items-center gap-1.5">
+      <Link
+        href={`/scenarios/${run.scenarioId}`}
+        className="truncate hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+        title={name}
+      >
+        {name}
+      </Link>
+      {isQuickSetup ? (
+        <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted/50 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          Quick
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function RunMetadataGrid({ run }: RunMetadataGridProps) {
   return (
     <section aria-label="Run metadata">
@@ -52,6 +77,7 @@ export function RunMetadataGrid({ run }: RunMetadataGridProps) {
         className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-muted/30 p-4
                    sm:grid-cols-2 md:grid-cols-4"
       >
+        <MetadataItem label="Scenario" value={<ScenarioCellValue run={run} />} />
         <MetadataItem
           label="Started"
           value={formatAbsoluteDate(run.startedAt)}

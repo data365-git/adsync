@@ -294,18 +294,15 @@ function FilterBar({
   return (
     <div className="flex items-center gap-2">
       <Switch
-        id="show-quick-setup"
         checked={includeQuickSetup}
         onCheckedChange={onToggle}
         size="sm"
         aria-label="Show Quick Setup scenarios"
       />
-      <label
-        htmlFor="show-quick-setup"
-        className="cursor-pointer select-none text-sm text-muted-foreground"
-      >
+      {/* Clicking the span label also toggles via the switch's own click area */}
+      <span className="select-none text-sm text-muted-foreground">
         Show Quick Setup scenarios
-      </label>
+      </span>
     </div>
   );
 }

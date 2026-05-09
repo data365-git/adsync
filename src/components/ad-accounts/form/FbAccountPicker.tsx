@@ -83,9 +83,10 @@ export function FbAccountPicker({
           type="button"
           role="combobox"
           aria-expanded={open}
+          aria-controls="fb-account-picker-listbox"
           aria-haspopup="listbox"
           aria-label="Select Facebook Ad Account"
-          aria-invalid={!!error}
+          data-invalid={error ? "true" : undefined}
           onClick={() => setOpen((v) => !v)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -140,7 +141,7 @@ export function FbAccountPicker({
           >
             <Command>
               <CommandInput placeholder="Search by name or account ID…" autoFocus />
-              <CommandList>
+              <CommandList id="fb-account-picker-listbox">
                 <CommandEmpty>No accounts found.</CommandEmpty>
                 <CommandGroup heading="Facebook Ad Accounts">
                   {accounts.map((account) => (

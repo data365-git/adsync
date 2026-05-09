@@ -96,7 +96,7 @@ export function MetricsMultiSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={`${selectedCount} metrics selected`}
-          aria-invalid={!!error}
+          data-invalid={error ? "true" : undefined}
           onClick={() => setOpen((v) => !v)}
           className={cn(
             "flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -190,7 +190,7 @@ export function MetricsMultiSelect({
                       {/* Group header */}
                       <button
                         type="button"
-                        onClick={() => toggleGroup(group as MetricGroup)}
+                        onClick={() => toggleGroup(group)}
                         className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted"
                       >
                         <div

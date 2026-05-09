@@ -26,7 +26,6 @@ import {
   AdAccountFormSchema,
   DEFAULT_FORM_VALUES,
   type AdAccountFormValues,
-  type Level,
 } from "./schema";
 import type { AdAccount } from "~/server/mocks/types";
 
@@ -418,7 +417,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
             </Label>
             <LevelCheckboxes
               value={values.levels}
-              onChange={(levels) => setField("levels", levels as Level[])}
+              onChange={(levels) => setField("levels", levels)}
               onBlur={() => blurField("levels")}
               error={getError("levels")}
             />

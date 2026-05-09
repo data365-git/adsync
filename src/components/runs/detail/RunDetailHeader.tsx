@@ -3,38 +3,9 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-import { cn, getStatusColor, getStatusLabel } from "~/lib/utils";
-import type { Run, RunStatus } from "~/server/mocks/types";
+import { RunStatusBadge } from "~/components/runs/RunStatusBadge";
+import type { Run } from "~/server/mocks/types";
 import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
-
-// ---------------------------------------------------------------------------
-// Inline RunStatusBadge — TEMPORARY local copy for Stage 1.
-// The canonical version is src/components/runs/RunStatusBadge.tsx, owned by
-// Runs-History-Agent. Orchestrator should reconcile at merge time.
-// ---------------------------------------------------------------------------
-function InlineRunStatusBadge({ status }: { status: RunStatus }) {
-  const statusIcons: Record<RunStatus, string> = {
-    queued: "○",
-    running: "◌",
-    success: "✓",
-    failed: "✕",
-  };
-
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        getStatusColor(status),
-      )}
-      aria-label={`Status: ${getStatusLabel(status)}`}
-    >
-      <span aria-hidden="true">{statusIcons[status]}</span>
-      {getStatusLabel(status)}
-    </span>
-  );
-}
-
-// ---------------------------------------------------------------------------
 
 interface RunDetailHeaderProps {
   run: Run;
@@ -74,7 +45,7 @@ export function RunDetailHeader({ run }: RunDetailHeaderProps) {
           Run {shortId}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
-          <InlineRunStatusBadge status={run.status} />
+          <RunStatusBadge status={run.status} pulse={run.status === "running"} />
           <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted-foreground capitalize">
             {run.trigger}
           </span>

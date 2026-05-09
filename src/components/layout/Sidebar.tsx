@@ -8,6 +8,7 @@ import {
   Plug,
   Settings,
   Wallet,
+  Workflow,
 } from "lucide-react";
 
 import { cn } from "~/lib/utils";
@@ -21,6 +22,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: "/connections", label: "Connections", icon: Plug },
   { href: "/ad-accounts", label: "Ad Accounts", icon: Wallet },
+  { href: "/scenarios", label: "Scenarios", icon: Workflow },
   { href: "/runs", label: "Runs", icon: Activity },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

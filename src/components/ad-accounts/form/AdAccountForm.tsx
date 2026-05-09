@@ -231,6 +231,15 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
       } else if (initialData) {
         await updateMutation.mutateAsync({ id: initialData.id, data: values });
       }
+
+      // ─── Phase 1.5 note ─────────────────────────────────────────────────
+      // Saving an AdAccount implicitly creates/updates a QUICK_SETUP Scenario
+      // at `scn_quick_<adAccountId>`. In Phase 2 this will fan out to
+      // `scenariosRouter.upsert(...)`. For now it is a no-op — the matching
+      // scenario already exists in MOCK_SCENARIOS and reflects this account's
+      // config field-for-field.
+      // ────────────────────────────────────────────────────────────────────
+
       router.push("/ad-accounts");
     } catch (err) {
       const msg =

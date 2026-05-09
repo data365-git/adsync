@@ -1,6 +1,7 @@
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 
 import { Toaster } from "~/components/ui/sonner";
 import { ThemeProvider } from "~/components/providers/ThemeProvider";
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground min-h-screen antialiased">
         <ThemeProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <NuqsAdapter>
+            <TRPCReactProvider>{children}</TRPCReactProvider>
+          </NuqsAdapter>
           <Toaster richColors closeButton />
         </ThemeProvider>
       </body>

@@ -1,21 +1,24 @@
-import Link from "next/link";
+import { getMockSession } from "~/server/mocks/session";
+import { AllowlistGate } from "~/components/auth/AllowlistGate";
+import { LoginCard } from "~/components/auth/LoginCard";
 
+/**
+ * /login — Auth entry point.
+ *
+ * Phase 1: uses getMockSession() to determine allowlist status.
+ * Phase 2: replace with real NextAuth session check.
+ *
+ * The page lives outside (dashboard) so it has no Sidebar / TopBar.
+ */
 export default function LoginPage() {
-  return (
-    <main className="bg-background text-foreground flex min-h-screen items-center justify-center p-6">
-      <div className="bg-card text-card-foreground border-border w-full max-w-sm rounded-lg border p-8 shadow-sm">
-        <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-muted-foreground mt-2 text-sm">
-          This page is a Stage 0 placeholder. Settings-Login-Agent will replace
-          it in Stage 1.
-        </p>
-        <Link
-          href="/connections"
-          className="bg-primary text-primary-foreground hover:bg-primary/90 mt-6 inline-flex h-10 w-full items-center justify-center rounded-md text-sm font-medium"
-        >
-          Continue to dashboard
-        </Link>
-      </div>
-    </main>
-  );
+  const session = getMockSession();
+
+  // If the user is already "logged in" but not allowlisted, show the gate.
+  // In Phase 1 MOCK_USER.allowlisted === true so this branch is never hit —
+  // but the component is wired so Phase 2 can flip it trivially.
+  if (!session.user.allowlisted) {
+    return <AllowlistGate />;
+  }
+
+  return <LoginCard />;
 }

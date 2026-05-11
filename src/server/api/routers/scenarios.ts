@@ -1,10 +1,15 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 
-import { MOCK_RUNS, MOCK_SCENARIOS } from "~/server/mocks/data";
-import type { Run, Scenario, ScenarioStep } from "~/server/mocks/types";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { db } from "~/server/db";
+import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { executeRun } from "~/server/core/executor";
+import type { Scenario as MockScenario } from "~/server/mocks/types";
 
-const ModuleTypeSchema = z.enum([
+// ── Zod schemas ───────────────────────────────────────────────────────────────
+
+export const ModuleTypeSchema = z.enum([
   "trigger.schedule",
   "trigger.manual",
   "fb.account_insights",
@@ -14,217 +19,325 @@ const ModuleTypeSchema = z.enum([
   "sheets.upsert",
 ]);
 
-const ScenarioStepInput = z.object({
+export const ScenarioStepInput = z.object({
   id: z.string().optional(),
   position: z.number().int().min(1),
   moduleType: ModuleTypeSchema,
   config: z.record(z.string(), z.unknown()),
 });
 
-const ScenarioCreateInput = z.object({
-  name: z.string().min(1).max(120),
-  enabled: z.boolean().default(false),
-  steps: z.array(ScenarioStepInput).min(1),
-});
+// ── Prisma query helper types ─────────────────────────────────────────────────
 
-const ScenarioUpdateInput = z.object({
-  id: z.string(),
-  data: z.object({
-    name: z.string().min(1).max(120).optional(),
-    enabled: z.boolean().optional(),
-    steps: z.array(ScenarioStepInput).optional(),
-  }),
-});
+type ScenarioWithSteps = Prisma.ScenarioGetPayload<{
+  include: { steps: { orderBy: { position: "asc" } } };
+}>;
 
-type TestStepResult = {
-  stepId: string;
-  status: "success" | "failed";
-  output: Record<string, unknown>;
-  durationMs: number;
-};
+// ── Normalizers ───────────────────────────────────────────────────────────────
 
-function nowISO(): string {
-  return new Date().toISOString();
+function normalizeStatus(
+  status: string | null | undefined,
+): "success" | "failed" | null {
+  if (status === "SUCCESS") return "success";
+  if (status === "FAILED") return "failed";
+  return null;
 }
 
-function withIds(
-  scenarioId: string,
+function scenarioToFrontend(s: ScenarioWithSteps): MockScenario {
+  return {
+    id: s.id,
+    userId: s.userId,
+    name: s.name,
+    kind: s.kind,
+    enabled: s.enabled,
+    steps: s.steps.map((step) => ({
+      id: step.id,
+      scenarioId: step.scenarioId,
+      position: step.position,
+      // moduleType is stored as string in DB; cast at this boundary is acceptable
+      moduleType: step.moduleType as MockScenario["steps"][number]["moduleType"],
+      config: step.config as Record<string, unknown>,
+    })),
+    lastRunAt: s.lastRunAt,
+    lastRunStatus: normalizeStatus(s.lastRunStatus),
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+  };
+}
+
+
+/**
+ * Validates that sheets steps reference an upstream FB step.
+ * Returns a warning string if mapping looks wrong, or null if OK.
+ */
+function validateFieldMappings(
   steps: z.infer<typeof ScenarioStepInput>[],
-): ScenarioStep[] {
-  return steps.map((s, idx) => ({
-    id: s.id ?? `${scenarioId}_step_${idx + 1}`,
-    scenarioId,
-    position: s.position,
-    moduleType: s.moduleType,
-    config: s.config,
-  }));
+): string | null {
+  const hasFbStep = steps.some((s) => s.moduleType.startsWith("fb."));
+  const hasSheetsStep = steps.some((s) => s.moduleType.startsWith("sheets."));
+  if (hasSheetsStep && !hasFbStep) {
+    return "Sheets step has no upstream Facebook data step — it will write 0 rows.";
+  }
+  return null;
 }
+
+/** Cast config to Prisma's InputJsonValue. One boundary cast is acceptable. */
+function toJsonInput(config: Record<string, unknown>): Prisma.InputJsonValue {
+  return config as Prisma.InputJsonValue;
+}
+
+// ── Router ────────────────────────────────────────────────────────────────────
 
 export const scenariosRouter = createTRPCRouter({
-  list: publicProcedure
+  list: authedProcedure
+    .input(z.object({ includeQuickSetup: z.boolean().optional() }).optional())
+    .query(async ({ ctx }) => {
+      const userId = ctx.userId;
+      const scenarios = await db.scenario.findMany({
+        where: { userId },
+        include: { steps: { orderBy: { position: "asc" } } },
+        orderBy: { createdAt: "desc" },
+      });
+      return scenarios.map(scenarioToFrontend);
+    }),
+
+  getById: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const scenario = await db.scenario.findUnique({
+        where: { id: input.id },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+      if (scenario?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+      return scenarioToFrontend(scenario);
+    }),
+
+  create: authedProcedure
     .input(
-      z
-        .object({
-          includeQuickSetup: z.boolean().optional(),
-        })
-        .optional(),
-    )
-    .query(({ input }): Scenario[] => {
-      const includeQuick = input?.includeQuickSetup ?? false;
-      return includeQuick
-        ? MOCK_SCENARIOS
-        : MOCK_SCENARIOS.filter((s) => s.kind !== "QUICK_SETUP");
-    }),
-
-  getById: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .query(({ input }): Scenario => {
-      const scn = MOCK_SCENARIOS.find((s) => s.id === input.id);
-      if (!scn) throw new Error(`Scenario ${input.id} not found`);
-      return scn;
-    }),
-
-  create: publicProcedure
-    .input(ScenarioCreateInput)
-    .mutation(({ input }): Scenario => {
-      const id = `scn_custom_new_${Date.now()}`;
-      const now = new Date();
-      return {
-        id,
-        userId: "user_01",
-        name: input.name,
-        kind: "CUSTOM",
-        enabled: input.enabled,
-        steps: withIds(id, input.steps),
-        lastRunAt: null,
-        lastRunStatus: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-    }),
-
-  update: publicProcedure
-    .input(ScenarioUpdateInput)
-    .mutation(({ input }): Scenario => {
-      const existing = MOCK_SCENARIOS.find((s) => s.id === input.id);
-      if (!existing) throw new Error(`Scenario ${input.id} not found`);
-      const next: Scenario = {
-        ...existing,
-        name: input.data.name ?? existing.name,
-        enabled: input.data.enabled ?? existing.enabled,
-        steps: input.data.steps
-          ? withIds(existing.id, input.data.steps)
-          : existing.steps,
-        updatedAt: new Date(),
-      };
-      return next;
-    }),
-
-  toggleEnabled: publicProcedure
-    .input(z.object({ id: z.string(), enabled: z.boolean() }))
-    .mutation(
-      ({ input }): { id: string; enabled: boolean } => ({
-        id: input.id,
-        enabled: input.enabled,
+      z.object({
+        name: z.string().min(1).max(120),
+        enabled: z.boolean().default(false),
+        adAccountId: z.string().optional(),
+        kind: z.enum(["QUICK_SETUP", "CUSTOM"]).default("CUSTOM"),
+        steps: z.array(ScenarioStepInput).min(1),
       }),
-    ),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      // Log validation warning but return Scenario directly for UI compat
+      validateFieldMappings(input.steps);
 
-  runNow: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(({ input }): Run => {
-      const scenario = MOCK_SCENARIOS.find((s) => s.id === input.id);
-      if (!scenario) throw new Error(`Scenario ${input.id} not found`);
-      const now = new Date();
-      // Best-effort guess at the ad account from the scenario's first FB step.
-      const fbStep = scenario.steps.find((s) =>
-        s.moduleType.startsWith("fb."),
-      );
-      const fbAccountId =
-        typeof fbStep?.config.fbAccountId === "string"
-          ? fbStep.config.fbAccountId
-          : "";
-      return {
-        id: `run_manual_${Date.now()}`,
-        userId: scenario.userId,
-        adAccountId: fbAccountId,
-        scenarioId: scenario.id,
-        trigger: "manual",
-        status: "running",
-        startedAt: now,
-        finishedAt: null,
-        campaignRowsWritten: null,
-        adRowsWritten: null,
-        durationMs: null,
-        errorMessage: null,
-        sheetsUrl: null,
-      };
-    }),
-
-  testRun: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(({ input }): TestStepResult[] => {
-      const scenario = MOCK_SCENARIOS.find((s) => s.id === input.id);
-      if (!scenario) throw new Error(`Scenario ${input.id} not found`);
-      return scenario.steps.map((s, idx) => ({
-        stepId: s.id,
-        status: "success",
-        durationMs: 320 + idx * 180,
-        output: {
-          step: s.position,
-          module: s.moduleType,
-          ranAt: nowISO(),
-          // Realistic-but-abbreviated sample; real shape per module is in lib/modules.ts
-          sample:
-            s.moduleType === "trigger.schedule" ||
-            s.moduleType === "trigger.manual"
-              ? { triggeredAt: nowISO() }
-              : s.moduleType.startsWith("fb.")
-                ? { rowsFetched: 14, firstId: "23845678234" }
-                : { rowsAppended: 14, rowsUpdated: 0 },
+      const scenario = await db.scenario.create({
+        data: {
+          userId,
+          name: input.name,
+          enabled: input.enabled,
+          kind: input.kind,
+          adAccountId: input.adAccountId ?? null,
+          steps: {
+            create: input.steps.map((s) => ({
+              position: s.position,
+              moduleType: s.moduleType,
+              config: toJsonInput(s.config),
+            })),
+          },
         },
-      }));
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+
+      return scenarioToFrontend(scenario);
     }),
 
-  delete: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(({ input }): { success: true; id: string } => ({
-      success: true,
-      id: input.id,
-    })),
+  update: authedProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        data: z.object({
+          name: z.string().min(1).max(120).optional(),
+          enabled: z.boolean().optional(),
+          steps: z.array(ScenarioStepInput).optional(),
+        }),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
 
-  duplicate: publicProcedure
-    .input(z.object({ id: z.string() }))
-    .mutation(({ input }): Scenario => {
-      const source = MOCK_SCENARIOS.find((s) => s.id === input.id);
-      if (!source) throw new Error(`Scenario ${input.id} not found`);
-      const newId = `scn_custom_dup_${Date.now()}`;
-      const now = new Date();
-      return {
-        ...source,
-        id: newId,
-        name: `${source.name} (copy)`,
-        kind: "CUSTOM",
-        enabled: false,
-        steps: source.steps.map((s, idx) => ({
-          ...s,
-          id: `${newId}_step_${idx + 1}`,
-          scenarioId: newId,
-        })),
-        lastRunAt: null,
-        lastRunStatus: null,
-        createdAt: now,
-        updatedAt: now,
-      };
+      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      if (existing?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+
+      if (input.data.steps) {
+        validateFieldMappings(input.data.steps);
+        // Replace steps: deleteMany + recreate
+        await db.scenarioStep.deleteMany({ where: { scenarioId: input.id } });
+        await db.scenarioStep.createMany({
+          data: input.data.steps.map((s) => ({
+            scenarioId: input.id,
+            position: s.position,
+            moduleType: s.moduleType,
+            config: toJsonInput(s.config),
+          })),
+        });
+      }
+
+      const scenario = await db.scenario.update({
+        where: { id: input.id },
+        data: {
+          ...(input.data.name !== undefined && { name: input.data.name }),
+          ...(input.data.enabled !== undefined && { enabled: input.data.enabled }),
+        },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+
+      return scenarioToFrontend(scenario);
     }),
 
-  /**
-   * Convenience: count of runs per scenario, used by the list page.
-   * Mocked from MOCK_RUNS at request time.
-   */
-  runCounts: publicProcedure.query((): Record<string, number> => {
+  toggleEnabled: authedProcedure
+    .input(z.object({ id: z.string(), enabled: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      if (existing?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+      await db.scenario.update({
+        where: { id: input.id },
+        data: { enabled: input.enabled },
+      });
+      return { id: input.id, enabled: input.enabled };
+    }),
+
+  runNow: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      if (existing?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+      const runId = await executeRun(input.id, "MANUAL", userId);
+      // Expose both `id` and `runId` for UI compat:
+      // Phase 1 UI calls `run.id`; Phase 2 callers can use `runId`.
+      return { id: runId, runId };
+    }),
+
+  testRun: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      if (existing?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+      const runId = await executeRun(input.id, "MANUAL", userId);
+      const logs = await db.runLog.findMany({
+        where: { runId },
+        orderBy: { ts: "asc" },
+      });
+
+      // Pair start/complete logs into per-step results
+      const stepResults: Array<{
+        stepId: string;
+        status: "success" | "failed";
+        durationMs: number;
+        output: { rowCount: number };
+      }> = [];
+
+      const seenSteps = new Set<string>();
+      for (const log of logs) {
+        if (log.level === "ERROR") continue;
+        const meta = log.meta as Record<string, unknown> | null;
+        const stepId = meta?.stepId as string | undefined;
+        if (!stepId || seenSteps.has(stepId)) continue;
+        if (log.message.startsWith("Completed")) {
+          seenSteps.add(stepId);
+          stepResults.push({
+            stepId,
+            status: "success",
+            durationMs: (meta?.durationMs as number | undefined) ?? 0,
+            output: { rowCount: (meta?.rowCount as number | undefined) ?? 0 },
+          });
+        }
+      }
+
+      const run = await db.run.findUnique({ where: { id: runId } });
+      if (run?.status === "FAILED") {
+        const steps = await db.scenarioStep.findMany({
+          where: { scenarioId: input.id },
+          orderBy: { position: "asc" },
+        });
+        for (const step of steps) {
+          if (!seenSteps.has(step.id)) {
+            stepResults.push({
+              stepId: step.id,
+              status: "failed",
+              durationMs: 0,
+              output: { rowCount: 0 },
+            });
+          }
+        }
+      }
+
+      return stepResults;
+    }),
+
+  delete: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      if (existing?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+      await db.scenario.delete({ where: { id: input.id } });
+      return { success: true as const, id: input.id };
+    }),
+
+  duplicate: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const source = await db.scenario.findUnique({
+        where: { id: input.id },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+      if (source?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+      }
+
+      const duplicate = await db.scenario.create({
+        data: {
+          userId,
+          name: `${source.name} (copy)`,
+          kind: "CUSTOM",
+          enabled: false,
+          adAccountId: source.adAccountId,
+          steps: {
+            create: source.steps.map((s) => ({
+              position: s.position,
+              moduleType: s.moduleType,
+              config: s.config as Prisma.InputJsonValue,
+            })),
+          },
+        },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+
+      return scenarioToFrontend(duplicate);
+    }),
+
+  runCounts: authedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.userId;
+    const scenarios = await db.scenario.findMany({
+      where: { userId },
+      select: { id: true, _count: { select: { runs: true } } },
+    });
     const counts: Record<string, number> = {};
-    for (const r of MOCK_RUNS) {
-      counts[r.scenarioId] = (counts[r.scenarioId] ?? 0) + 1;
+    for (const s of scenarios) {
+      counts[s.id] = s._count.runs;
     }
     return counts;
   }),

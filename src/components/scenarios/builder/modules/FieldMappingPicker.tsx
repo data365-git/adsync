@@ -3,6 +3,8 @@
 import * as React from "react";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
+import type { ModuleType } from "~/server/mocks/types";
+import { moduleProducesArray } from "../stepUtils";
 
 interface FieldMappingPickerProps {
   /** Available output fields from the previous step */
@@ -11,6 +13,12 @@ interface FieldMappingPickerProps {
   value: string[];
   onChange: (fields: string[]) => void;
   error?: string;
+  /**
+   * Agent C — when provided, the component checks whether the upstream step
+   * produces an array. If so, field keys are prefixed with `item.` and a
+   * context notice is rendered above the field list.
+   */
+  prevStepModuleType?: ModuleType;
 }
 
 function formatFieldLabel(field: string): string {
@@ -25,15 +33,27 @@ export function FieldMappingPicker({
   value,
   onChange,
   error,
+  prevStepModuleType,
 }: FieldMappingPickerProps) {
-  const allSelected = availableFields.length > 0 && availableFields.every((f) => value.includes(f));
-  const someSelected = availableFields.some((f) => value.includes(f));
+  // Agent C — when upstream step outputs an array, prefix every key with item.
+  const isIterator =
+    prevStepModuleType !== undefined && moduleProducesArray(prevStepModuleType);
+
+  // Displayed keys may have the item. prefix; the value array stores them
+  // with the prefix too so the saved config reflects the actual reference.
+  const displayedFields = isIterator
+    ? availableFields.map((f) => `item.${f}`)
+    : availableFields;
+
+  const allSelected =
+    displayedFields.length > 0 && displayedFields.every((f) => value.includes(f));
+  const someSelected = displayedFields.some((f) => value.includes(f));
 
   function handleToggleAll() {
     if (allSelected) {
       onChange([]);
     } else {
-      onChange([...availableFields]);
+      onChange([...displayedFields]);
     }
   }
 
@@ -55,6 +75,15 @@ export function FieldMappingPicker({
 
   return (
     <div className="space-y-2">
+      {/* Agent C — iterator context notice */}
+      {isIterator && (
+        <p className="text-xs text-muted-foreground mb-2 px-1">
+          Fields are prefixed with{" "}
+          <code className="text-xs bg-muted px-1 rounded">item.</code> — this
+          step runs once per row from the upstream list.
+        </p>
+      )}
+
       {/* Select all toggle */}
       <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2">
         <Checkbox
@@ -71,7 +100,7 @@ export function FieldMappingPicker({
           {allSelected ? "Deselect all" : "Select all visible"}
         </label>
         <span className="ml-auto text-xs text-muted-foreground">
-          {value.filter((f) => availableFields.includes(f)).length}/{availableFields.length}
+          {value.filter((f) => displayedFields.includes(f)).length}/{displayedFields.length}
         </span>
       </div>
 
@@ -81,7 +110,7 @@ export function FieldMappingPicker({
         role="group"
         aria-label="Field mapping checkboxes"
       >
-        {availableFields.map((field) => {
+        {displayedFields.map((field) => {
           const checked = value.includes(field);
           return (
             <div key={field} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted/50">

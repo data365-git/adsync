@@ -24,17 +24,33 @@ interface ModuleLibraryModalProps {
   isTriggerSlot?: boolean;
 }
 
-// Section config: each section declares a representative moduleType for branding
-// and which MODULES.group it corresponds to.
-const SECTIONS: Array<{
-  group: string;
-  label: string;
-  brandModule: ModuleType;
-}> = [
-  { group: "trigger", label: "Triggers", brandModule: "trigger.schedule" },
-  { group: "facebook", label: "Facebook Ads", brandModule: "fb.account_insights" },
-  { group: "sheets", label: "Google Sheets", brandModule: "sheets.append" },
-];
+// ─── Section helpers ──────────────────────────────────────────────────────────
+//
+// Agent C: group filters accept BOTH old + new group name strings so that
+// modules added before Phase 3 (group: 'sheets', group: 'trigger') and
+// modules added in Phase 3 (group: 'googleSheets', group: 'triggers',
+// group: 'bitrix24') all appear in the correct section.
+
+function isTriggerGroup(g: string): boolean {
+  return g === "trigger" || g === "triggers";
+}
+
+function isSheetsGroup(g: string): boolean {
+  return g === "sheets" || g === "googleSheets";
+}
+
+function isFacebookGroup(g: string): boolean {
+  return g === "facebook";
+}
+
+function isBitrixGroup(g: string): boolean {
+  return g === "bitrix24";
+}
+
+// Watch triggers are a sub-group within the Triggers section.
+function isWatchTrigger(id: string): boolean {
+  return id.startsWith("trigger.watch.");
+}
 
 export function ModuleLibraryModal({
   open,
@@ -63,11 +79,12 @@ export function ModuleLibraryModal({
     }
   }, [open]);
 
-  // Filter modules
+  // Filter by slot (trigger vs action)
   const filteredBySlot = isTriggerSlot
-    ? MODULES.filter((m) => m.group === "trigger")
-    : MODULES.filter((m) => m.group !== "trigger");
+    ? MODULES.filter((m) => isTriggerGroup(m.group))
+    : MODULES.filter((m) => !isTriggerGroup(m.group));
 
+  // Filter by search query
   const filtered = filteredBySlot.filter((m) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
@@ -77,14 +94,6 @@ export function ModuleLibraryModal({
       m.id.toLowerCase().includes(q)
     );
   });
-
-  // Group filtered modules, preserving SECTIONS order; hide empty sections
-  const sections = React.useMemo(() => {
-    return SECTIONS.map((sec) => ({
-      ...sec,
-      mods: filtered.filter((m) => m.group === sec.group),
-    })).filter((sec) => sec.mods.length > 0);
-  }, [filtered]);
 
   function handleSelect(moduleType: ModuleType) {
     setSelectedId(moduleType);
@@ -102,24 +111,38 @@ export function ModuleLibraryModal({
       onOpenChange(false);
       return;
     }
-    // Enter while in search → select first visible card
     if (e.key === "Enter") {
-      const firstSection = sections[0];
-      const firstMod = firstSection?.mods[0];
-      if (firstMod) handleSelect(firstMod.id);
+      // Select the first visible card
+      const firstCard = cardEls.current[0];
+      if (firstCard) firstCard.click();
       return;
     }
-    // Arrow Down → move focus to first card
     if (e.key === "ArrowDown") {
       e.preventDefault();
       focusCard(0);
     }
   }
 
+  // Total flat card count across ALL sections (for keyboard nav bounds)
+  // We compute this live rather than from the old SECTIONS array.
+  const triggerMods = filtered.filter(
+    (m) => isTriggerGroup(m.group) && !isWatchTrigger(m.id),
+  );
+  const watchMods = filtered.filter((m) => isWatchTrigger(m.id));
+  const facebookMods = filtered.filter((m) => isFacebookGroup(m.group));
+  const sheetsMods = filtered.filter((m) => isSheetsGroup(m.group));
+  const bitrixMods = filtered.filter((m) => isBitrixGroup(m.group));
+
+  // For trigger slot: triggers (incl. watch). For action slot: fb + sheets + bitrix.
+  const visibleCardLists: typeof filtered[] = isTriggerSlot
+    ? [triggerMods, watchMods]
+    : [facebookMods, sheetsMods, bitrixMods];
+
+  const totalCards = visibleCardLists.reduce((sum, list) => sum + list.length, 0);
+
   function handleCardKeyDown(
     e: React.KeyboardEvent<HTMLButtonElement>,
     flatIndex: number,
-    totalCards: number,
   ) {
     if (e.key === "Escape") {
       onOpenChange(false);
@@ -130,7 +153,6 @@ export function ModuleLibraryModal({
       if (flatIndex + 1 < totalCards) {
         focusCard(flatIndex + 1);
       } else {
-        // Last card → Tab loops to search
         searchRef.current?.focus();
       }
       return;
@@ -143,11 +165,54 @@ export function ModuleLibraryModal({
         focusCard(flatIndex - 1);
       }
     }
-    // Enter / Space fire the button's onClick naturally
   }
 
-  // Compute total visible card count for keyboard nav bounds
-  const totalCards = sections.reduce((sum, s) => sum + s.mods.length, 0);
+  // ── Render helpers ────────────────────────────────────────────────────────
+
+  let flatCardIdx = 0;
+
+  function renderCardGrid(mods: typeof filtered) {
+    return (
+      <div className="mt-1 grid grid-cols-2 gap-2">
+        {mods.map((mod) => {
+          const idx = flatCardIdx++;
+          return (
+            <ModuleLibraryCard
+              key={mod.id}
+              module={mod}
+              isSelected={selectedId === mod.id}
+              onClick={() => handleSelect(mod.id)}
+              onKeyDown={(e) => handleCardKeyDown(e, idx)}
+              setRef={(el) => {
+                if (el) cardEls.current[idx] = el;
+              }}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderSectionHeader(brandModuleType: ModuleType, label: string) {
+    const { Icon, tileBg, iconColor } = getIntegrationMeta(brandModuleType);
+    return (
+      <div className="flex items-center gap-2 px-2 py-1.5">
+        <div
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded",
+            tileBg,
+          )}
+        >
+          <Icon className={cn("h-3.5 w-3.5", iconColor)} />
+        </div>
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+      </div>
+    );
+  }
+
+  const hasAnyCards = totalCards > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,58 +248,70 @@ export function ModuleLibraryModal({
           role="listbox"
           aria-label="Available modules"
         >
-          {sections.length === 0 ? (
+          {!hasAnyCards ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               No modules match &quot;{search}&quot;
             </p>
-          ) : (
-            sections.map((sec, sectionIdx) => {
-              // Compute flat start index for this section
-              const sectionStart = sections
-                .slice(0, sectionIdx)
-                .reduce((sum, s) => sum + s.mods.length, 0);
-              const { Icon, tileBg, iconColor } = getIntegrationMeta(sec.brandModule);
+          ) : isTriggerSlot ? (
+            /* ── Trigger slot: Schedule/Manual + Watch subgroup ─────────────── */
+            <>
+              {/* Triggers section — hide if all trigger cards filtered out */}
+              {triggerMods.length > 0 && (
+                <div className="mb-4">
+                  {renderSectionHeader("trigger.schedule", "Triggers")}
+                  {renderCardGrid(triggerMods)}
 
-              return (
-                <div key={sec.group} className="mb-4">
-                  {/* Branded section header */}
-                  <div className="flex items-center gap-2 px-2 py-1.5">
-                    <div
-                      className={cn(
-                        "flex h-6 w-6 items-center justify-center rounded",
-                        tileBg,
-                      )}
-                    >
-                      <Icon className={cn("h-3.5 w-3.5", iconColor)} />
-                    </div>
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      {sec.label}
-                    </span>
-                  </div>
-
-                  {/* 2-col card grid */}
-                  <div className="mt-1 grid grid-cols-2 gap-2">
-                    {sec.mods.map((mod, modIdx) => {
-                      const flatIndex = sectionStart + modIdx;
-                      return (
-                        <ModuleLibraryCard
-                          key={mod.id}
-                          module={mod}
-                          isSelected={selectedId === mod.id}
-                          onClick={() => handleSelect(mod.id)}
-                          onKeyDown={(e) =>
-                            handleCardKeyDown(e, flatIndex, totalCards)
-                          }
-                          setRef={(el) => {
-                            if (el) cardEls.current[flatIndex] = el;
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
+                  {/* Watch subgroup divider — only if any watch modules visible */}
+                  {watchMods.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-2 my-3">
+                        <div className="h-px flex-1 bg-border" />
+                        <span className="text-xs font-medium text-muted-foreground px-2 uppercase tracking-wide">
+                          Watch
+                        </span>
+                        <div className="h-px flex-1 bg-border" />
+                      </div>
+                      {renderCardGrid(watchMods)}
+                    </>
+                  )}
                 </div>
-              );
-            })
+              )}
+
+              {/* Watch-only: render without Trigger header if all plain triggers filtered */}
+              {triggerMods.length === 0 && watchMods.length > 0 && (
+                <div className="mb-4">
+                  {renderSectionHeader("trigger.watch.sheets_new_rows", "Watch")}
+                  {renderCardGrid(watchMods)}
+                </div>
+              )}
+            </>
+          ) : (
+            /* ── Action slot: Facebook + Google Sheets + Bitrix24 ────────────── */
+            <>
+              {/* Facebook Ads section */}
+              {facebookMods.length > 0 && (
+                <div className="mb-4">
+                  {renderSectionHeader("fb.account_insights", "Facebook Ads")}
+                  {renderCardGrid(facebookMods)}
+                </div>
+              )}
+
+              {/* Google Sheets section — includes both 'sheets' and 'googleSheets' groups */}
+              {sheetsMods.length > 0 && (
+                <div className="mb-4">
+                  {renderSectionHeader("sheets.append", "Google Sheets")}
+                  {renderCardGrid(sheetsMods)}
+                </div>
+              )}
+
+              {/* Bitrix24 section — group: 'bitrix24' */}
+              {bitrixMods.length > 0 && (
+                <div className="mb-4">
+                  {renderSectionHeader("bitrix.create_lead", "Bitrix24")}
+                  {renderCardGrid(bitrixMods)}
+                </div>
+              )}
+            </>
           )}
         </div>
       </DialogContent>

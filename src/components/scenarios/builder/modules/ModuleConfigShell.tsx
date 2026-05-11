@@ -50,6 +50,12 @@ interface ModuleConfigShellProps {
   moduleName?: string;
   /** Module description */
   moduleDescription?: string;
+  /**
+   * Agent C — optional iterator badge element rendered after the module name
+   * in the collapsed header. Passed from StepCard when the upstream step
+   * produces an array.
+   */
+  iteratorBadge?: React.ReactNode;
 }
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
@@ -177,6 +183,7 @@ export function ModuleConfigShell({
   iconColor = "text-foreground/70",
   moduleName,
   moduleDescription,
+  iteratorBadge,
 }: ModuleConfigShellProps) {
   const [activeTab, setActiveTab] = React.useState<"configure" | "sample">("configure");
   const isTrigger = position === 1;
@@ -250,6 +257,9 @@ export function ModuleConfigShell({
                 <span className="ml-1.5 text-muted-foreground">· {summary}</span>
               )}
             </p>
+
+            {/* Agent C — iterator badge: appears after name/summary when upstream outputs array */}
+            {iteratorBadge}
           </div>
         </div>
 

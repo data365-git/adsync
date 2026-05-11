@@ -16,6 +16,8 @@ import { getModule } from "~/lib/modules";
 import { humanizeCronShort } from "~/lib/cron-builder";
 import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
 import type { ModuleType, ScenarioStep } from "~/server/mocks/types";
+import { IteratorBadge } from "./IteratorBadge";
+import { moduleProducesArray, moduleSampleOutputLength } from "./stepUtils";
 
 /** A step that may not yet be saved to the server — scenarioId is optional */
 export type DraftStep = Omit<ScenarioStep, "scenarioId"> & { scenarioId?: string };
@@ -202,6 +204,11 @@ interface StepCardProps {
   onChangeTrigger?: () => void;
   /** Module type of the step directly before this one (for FieldMappingPicker) */
   prevStepModuleType?: ModuleType;
+  /**
+   * All steps in the scenario. Used by Agent C's iterator badge to derive the
+   * immediately-upstream step without requiring a separate prop.
+   */
+  steps?: DraftStep[];
   /** Drag state */
   isDragging?: boolean;
   isLifted?: boolean;
@@ -221,6 +228,7 @@ export function StepCard({
   onDelete,
   onChangeTrigger,
   prevStepModuleType,
+  steps,
   isDragging,
   isLifted,
   dragHandleProps,
@@ -233,6 +241,21 @@ export function StepCard({
   const mod = getModule(step.moduleType);
   const summary = summarizeStep(step.moduleType, step.config);
   const status = getStepStatus(step.moduleType, step.config);
+
+  // ── Agent C: iterator badge derivation ───────────────────────────────────────
+  // Find the step immediately before this one using the steps array (preferred)
+  // or fall back to prevStepModuleType when steps is not passed.
+  const previousStep = steps
+    ? steps.find((s) => s.position === step.position - 1)
+    : undefined;
+  const upstreamModuleType = previousStep?.moduleType ?? prevStepModuleType;
+  const showIteratorBadge =
+    !isTrigger &&
+    upstreamModuleType !== undefined &&
+    moduleProducesArray(upstreamModuleType);
+  const iteratorRunCount = upstreamModuleType
+    ? moduleSampleOutputLength(upstreamModuleType)
+    : undefined;
 
   // ── Drag handle — hidden (display:none) for position 1
   const dragHandle = isTrigger ? null : (
@@ -317,6 +340,7 @@ export function StepCard({
         isLifted && "scale-[1.02] shadow-lg",
       )}
     >
+      {/* ── Agent C zone: renderer wrapper passes iterator badge to shell ── */}
       <ModuleConfigShell
         moduleType={step.moduleType}
         position={step.position}
@@ -334,9 +358,18 @@ export function StepCard({
         iconColor={iconColor}
         moduleName={mod?.name ?? step.moduleType}
         moduleDescription={mod?.description ?? ""}
+        iteratorBadge={
+          showIteratorBadge ? (
+            <IteratorBadge
+              runCount={iteratorRunCount}
+              className="ml-2 shrink-0"
+            />
+          ) : undefined
+        }
       >
         {renderConfig()}
       </ModuleConfigShell>
+      {/* ── End Agent C zone ── */}
     </div>
   );
 }

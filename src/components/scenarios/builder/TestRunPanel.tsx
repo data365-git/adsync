@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2Icon, XCircleIcon, XIcon } from "lucide-react";
+import { CheckCircle2Icon, RefreshCwIcon, XCircleIcon, XIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { formatDuration } from "~/lib/utils";
 import { getModule } from "~/lib/modules";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import type { ModuleType } from "~/server/mocks/types";
+import { moduleProducesArray, moduleSampleOutputLength } from "./stepUtils";
 
 type TestStepResult = {
   stepId: string;
@@ -118,8 +119,41 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
         const isExpanded = expandedIdx === idx;
         const tableRows = outputTableRows(result.output);
 
+        // Agent C — iterator copy: check if the immediately-upstream step outputs an array
+        const prevModuleType = idx > 0 ? stepModuleTypes[idx - 1] : undefined;
+        const upstreamProducesArray =
+          prevModuleType !== undefined && moduleProducesArray(prevModuleType);
+        const upstreamRunCount =
+          prevModuleType !== undefined
+            ? moduleSampleOutputLength(prevModuleType)
+            : undefined;
+        const prevModName = prevModuleType
+          ? (getModule(prevModuleType)?.shortName ?? prevModuleType)
+          : undefined;
+
         return (
           <div key={result.stepId}>
+            {/* Agent C — iterator context block: slate left-border above the result row */}
+            {upstreamProducesArray && (
+              <div className="mx-4 mt-2 mb-1 flex items-start gap-2 rounded-md border-l-2 border-slate-300 bg-slate-50 py-2 pl-3 pr-3 dark:border-slate-600 dark:bg-slate-900/40">
+                <RefreshCwIcon
+                  className="mt-0.5 size-3.5 shrink-0 text-slate-500"
+                  aria-hidden="true"
+                />
+                <div className="space-y-0.5 text-xs text-slate-600 dark:text-slate-300">
+                  <p className="font-medium">
+                    Iterates per item from Step {idx} ({prevModName})
+                  </p>
+                  {upstreamRunCount !== undefined && (
+                    <p>Will run {upstreamRunCount} times during a real execution</p>
+                  )}
+                  <p className="text-slate-500 dark:text-slate-400">
+                    Showing result for first item (item[0]) below
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Step row */}
             <button
               type="button"

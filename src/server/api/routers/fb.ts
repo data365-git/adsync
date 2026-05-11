@@ -1,8 +1,8 @@
-import { MOCK_FB_ACCOUNTS } from "~/lib/mock-fb-accounts";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, authedProcedure } from "~/server/api/trpc";
+import { listAdAccounts } from "~/integrations/facebook/graph-client";
 
 export const fbRouter = createTRPCRouter({
-  listAvailableAccounts: publicProcedure.query(
-    (): { id: string; name: string }[] => MOCK_FB_ACCOUNTS,
-  ),
+  listAvailableAccounts: authedProcedure.query(async ({ ctx }) => {
+    return listAdAccounts(ctx.userId);
+  }),
 });

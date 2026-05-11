@@ -1,58 +1,102 @@
 import { z } from "zod";
+import { db } from "~/server/db";
+import { Provider, ConnectionStatus } from "@prisma/client";
+import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { getAuthedClient } from "~/integrations/google/oauth";
 
-import { MOCK_CONNECTIONS } from "~/server/mocks/data";
-import type { OAuthConnection } from "~/server/mocks/types";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+// ─── Shared helpers ──────────────────────────────────────────────────────────
 
-const ProviderSchema = z.enum(["google", "facebook"]);
+function toFrontendConnection(conn: {
+  id: string;
+  provider: Provider;
+  status: ConnectionStatus;
+  email: string | null;
+  expiresAt: Date | null;
+  connectedAt: Date;
+}) {
+  return {
+    id: conn.id,
+    provider:
+      conn.provider === Provider.GOOGLE_SHEETS
+        ? ("google" as const)
+        : ("facebook" as const),
+    status:
+      conn.status === ConnectionStatus.CONNECTED
+        ? ("connected" as const)
+        : conn.status === ConnectionStatus.EXPIRED
+          ? ("expired" as const)
+          : ("disconnected" as const),
+    email: conn.email,
+    expiresAt: conn.expiresAt,
+    connectedAt: conn.connectedAt,
+  };
+}
+
+// ─── Router ──────────────────────────────────────────────────────────────────
 
 export const connectionsRouter = createTRPCRouter({
-  list: publicProcedure.query((): OAuthConnection[] => MOCK_CONNECTIONS),
+  list: authedProcedure.query(async ({ ctx }) => {
+    const conns = await db.oAuthConnection.findMany({
+      where: { userId: ctx.userId },
+    });
+    return conns.map(toFrontendConnection);
+  }),
 
-  connect: publicProcedure
-    .input(z.object({ provider: ProviderSchema }))
-    .mutation(({ input }): OAuthConnection => {
-      const existing = MOCK_CONNECTIONS.find(
-        (c) => c.provider === input.provider,
-      );
-      const now = new Date();
-      return {
-        id: existing?.id ?? `oauth_${input.provider}_new`,
-        userId: "user_01",
-        provider: input.provider,
-        status: "connected",
-        email: existing?.email ?? "jumanovsamandar005@gmail.com",
-        expiresAt:
-          input.provider === "google"
-            ? new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
-            : null,
-        connectedAt: now,
-      };
+  connect: authedProcedure
+    .input(z.object({ provider: z.enum(["google", "facebook"]) }))
+    .mutation(async ({ input }) => {
+      // Returns the OAuth initiation URL; actual token storage happens in the callback routes.
+      const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+      const url =
+        input.provider === "google"
+          ? `${baseUrl}/api/oauth/google`
+          : `${baseUrl}/api/oauth/facebook`;
+      return { redirectUrl: url };
     }),
 
-  disconnect: publicProcedure
+  disconnect: authedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ input }): { id: string; status: "disconnected" } => ({
-      id: input.id,
-      status: "disconnected",
-    })),
+    .mutation(async ({ ctx, input }) => {
+      await db.oAuthConnection.updateMany({
+        where: { id: input.id, userId: ctx.userId },
+        data: { status: ConnectionStatus.DISCONNECTED },
+      });
+      return { id: input.id, status: "disconnected" as const };
+    }),
 
-  refresh: publicProcedure
+  refresh: authedProcedure
     .input(z.object({ id: z.string() }))
-    .mutation(({ input }): OAuthConnection => {
-      const existing = MOCK_CONNECTIONS.find((c) => c.id === input.id);
-      if (!existing) {
-        throw new Error(`Connection ${input.id} not found`);
+    .mutation(async ({ ctx, input }) => {
+      const conn = await db.oAuthConnection.findFirst({
+        where: { id: input.id, userId: ctx.userId },
+      });
+      if (!conn) throw new Error(`Connection ${input.id} not found`);
+
+      if (conn.provider === Provider.GOOGLE_SHEETS) {
+        // Force a token refresh by calling getAuthedClient (auto-refreshes if expiring within 5 min)
+        await getAuthedClient(ctx.userId);
+        const updated = await db.oAuthConnection.findUniqueOrThrow({
+          where: { id: conn.id },
+        });
+        return toFrontendConnection({
+          ...updated,
+          connectedAt: updated.connectedAt,
+        });
       }
-      const now = new Date();
-      return {
-        ...existing,
-        status: "connected",
-        connectedAt: now,
-        expiresAt:
-          existing.provider === "google"
-            ? new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
-            : null,
-      };
+
+      // Facebook: tokens are long-lived and don't refresh via API.
+      // If the token is expired, surface EXPIRED status so UI prompts reconnect.
+      if (conn.expiresAt && conn.expiresAt < new Date()) {
+        await db.oAuthConnection.update({
+          where: { id: conn.id },
+          data: { status: ConnectionStatus.EXPIRED },
+        });
+        return toFrontendConnection({
+          ...conn,
+          status: ConnectionStatus.EXPIRED,
+          connectedAt: conn.connectedAt,
+        });
+      }
+      return toFrontendConnection({ ...conn, connectedAt: conn.connectedAt });
     }),
 });

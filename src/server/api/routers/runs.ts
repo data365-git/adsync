@@ -1,61 +1,125 @@
+/**
+ * Runs tRPC router — Phase 2 real-DB implementation.
+ *
+ * NOTE: authedProcedure is provided by Agent A post-merge.
+ * Using publicProcedure as a stand-in until then.
+ */
+
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { MOCK_RUNS } from "~/server/mocks/data";
-import type { Run } from "~/server/mocks/types";
+import { db } from "~/server/db";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import type { Run as MockRun } from "~/server/mocks/types";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore -- resolved after Agent A merge
+// import { authedProcedure } from "~/server/api/trpc";
+const authedProcedure = publicProcedure;
+
+// ── Normalizer ────────────────────────────────────────────────────────────────
+
+type DbRun = Awaited<ReturnType<typeof db.run.findUniqueOrThrow>>;
+
+function normalizeRun(r: DbRun): MockRun {
+  return {
+    id: r.id,
+    userId: r.userId,
+    // adAccountId is not on the Phase 2 Run model — keep as '' for type compat
+    adAccountId: "",
+    scenarioId: r.scenarioId,
+    trigger: r.trigger.toLowerCase() as MockRun["trigger"],
+    status: r.status.toLowerCase() as MockRun["status"],
+    startedAt: r.startedAt,
+    finishedAt: r.finishedAt,
+    campaignRowsWritten: r.campaignRowsWritten,
+    adRowsWritten: r.adRowsWritten,
+    durationMs: r.durationMs,
+    errorMessage: r.errorMessage,
+    sheetsUrl: r.sheetsUrl,
+  };
+}
+
+// ── Input schemas ─────────────────────────────────────────────────────────────
 
 const StatusSchema = z.enum(["queued", "running", "success", "failed"]);
 
 const ListInputSchema = z.object({
   accountIds: z.array(z.string()).optional(),
   statuses: z.array(StatusSchema).optional(),
+  scenarioIds: z.array(z.string()).optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(10),
 });
 
 export type RunsListResult = {
-  runs: Run[];
+  runs: MockRun[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
 };
 
+// ── Router ────────────────────────────────────────────────────────────────────
+
 export const runsRouter = createTRPCRouter({
-  list: publicProcedure
+  list: authedProcedure
     .input(ListInputSchema.optional())
-    .query(({ input }): RunsListResult => {
+    .query(async ({ input, ctx }) => {
+      const userId = (ctx as { userId?: string }).userId ?? "dev";
       const opts = input ?? { page: 1, pageSize: 10 };
-      const filtered = MOCK_RUNS.filter((r) => {
-        if (opts.accountIds && opts.accountIds.length > 0) {
-          if (!opts.accountIds.includes(r.adAccountId)) return false;
-        }
-        if (opts.statuses && opts.statuses.length > 0) {
-          if (!opts.statuses.includes(r.status)) return false;
-        }
-        return true;
-      });
-      const sorted = [...filtered].sort(
-        (a, b) => b.startedAt.getTime() - a.startedAt.getTime(),
-      );
-      const total = sorted.length;
+
+      // Build DB status filter — UI sends lowercase, DB stores uppercase
+      const dbStatuses = opts.statuses?.map((s) => s.toUpperCase() as "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED");
+
+      // scenarioIds filter via accountIds: look up scenarios for those accounts
+      let scenarioIds = opts.scenarioIds;
+      if (opts.accountIds && opts.accountIds.length > 0 && !scenarioIds) {
+        const scenarios = await db.scenario.findMany({
+          where: {
+            userId,
+            adAccountId: { in: opts.accountIds },
+          },
+          select: { id: true },
+        });
+        scenarioIds = scenarios.map((s) => s.id);
+      }
+
+      const where = {
+        userId,
+        ...(dbStatuses && dbStatuses.length > 0 && { status: { in: dbStatuses } }),
+        ...(scenarioIds && scenarioIds.length > 0 && { scenarioId: { in: scenarioIds } }),
+      };
+
+      const [total, runs] = await Promise.all([
+        db.run.count({ where }),
+        db.run.findMany({
+          where,
+          orderBy: { startedAt: "desc" },
+          skip: (opts.page - 1) * opts.pageSize,
+          take: opts.pageSize,
+        }),
+      ]);
+
       const totalPages = Math.max(1, Math.ceil(total / opts.pageSize));
-      const start = (opts.page - 1) * opts.pageSize;
-      const runs = sorted.slice(start, start + opts.pageSize);
+
       return {
-        runs,
+        runs: runs.map(normalizeRun),
         total,
         page: opts.page,
         pageSize: opts.pageSize,
         totalPages,
-      };
+      } satisfies RunsListResult;
     }),
 
-  getById: publicProcedure
+  getById: authedProcedure
     .input(z.object({ id: z.string() }))
-    .query(({ input }): Run => {
-      const run = MOCK_RUNS.find((r) => r.id === input.id);
-      if (!run) throw new Error(`Run ${input.id} not found`);
-      return run;
+    .query(async ({ input, ctx }) => {
+      const userId = (ctx as { userId?: string }).userId ?? "dev";
+      const run = await db.run.findUnique({ where: { id: input.id } });
+      if (run?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.id} not found` });
+      }
+      return normalizeRun(run);
     }),
 });

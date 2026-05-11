@@ -9,14 +9,33 @@ import type { Scenario as MockScenario } from "~/server/mocks/types";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
+// Must mirror ModuleType in src/server/mocks/types.ts. Phase 3 widens the API
+// contract so new modules can be saved through scenarios.create / scenarios.update.
 export const ModuleTypeSchema = z.enum([
   "trigger.schedule",
   "trigger.manual",
+  "trigger.watch.sheets_new_rows",
+  "trigger.watch.bitrix_new_lead",
   "fb.account_insights",
   "fb.campaign_insights",
   "fb.ad_insights",
+  "fb.list_ad_accounts",
+  "fb.list_ads",
+  "fb.get_ad",
   "sheets.append",
   "sheets.upsert",
+  "sheets.find_rows",
+  "sheets.update_row",
+  "sheets.delete_row",
+  "sheets.get_row",
+  "sheets.create_tab",
+  "sheets.watch_new_rows",
+  "bitrix.create_lead",
+  "bitrix.update_lead",
+  "bitrix.find_leads",
+  "bitrix.create_deal",
+  "bitrix.update_deal",
+  "bitrix.create_smart_process_item",
 ]);
 
 export const ScenarioStepInput = z.object({

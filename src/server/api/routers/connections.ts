@@ -21,7 +21,9 @@ function toFrontendConnection(conn: {
     provider:
       conn.provider === Provider.GOOGLE_SHEETS
         ? ("google" as const)
-        : ("facebook" as const),
+        : conn.provider === Provider.FACEBOOK
+          ? ("facebook" as const)
+          : ("bitrix" as const),
     status:
       conn.status === ConnectionStatus.CONNECTED
         ? ("connected" as const)
@@ -45,14 +47,22 @@ export const connectionsRouter = createTRPCRouter({
   }),
 
   connect: authedProcedure
-    .input(z.object({ provider: z.enum(["google", "facebook"]) }))
+    .input(z.object({ provider: z.enum(["google", "facebook", "bitrix"]) }))
     .mutation(async ({ input }) => {
       // Returns the OAuth initiation URL; actual token storage happens in the callback routes.
       const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
-      const url =
-        input.provider === "google"
-          ? `${baseUrl}/api/oauth/google`
-          : `${baseUrl}/api/oauth/facebook`;
+      let url: string;
+      switch (input.provider) {
+        case "google":
+          url = `${baseUrl}/api/oauth/google`;
+          break;
+        case "facebook":
+          url = `${baseUrl}/api/oauth/facebook`;
+          break;
+        case "bitrix":
+          url = `${baseUrl}/api/oauth/bitrix`;
+          break;
+      }
       return { redirectUrl: url };
     }),
 

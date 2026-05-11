@@ -87,6 +87,7 @@ model OAuthConnection {
 enum Provider {
   GOOGLE_SHEETS
   FACEBOOK
+  BITRIX24
 }
 
 enum ConnectionStatus {

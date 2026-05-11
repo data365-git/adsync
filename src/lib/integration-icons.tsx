@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import { Clock, Zap } from "lucide-react";
+import { Clock, Eye, Zap } from "lucide-react";
 
 import type { ModuleType } from "~/server/mocks/types";
 
@@ -37,11 +37,32 @@ export const ManualIcon: ComponentType<SVGProps<SVGSVGElement>> = (props) => (
   <Zap {...props} />
 );
 
+// Stylized B24 mark — approximation of Bitrix24 brand mark. Replace with the
+// official SVG in Phase 4 if licensing permits.
+export const BitrixIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    width={24}
+    height={24}
+    aria-hidden="true"
+    {...props}
+  >
+    <path d="M3 2h10.5a5.5 5.5 0 0 1 3.6 9.65A5.5 5.5 0 0 1 13.5 22H3V2zm3 3v5h4.5a2.5 2.5 0 0 0 0-5H6zm0 8v5h5.5a2.5 2.5 0 0 0 0-5H6z" />
+  </svg>
+);
+
+export const WatchIcon: ComponentType<SVGProps<SVGSVGElement>> = (props) => (
+  <Eye {...props} />
+);
+
 export type IntegrationTone =
   | "fb-blue"
   | "sheets-green"
   | "schedule-slate"
-  | "manual-indigo";
+  | "manual-indigo"
+  | "bitrix-cyan"
+  | "watch-violet";
 
 export interface IntegrationMeta {
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
@@ -67,6 +88,22 @@ export function getIntegrationMeta(moduleType: ModuleType): IntegrationMeta {
       tone: "manual-indigo",
       tileBg: "bg-manual-indigo/10",
       iconColor: "text-manual-indigo",
+    };
+  }
+  if (moduleType.startsWith("trigger.watch.")) {
+    return {
+      Icon: WatchIcon,
+      tone: "watch-violet",
+      tileBg: "bg-watch-violet/10",
+      iconColor: "text-watch-violet",
+    };
+  }
+  if (moduleType.startsWith("bitrix.")) {
+    return {
+      Icon: BitrixIcon,
+      tone: "bitrix-cyan",
+      tileBg: "bg-bitrix-cyan/10",
+      iconColor: "text-bitrix-cyan",
     };
   }
   if (moduleType.startsWith("fb.")) {

@@ -12,7 +12,7 @@ export type User = {
 export type OAuthConnection = {
   id: string;
   userId: string;
-  provider: "google" | "facebook";
+  provider: "google" | "facebook" | "bitrix";
   status: "connected" | "expired" | "disconnected";
   email: string | null;
   expiresAt: Date | null;
@@ -75,11 +75,30 @@ export type ScenarioKind = "QUICK_SETUP" | "CUSTOM";
 export type ModuleType =
   | "trigger.schedule"
   | "trigger.manual"
+  | "trigger.watch.sheets_new_rows"
+  | "trigger.watch.bitrix_new_lead"
+  // Legacy — superseded by fb.ad_insights in Phase 3. Kept in the union
+  // until Phase 4 cleans up the case branches across the executor + UI.
   | "fb.account_insights"
   | "fb.campaign_insights"
   | "fb.ad_insights"
+  | "fb.list_ad_accounts"
+  | "fb.list_ads"
+  | "fb.get_ad"
   | "sheets.append"
-  | "sheets.upsert";
+  | "sheets.upsert"
+  | "sheets.find_rows"
+  | "sheets.update_row"
+  | "sheets.delete_row"
+  | "sheets.get_row"
+  | "sheets.create_tab"
+  | "sheets.watch_new_rows"
+  | "bitrix.create_lead"
+  | "bitrix.update_lead"
+  | "bitrix.find_leads"
+  | "bitrix.create_deal"
+  | "bitrix.update_deal"
+  | "bitrix.create_smart_process_item";
 
 export type ScenarioStep = {
   id: string;

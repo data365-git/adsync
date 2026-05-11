@@ -48,6 +48,10 @@ export function defaultConfigFor(moduleType: ModuleType): Record<string, unknown
       return { spreadsheetId: "", tabName: "", mappedFields: [] };
     case "sheets.upsert":
       return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: [] };
+    default:
+      // Phase 3 module config defaults are populated by their individual
+      // config form components in Stage 1'. Empty object is a safe baseline.
+      return {};
   }
 }
 

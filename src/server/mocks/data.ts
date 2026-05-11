@@ -49,6 +49,15 @@ export const MOCK_CONNECTIONS: OAuthConnection[] = [
     expiresAt: null,
     connectedAt: relative(-45 * DAY),
   },
+  {
+    id: "conn_bitrix_01",
+    userId: MOCK_USER.id,
+    provider: "bitrix",
+    status: "disconnected",
+    email: null,
+    expiresAt: null,
+    connectedAt: new Date("2025-05-11T00:00:00Z"),
+  },
 ];
 
 export const MOCK_AD_ACCOUNTS: AdAccount[] = [
@@ -234,7 +243,7 @@ export const MOCK_SCENARIOS: Scenario[] = [
         id: "scn_custom_01_step_2",
         scenarioId: "scn_custom_01",
         position: 2,
-        moduleType: "fb.account_insights",
+        moduleType: "fb.ad_insights",
         config: {
           fbAccountId: ACC_01.fbAccountId,
           dateWindowDays: 7,

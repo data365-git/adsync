@@ -1,8 +1,23 @@
 import type { ModuleType } from "~/server/mocks/types";
 
-export type ModuleGroup = "trigger" | "facebook" | "sheets";
+export type ModuleGroup =
+  | "trigger"
+  | "triggers"
+  | "facebook"
+  | "sheets"
+  | "googleSheets"
+  | "bitrix24";
 
-type FieldType = "string" | "number" | "boolean" | "string[]" | "cron";
+type FieldType =
+  | "string"
+  | "number"
+  | "boolean"
+  | "string[]"
+  | "cron"
+  | "text"
+  | "select"
+  | "textarea"
+  | "fieldMapping";
 
 export type ConfigField = {
   key: string;
@@ -10,6 +25,10 @@ export type ConfigField = {
   type: FieldType;
   required: boolean;
   description?: string;
+  /** Always-visible plain help text rendered below the field label. */
+  help?: string;
+  /** Options for `type: 'select'` fields. */
+  options?: { value: string; label: string }[];
 };
 
 export type ModuleDefinition = {
@@ -19,14 +38,20 @@ export type ModuleDefinition = {
   shortName: string;
   description: string;
   group: ModuleGroup;
-  /** lucide-react icon name; the UI imports it dynamically. */
-  icon: string;
+  /** lucide-react icon name; legacy hint, the UI reads `getIntegrationMeta` instead. */
+  icon?: string;
+  /**
+   * `true` when this module's output is an array of items. Downstream cards
+   * render the "Iterates per item" badge and FieldMappingPicker prefixes
+   * option keys with `item.`.
+   */
+  outputsArray?: boolean;
   configSchema: ConfigField[];
   /**
    * Realistic sample output rows. Used by:
    *   - Step Card "Sample" tab (renders a 3-row × ≤5-column mini-table)
    *   - FieldMappingPicker — derives available output field keys from row[0]
-   * Always provide at least one row; 3+ rows give the Sample tab variety.
+   * Always provide at least one row; modules with `outputsArray: true` provide 3.
    */
   sampleOutput: Record<string, unknown>[];
 };
@@ -368,6 +393,728 @@ export const MODULES: ModuleDefinition[] = [
     ],
   },
 ];
+
+// ─── Phase 3 additions ──────────────────────────────────────────────────────
+// New triggers (Watch family) and 13 new action modules across Facebook,
+// Google Sheets, and Bitrix24. Runtime is mocked: every new module returns its
+// `sampleOutput` from the executor handler. Real API wiring is Phase 4.
+
+const PHASE_3_MODULES: ModuleDefinition[] = [
+  {
+    id: "trigger.watch.sheets_new_rows",
+    name: "Watch Sheets — New Rows",
+    shortName: "Watch New Rows",
+    description:
+      "Fires when a new row is appended to the watched Google Sheets tab.",
+    group: "triggers",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+      },
+      { key: "tabName", label: "Tab name", type: "text", required: true },
+      {
+        key: "watchColumn",
+        label: "Watch column",
+        type: "text",
+        required: true,
+      },
+    ],
+    sampleOutput: [
+      {
+        row: 14,
+        id: "99",
+        name: "New Contact",
+        email: "new@example.com",
+        createdAt: "2025-05-11T08:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "trigger.watch.bitrix_new_lead",
+    name: "Watch Bitrix — New Lead",
+    shortName: "Watch New Lead",
+    description:
+      "Fires when a new lead matching filter criteria appears in Bitrix24 CRM.",
+    group: "triggers",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "pipeline",
+        label: "Pipeline",
+        type: "text",
+        required: false,
+        help: "Filter by pipeline name (leave blank for all)",
+      },
+      {
+        key: "filterField",
+        label: "Filter field",
+        type: "select",
+        required: false,
+        options: [
+          { value: "", label: "Any new lead" },
+          { value: "SOURCE_ID", label: "By source" },
+          { value: "STATUS_ID", label: "By status" },
+        ],
+      },
+      {
+        key: "filterValue",
+        label: "Filter value",
+        type: "text",
+        required: false,
+      },
+    ],
+    sampleOutput: [
+      {
+        id: "lead_099",
+        title: "New website lead",
+        status: "NEW",
+        createdAt: "2025-05-11T08:30:00Z",
+      },
+    ],
+  },
+  {
+    id: "fb.list_ad_accounts",
+    name: "List Ad Accounts",
+    shortName: "List Ad Accounts",
+    description:
+      "Returns all Facebook Ad Accounts accessible to the connected user.",
+    group: "facebook",
+    outputsArray: true,
+    configSchema: [],
+    sampleOutput: [
+      {
+        id: "act_111111111",
+        name: "Acme Corp Ads",
+        currency: "USD",
+        status: "ACTIVE",
+      },
+      {
+        id: "act_222222222",
+        name: "Test Account",
+        currency: "EUR",
+        status: "PAUSED",
+      },
+      {
+        id: "act_333333333",
+        name: "Brand B",
+        currency: "USD",
+        status: "ACTIVE",
+      },
+    ],
+  },
+  {
+    id: "fb.list_ads",
+    name: "List Ads",
+    shortName: "List Ads",
+    description:
+      "Returns ads in an ad account, optionally filtered by campaign or status.",
+    group: "facebook",
+    outputsArray: true,
+    configSchema: [
+      {
+        key: "fbAccountId",
+        label: "Ad Account ID",
+        type: "text",
+        required: true,
+        help: "Format: act_XXXXXXXXX — find this in Facebook Ads Manager",
+      },
+      {
+        key: "campaignId",
+        label: "Campaign ID",
+        type: "text",
+        required: false,
+        help: "Leave blank to return ads from all campaigns",
+      },
+      {
+        key: "status",
+        label: "Status filter",
+        type: "select",
+        required: false,
+        options: [
+          { value: "", label: "All statuses" },
+          { value: "ACTIVE", label: "Active" },
+          { value: "PAUSED", label: "Paused" },
+          { value: "ARCHIVED", label: "Archived" },
+        ],
+      },
+    ],
+    sampleOutput: [
+      {
+        id: "23001",
+        name: "Summer promo — Banner A",
+        status: "ACTIVE",
+        campaign_id: "9001",
+        creative_thumbnail: "https://placehold.co/60x60",
+      },
+      {
+        id: "23002",
+        name: "Summer promo — Banner B",
+        status: "PAUSED",
+        campaign_id: "9001",
+        creative_thumbnail: "https://placehold.co/60x60",
+      },
+      {
+        id: "23003",
+        name: "Retargeting — CTA",
+        status: "ACTIVE",
+        campaign_id: "9002",
+        creative_thumbnail: "https://placehold.co/60x60",
+      },
+    ],
+  },
+  {
+    id: "fb.get_ad",
+    name: "Get Ad",
+    shortName: "Get Ad",
+    description:
+      "Returns full details for a single Facebook ad including creative and targeting summary.",
+    group: "facebook",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "adId",
+        label: "Ad ID",
+        type: "text",
+        required: true,
+        help: "The numeric Facebook ad ID (e.g. 23001234567890)",
+      },
+    ],
+    sampleOutput: [
+      {
+        id: "23001",
+        name: "Summer promo — Banner A",
+        status: "ACTIVE",
+        creative: { title: "Summer Sale", body: "Up to 50% off" },
+        targeting_summary: "Ages 25-45 · US · Interests: Travel, Fashion",
+      },
+    ],
+  },
+  {
+    id: "sheets.find_rows",
+    name: "Find Rows",
+    shortName: "Find Rows",
+    description:
+      "Searches a sheet tab for rows matching a column value and returns all matches.",
+    group: "googleSheets",
+    outputsArray: true,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL (between /d/ and /edit)",
+      },
+      {
+        key: "tabName",
+        label: "Tab name",
+        type: "text",
+        required: true,
+        help: "Name of the sheet tab to search",
+      },
+      {
+        key: "searchColumn",
+        label: "Search column",
+        type: "text",
+        required: true,
+        help: 'Column header to match against (e.g. "email")',
+      },
+      {
+        key: "searchValue",
+        label: "Search value",
+        type: "text",
+        required: true,
+        help: "Value to search for in that column",
+      },
+    ],
+    sampleOutput: [
+      { row: 2, email: "alice@example.com", name: "Alice", status: "active" },
+      {
+        row: 7,
+        email: "alice+promo@example.com",
+        name: "Alice P",
+        status: "pending",
+      },
+      { row: 12, email: "alice2@example.com", name: "Alice Q", status: "active" },
+    ],
+  },
+  {
+    id: "sheets.update_row",
+    name: "Update Row",
+    shortName: "Update Row",
+    description:
+      "Updates a specific row in a sheet by row index or by a key column match.",
+    group: "googleSheets",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL",
+      },
+      {
+        key: "tabName",
+        label: "Tab name",
+        type: "text",
+        required: true,
+        help: "Name of the sheet tab",
+      },
+      {
+        key: "rowIdentifier",
+        label: "Row identifier",
+        type: "text",
+        required: true,
+        help: 'Row number (e.g. "3") OR key column + value (e.g. "id=42")',
+      },
+      {
+        key: "mappedFields",
+        label: "Fields to update",
+        type: "fieldMapping",
+        required: true,
+        help: "Map column headers to values from upstream steps",
+      },
+    ],
+    sampleOutput: [
+      { row: 3, status: "updated", updatedFields: ["status", "updatedAt"] },
+    ],
+  },
+  {
+    id: "sheets.delete_row",
+    name: "Delete Row",
+    shortName: "Delete Row",
+    description: "Deletes a specific row from a sheet tab by row index.",
+    group: "googleSheets",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL",
+      },
+      {
+        key: "tabName",
+        label: "Tab name",
+        type: "text",
+        required: true,
+        help: "Name of the sheet tab",
+      },
+      {
+        key: "rowIdentifier",
+        label: "Row identifier",
+        type: "text",
+        required: true,
+        help: "Row number to delete (1-indexed)",
+      },
+    ],
+    sampleOutput: [{ deleted: true, rowIndex: 3 }],
+  },
+  {
+    id: "sheets.get_row",
+    name: "Get Row",
+    shortName: "Get Row",
+    description: "Returns the contents of a specific row by row index.",
+    group: "googleSheets",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL",
+      },
+      {
+        key: "tabName",
+        label: "Tab name",
+        type: "text",
+        required: true,
+        help: "Name of the sheet tab",
+      },
+      {
+        key: "rowIndex",
+        label: "Row index",
+        type: "number",
+        required: true,
+        help: "Row number to retrieve (1-indexed; row 1 is the header row)",
+      },
+    ],
+    sampleOutput: [
+      {
+        row: 5,
+        id: "42",
+        name: "Bob Smith",
+        email: "bob@example.com",
+        status: "active",
+      },
+    ],
+  },
+  {
+    id: "sheets.create_tab",
+    name: "Create Tab",
+    shortName: "Create Tab",
+    description:
+      "Adds a new tab (sheet) to a spreadsheet with an optional header row.",
+    group: "googleSheets",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL",
+      },
+      {
+        key: "newTabName",
+        label: "New tab name",
+        type: "text",
+        required: true,
+        help: "Name for the new sheet tab (must be unique; avoid / [ ] * ? : \\)",
+      },
+      {
+        key: "headerRow",
+        label: "Header row",
+        type: "text",
+        required: false,
+        help: 'Optional. Comma-separated column headers (e.g. "id,name,email,createdAt")',
+      },
+    ],
+    sampleOutput: [{ tabName: "Leads_2025", created: true }],
+  },
+  {
+    id: "sheets.watch_new_rows",
+    name: "Watch — New Rows",
+    shortName: "Watch New Rows",
+    description:
+      "Triggers whenever a new row is appended to a sheet tab. (Polling — Phase 4 wires real polling.)",
+    group: "googleSheets",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL",
+      },
+      {
+        key: "tabName",
+        label: "Tab name",
+        type: "text",
+        required: true,
+        help: "Name of the sheet tab to watch",
+      },
+      {
+        key: "watchColumn",
+        label: "Watch column",
+        type: "text",
+        required: true,
+        help: 'Column header used to detect new rows (e.g. "id"). Values must be unique per row.',
+      },
+    ],
+    sampleOutput: [
+      {
+        row: 14,
+        id: "99",
+        name: "New Contact",
+        email: "new@example.com",
+        createdAt: "2025-05-11T08:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "bitrix.create_lead",
+    name: "Create Lead",
+    shortName: "Create Lead",
+    description:
+      "Creates a new lead in Bitrix24 CRM with contact details and source.",
+    group: "bitrix24",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "title",
+        label: "Lead title",
+        type: "text",
+        required: true,
+        help: 'Short descriptive title for the lead (e.g. "Website inquiry — Alice")',
+      },
+      {
+        key: "name",
+        label: "First name",
+        type: "text",
+        required: true,
+        help: "Contact first name",
+      },
+      {
+        key: "lastName",
+        label: "Last name",
+        type: "text",
+        required: false,
+        help: "Contact last name",
+      },
+      {
+        key: "phone",
+        label: "Phone",
+        type: "text",
+        required: false,
+        help: "Phone number in any format",
+      },
+      {
+        key: "email",
+        label: "Email",
+        type: "text",
+        required: false,
+        help: "Contact email address",
+      },
+      {
+        key: "sourceId",
+        label: "Source",
+        type: "select",
+        required: true,
+        options: [
+          { value: "WEB", label: "Website" },
+          { value: "CALL", label: "Inbound call" },
+          { value: "EMAIL", label: "Email" },
+          { value: "OTHER", label: "Other" },
+        ],
+      },
+      {
+        key: "comments",
+        label: "Comments",
+        type: "textarea",
+        required: false,
+        help: "Additional notes to attach to the lead",
+      },
+    ],
+    sampleOutput: [{ leadId: "lead_001", createdAt: "2025-05-11T08:00:00Z" }],
+  },
+  {
+    id: "bitrix.update_lead",
+    name: "Update Lead",
+    shortName: "Update Lead",
+    description: "Updates fields on an existing Bitrix24 lead by ID.",
+    group: "bitrix24",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "leadId",
+        label: "Lead ID",
+        type: "text",
+        required: true,
+        help: "The numeric ID of the lead to update",
+      },
+      {
+        key: "title",
+        label: "New title",
+        type: "text",
+        required: false,
+        help: "Leave blank to keep existing title",
+      },
+      {
+        key: "statusId",
+        label: "Status",
+        type: "select",
+        required: false,
+        options: [
+          { value: "", label: "No change" },
+          { value: "NEW", label: "New" },
+          { value: "IN_PROCESS", label: "In process" },
+          { value: "PROCESSED", label: "Processed" },
+          { value: "CONVERTED", label: "Converted" },
+        ],
+      },
+      { key: "comments", label: "Comments", type: "textarea", required: false },
+    ],
+    sampleOutput: [{ leadId: "lead_001", updated: true }],
+  },
+  {
+    id: "bitrix.find_leads",
+    name: "Find Leads",
+    shortName: "Find Leads",
+    description:
+      "Searches Bitrix24 CRM for leads matching a field filter and returns matches.",
+    group: "bitrix24",
+    outputsArray: true,
+    configSchema: [
+      {
+        key: "filterField",
+        label: "Filter field",
+        type: "select",
+        required: true,
+        options: [
+          { value: "EMAIL", label: "Email" },
+          { value: "PHONE", label: "Phone" },
+          { value: "STATUS_ID", label: "Status" },
+          { value: "SOURCE_ID", label: "Source" },
+        ],
+      },
+      {
+        key: "filterValue",
+        label: "Filter value",
+        type: "text",
+        required: true,
+        help: "Value to match against the selected field",
+      },
+      {
+        key: "limit",
+        label: "Limit",
+        type: "number",
+        required: false,
+        help: "Maximum results to return (default 10, max 50)",
+      },
+    ],
+    sampleOutput: [
+      {
+        id: "lead_001",
+        title: "Website inquiry — Alice",
+        status: "NEW",
+        createdAt: "2025-05-01T09:00:00Z",
+      },
+      {
+        id: "lead_002",
+        title: "Inbound call — Bob",
+        status: "IN_PROCESS",
+        createdAt: "2025-05-03T14:30:00Z",
+      },
+      {
+        id: "lead_003",
+        title: "Email inquiry — Carol",
+        status: "PROCESSED",
+        createdAt: "2025-05-07T11:00:00Z",
+      },
+    ],
+  },
+  {
+    id: "bitrix.create_deal",
+    name: "Create Deal",
+    shortName: "Create Deal",
+    description:
+      "Creates a new deal in a Bitrix24 pipeline with opportunity amount.",
+    group: "bitrix24",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "title",
+        label: "Deal title",
+        type: "text",
+        required: true,
+        help: "Title for the new deal",
+      },
+      {
+        key: "categoryId",
+        label: "Pipeline ID",
+        type: "text",
+        required: true,
+        help: "Bitrix24 pipeline (category) ID — found in CRM settings",
+      },
+      {
+        key: "stageId",
+        label: "Stage ID",
+        type: "text",
+        required: true,
+        help: 'Stage within the pipeline (e.g. "C1:NEW")',
+      },
+      {
+        key: "opportunity",
+        label: "Deal amount",
+        type: "number",
+        required: false,
+        help: "Monetary value of the deal",
+      },
+      {
+        key: "currency",
+        label: "Currency",
+        type: "text",
+        required: false,
+        help: 'ISO 4217 currency code (e.g. "USD"). Defaults to account currency.',
+      },
+      {
+        key: "contactId",
+        label: "Contact ID",
+        type: "text",
+        required: false,
+        help: "Optional — link to existing Bitrix24 contact by ID",
+      },
+    ],
+    sampleOutput: [{ dealId: "deal_001", createdAt: "2025-05-11T08:00:00Z" }],
+  },
+  {
+    id: "bitrix.update_deal",
+    name: "Update Deal",
+    shortName: "Update Deal",
+    description: "Updates fields on an existing Bitrix24 deal by ID.",
+    group: "bitrix24",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "dealId",
+        label: "Deal ID",
+        type: "text",
+        required: true,
+        help: "The numeric ID of the deal to update",
+      },
+      {
+        key: "stageId",
+        label: "New stage",
+        type: "text",
+        required: false,
+        help: "Stage ID to move the deal to (leave blank for no change)",
+      },
+      {
+        key: "opportunity",
+        label: "New amount",
+        type: "number",
+        required: false,
+      },
+      { key: "comments", label: "Comments", type: "textarea", required: false },
+    ],
+    sampleOutput: [{ dealId: "deal_001", updated: true }],
+  },
+  {
+    id: "bitrix.create_smart_process_item",
+    name: "Create Smart Process Item",
+    shortName: "Smart Process Item",
+    description:
+      "Creates an item in a Bitrix24 Smart Process. Smart Processes are Bitrix24's flexible custom CRM entity primitive.",
+    group: "bitrix24",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "entityTypeId",
+        label: "Entity type ID",
+        type: "text",
+        required: true,
+        help: "The dynamic entity type ID for your Smart Process. Find it in CRM → Smart Processes settings.",
+      },
+      {
+        key: "title",
+        label: "Title",
+        type: "text",
+        required: true,
+        help: "Title for the new item",
+      },
+      { key: "stageId", label: "Stage ID", type: "text", required: false },
+      {
+        key: "fields",
+        label: "Additional fields",
+        type: "fieldMapping",
+        required: false,
+        help: "Map extra custom fields. Keys are Bitrix24 field API names.",
+      },
+    ],
+    sampleOutput: [{ itemId: "spi_001", createdAt: "2025-05-11T08:00:00Z" }],
+  },
+];
+
+MODULES.push(...PHASE_3_MODULES);
 
 export function getModule(type: ModuleType): ModuleDefinition | undefined {
   return MODULES.find((m) => m.id === type);

@@ -14,6 +14,10 @@
   --color-sheets-green: #0f9d58;
   --color-schedule-slate: oklch(0.554 0.046 257.417);
   --color-manual-indigo: #6366f1;
+
+  /* Phase 3 brand tokens */
+  --color-bitrix-cyan: #2FC6F6;
+  --color-watch-violet: #8b5cf6;
 }
 
 @theme inline {

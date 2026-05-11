@@ -18,6 +18,7 @@ import { Button } from "~/components/ui/button";
 import { ConnectionStatus } from "~/components/connections/ConnectionStatus";
 import { DisconnectDialog } from "~/components/connections/DisconnectDialog";
 import { TokenExpiryWarning } from "~/components/connections/TokenExpiryWarning";
+import { BitrixConnectionCard } from "~/components/connections/cards";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -191,6 +192,20 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
   }
 
   const isAnyLoading = isConnecting || isDisconnecting || isRefreshing;
+
+  // --- Bitrix24 provider routing ---
+  // All hooks above run unconditionally (React rules). After hooks, we can
+  // safely early-return for a specific provider. Uses lowercase 'bitrix' —
+  // the tRPC toFrontendConnection normalizer returns lowercase, NOT 'BITRIX24'.
+  if (connection.provider === 'bitrix') {
+    return (
+      <BitrixConnectionCard
+        connection={connection}
+        onConnect={handleConnect}
+        onDisconnect={handleDisconnect}
+      />
+    );
+  }
 
   return (
     <article

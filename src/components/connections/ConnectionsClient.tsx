@@ -8,6 +8,7 @@ import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { ConnectionCard } from "~/components/connections/ConnectionCard";
 import { Skeleton } from "~/components/ui/skeleton";
+import { BitrixIcon } from "~/lib/integration-icons";
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_denied: "You denied access to Google Sheets. Try again to connect.",
@@ -22,11 +23,16 @@ const ERROR_MESSAGES: Record<string, string> = {
     "OAuth state mismatch (possible session change). Please try again.",
   facebook_exchange_failed:
     "Failed to complete Facebook connection. Check server logs for details.",
+  bitrix_invalid_code:
+    "Bitrix24 connection failed: invalid authorization code",
+  bitrix_upsert_failed:
+    "Bitrix24 connection failed: could not save credentials",
 };
 
 const SUCCESS_LABELS: Record<string, string> = {
   google: "Google Sheets",
   facebook: "Facebook Ads",
+  bitrix: "Bitrix24",
 };
 
 function CardSkeleton() {
@@ -97,7 +103,7 @@ export function ConnectionsClient() {
   // Empty-state CTAs share one mutation. Server returns { redirectUrl }; we
   // navigate the window to it so Google/Facebook can prompt for consent.
   const [pendingProvider, setPendingProvider] = useState<
-    "google" | "facebook" | null
+    "google" | "facebook" | "bitrix" | null
   >(null);
 
   const connectMutation = api.connections.connect.useMutation({
@@ -113,7 +119,7 @@ export function ConnectionsClient() {
     },
   });
 
-  function handleConnect(provider: "google" | "facebook") {
+  function handleConnect(provider: "google" | "facebook" | "bitrix") {
     setPendingProvider(provider);
     connectMutation.mutate({ provider });
   }
@@ -123,7 +129,7 @@ export function ConnectionsClient() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-foreground">Connections</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Manage your Google Sheets and Facebook Ads integrations.
+          Manage your Google Sheets, Facebook Ads, and Bitrix24 integrations.
         </p>
       </div>
 
@@ -160,10 +166,11 @@ export function ConnectionsClient() {
       {/* Loading state */}
       {isLoading && (
         <div
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           aria-label="Loading connections"
           aria-busy="true"
         >
+          <CardSkeleton />
           <CardSkeleton />
           <CardSkeleton />
         </div>
@@ -178,11 +185,10 @@ export function ConnectionsClient() {
           <h2 className="mt-4 text-sm font-medium text-foreground">
             No connections yet
           </h2>
-          <p className="mt-1.5 max-w-xs text-sm text-muted-foreground">
-            Connect Google Sheets or Facebook to get started. Your syncs need
-            both.
+          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+            Connect Google Sheets, Facebook, or Bitrix24 to get started.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-6 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-3">
             <Button
               size="sm"
               aria-label="Connect Google Sheets"
@@ -206,13 +212,26 @@ export function ConnectionsClient() {
                 ? "Connecting…"
                 : "Connect Facebook Ads"}
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label="Connect Bitrix24"
+              className="min-h-[2.75rem] gap-1.5 bg-bitrix-cyan/10 text-bitrix-cyan hover:bg-bitrix-cyan/20 hover:text-bitrix-cyan"
+              onClick={() => handleConnect("bitrix")}
+              disabled={pendingProvider !== null}
+            >
+              <BitrixIcon className="size-4 shrink-0" aria-hidden="true" />
+              {pendingProvider === "bitrix"
+                ? "Connecting…"
+                : "Connect Bitrix24"}
+            </Button>
           </div>
         </div>
       )}
 
       {/* Success state */}
       {!isLoading && !isError && connections && connections.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {connections.map((connection) => (
             <ConnectionCard key={connection.id} connection={connection} />
           ))}

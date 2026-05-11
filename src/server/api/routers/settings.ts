@@ -1,25 +1,62 @@
 import { z } from "zod";
 
-import { MOCK_USER } from "~/server/mocks/data";
-import type { User } from "~/server/mocks/types";
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { db } from "~/server/db";
+import { createTRPCRouter, authedProcedure } from "~/server/api/trpc";
 
 const ThemeSchema = z.enum(["light", "dark", "system"]);
 
 export const settingsRouter = createTRPCRouter({
-  get: publicProcedure.query((): User => MOCK_USER),
+  get: authedProcedure.query(async ({ ctx }) => {
+    const user = await db.user.findUniqueOrThrow({
+      where: { id: ctx.userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        allowlisted: true,
+        timezone: true,
+        theme: true,
+        createdAt: true,
+      },
+    });
 
-  updateTheme: publicProcedure
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name ?? "",
+      image: user.image,
+      allowlisted: user.allowlisted,
+      timezone: user.timezone,
+      theme: ThemeSchema.catch("system").parse(user.theme),
+      createdAt: user.createdAt,
+    };
+  }),
+
+  updateTheme: authedProcedure
     .input(z.object({ theme: ThemeSchema }))
-    .mutation(({ input }): { theme: User["theme"] } => ({
-      theme: input.theme,
-    })),
+    .mutation(async ({ ctx, input }) => {
+      await db.user.update({
+        where: { id: ctx.userId },
+        data: { theme: input.theme },
+      });
+      return { theme: input.theme };
+    }),
 
-  updateTimezone: publicProcedure
+  updateTimezone: authedProcedure
     .input(z.object({ timezone: z.string().min(1) }))
-    .mutation(({ input }): { timezone: string } => ({
-      timezone: input.timezone,
-    })),
+    .mutation(async ({ ctx, input }) => {
+      await db.user.update({
+        where: { id: ctx.userId },
+        data: { timezone: input.timezone },
+      });
+      return { timezone: input.timezone };
+    }),
 
-  deleteAllData: publicProcedure.mutation((): { ok: true } => ({ ok: true })),
+  deleteAllData: authedProcedure.mutation(async ({ ctx }) => {
+    // Cascade-deletes all user-owned rows (OAuthConnection, AdAccount, Run, …)
+    // via Prisma's onDelete: Cascade constraints.
+    await db.user.delete({ where: { id: ctx.userId } });
+    return { ok: true } as const;
+  }),
 });

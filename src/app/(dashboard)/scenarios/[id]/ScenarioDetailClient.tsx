@@ -88,6 +88,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "~/components/ui/tabs";
+import { cn } from "~/lib/utils";
 import { BuilderHeader } from "~/components/scenarios/builder/BuilderHeader";
 import { preserveCompatibleTriggerConfig } from "~/components/scenarios/builder/ScenarioBuilder";
 import { StepCard, validateStepConfig, type DraftStep } from "~/components/scenarios/builder/StepCard";
@@ -168,9 +169,9 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
     })),
   );
 
-  // Existing scenario: all collapsed by default
-  const [expandedStepIds, setExpandedStepIds] = React.useState<Set<string>>(
-    () => new Set<string>(),
+  // C.3: First step expanded by default (single-expand model)
+  const [expandedStepId, setExpandedStepId] = React.useState<string | null>(
+    steps.length > 0 ? (steps[0]?.id ?? null) : null,
   );
 
   const [showErrors, setShowErrors] = React.useState(false);
@@ -237,11 +238,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         ),
       );
       // Auto-expand the trigger so the new config is immediately visible.
-      setExpandedStepIds((prev) => {
-        const triggerStep = steps.find((s) => s.position === 1);
-        if (!triggerStep) return prev;
-        return new Set([...prev, triggerStep.id]);
-      });
+      const triggerStep = steps.find((s) => s.position === 1);
+      if (triggerStep) setExpandedStepId(triggerStep.id);
       setModalOpen(false);
       setModalMode("insert");
       return;
@@ -260,7 +258,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
       ].map((s, idx) => ({ ...s, position: idx + 1 }));
       return updated;
     });
-    setExpandedStepIds((prev) => new Set([...prev, newStep.id]));
+    // C.3: single-expand — open new step
+    setExpandedStepId(newStep.id);
     setModalOpen(false);
   }
 
@@ -268,11 +267,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
     setSteps((prev) =>
       prev.filter((s) => s.id !== stepId).map((s, idx) => ({ ...s, position: idx + 1 })),
     );
-    setExpandedStepIds((prev) => {
-      const next = new Set(prev);
-      next.delete(stepId);
-      return next;
-    });
+    setExpandedStepId((prev) => (prev === stepId ? null : prev));
   }
 
   function handleConfigChange(stepId: string, config: Record<string, unknown>) {
@@ -280,15 +275,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   }
 
   function handleToggleExpand(stepId: string) {
-    setExpandedStepIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(stepId)) {
-        next.delete(stepId);
-      } else {
-        next.add(stepId);
-      }
-      return next;
-    });
+    // Single-expand model
+    setExpandedStepId((prev) => (prev === stepId ? null : stepId));
   }
 
   function handleDragKeyDown(stepId: string, e: React.KeyboardEvent) {
@@ -388,7 +376,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   }
 
   const builderContent = (
-    <div className="mx-auto max-w-2xl px-4 py-6 pb-24">
+    <div className={cn("mx-auto max-w-2xl px-4 py-6", showTestPanel ? "pb-[280px]" : "pb-24")}>
       {saveError && (
         <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           <span className="mt-0.5 shrink-0" aria-hidden="true">&#x26A0;</span>
@@ -432,7 +420,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
                 >
                   <StepCard
                     step={step}
-                    isExpanded={expandedStepIds.has(step.id)}
+                    isExpanded={expandedStepId === step.id}
                     onToggleExpand={() => handleToggleExpand(step.id)}
                     onConfigChange={(config) => handleConfigChange(step.id, config)}
                     onDelete={() => handleDeleteStep(step.id)}
@@ -479,18 +467,6 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
           <p>Add at least one action step to make this scenario runnable.</p>
         </div>
       )}
-
-      {showTestPanel && (
-        <TestRunPanel
-          results={testResults}
-          stepModuleTypes={steps.map((s) => s.moduleType)}
-          isLoading={isTesting}
-          onClose={() => {
-            setShowTestPanel(false);
-            setTestResults([]);
-          }}
-        />
-      )}
     </div>
   );
 
@@ -511,7 +487,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         isTriggerSlot={modalMode === "replace-trigger" || modalInsertAt === 1}
       />
 
-      {/* Builder header */}
+      {/* Builder header — now receives steps, scenarioId, scenarioRuns for C.1/C.2 */}
       <BuilderHeader
         name={name}
         enabled={enabled}
@@ -524,6 +500,9 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         onSave={() => void handleSave()}
         onTest={() => void handleTest()}
         onBack={handleBack}
+        steps={steps}
+        scenarioId={scenario.id}
+        scenarioRuns={scenarioRuns}
       />
 
       {/* Tabs */}
@@ -563,6 +542,19 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* C.5: Sliding bottom dock — rendered outside tabs so it overlays everything */}
+      {showTestPanel && (
+        <TestRunPanel
+          results={testResults}
+          stepModuleTypes={steps.map((s) => s.moduleType)}
+          isLoading={isTesting}
+          onClose={() => {
+            setShowTestPanel(false);
+            setTestResults([]);
+          }}
+        />
+      )}
     </>
   );
 }

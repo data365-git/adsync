@@ -42,6 +42,9 @@ export function SheetsAppendConfig({
           Spreadsheet ID
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          The ID from your Google Sheet's URL: docs.google.com/spreadsheets/d/[THIS-PART]/edit
+        </p>
         <Input
           id="sheets-append-id"
           type="text"
@@ -50,16 +53,11 @@ export function SheetsAppendConfig({
           onChange={(e) => onChange({ ...config, spreadsheetId: e.target.value })}
           aria-required="true"
           aria-invalid={!!errors?.spreadsheetId}
-          aria-describedby={errors?.spreadsheetId ? "sheets-append-id-error" : "sheets-append-id-hint"}
         />
-        {errors?.spreadsheetId ? (
-          <p id="sheets-append-id-error" role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+        {errors?.spreadsheetId && (
+          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
             <span aria-hidden="true">&#x26A0;</span>
             {errors.spreadsheetId}
-          </p>
-        ) : (
-          <p id="sheets-append-id-hint" className="text-xs text-muted-foreground">
-            Found in the Sheets URL: <code className="font-mono">/spreadsheets/d/[ID]/</code>
           </p>
         )}
       </div>
@@ -70,6 +68,9 @@ export function SheetsAppendConfig({
           Tab name
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          The exact name of the sheet tab to write to (case-sensitive). It must already exist.
+        </p>
         <Input
           id="sheets-append-tab"
           type="text"
@@ -93,6 +94,9 @@ export function SheetsAppendConfig({
           Fields to write
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Choose which fields from the previous step to write as columns. The column header in Sheets will match the field name.
+        </p>
         <FieldMappingPicker
           availableFields={availableFields}
           value={mappedFields}

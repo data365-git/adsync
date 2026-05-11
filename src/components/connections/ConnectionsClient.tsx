@@ -1,10 +1,33 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { AlertCircle, Plug } from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { ConnectionCard } from "~/components/connections/ConnectionCard";
 import { Skeleton } from "~/components/ui/skeleton";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  google_denied: "You denied access to Google Sheets. Try again to connect.",
+  google_invalid: "Google sent an invalid response. Please try again.",
+  google_state_mismatch:
+    "OAuth state mismatch (possible session change). Please try again.",
+  google_exchange_failed:
+    "Failed to complete Google connection. Check server logs for details.",
+  facebook_denied: "You denied access to Facebook. Try again to connect.",
+  facebook_invalid: "Facebook sent an invalid response. Please try again.",
+  facebook_state_mismatch:
+    "OAuth state mismatch (possible session change). Please try again.",
+  facebook_exchange_failed:
+    "Failed to complete Facebook connection. Check server logs for details.",
+};
+
+const SUCCESS_LABELS: Record<string, string> = {
+  google: "Google Sheets",
+  facebook: "Facebook Ads",
+};
 
 function CardSkeleton() {
   return (
@@ -35,12 +58,65 @@ function CardSkeleton() {
 }
 
 export function ConnectionsClient() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const utils = api.useUtils();
+
   const {
     data: connections,
     isLoading,
     isError,
     refetch,
   } = api.connections.list.useQuery();
+
+  // Surface OAuth callback outcome via toast and clean the URL so the toast
+  // doesn't re-fire on every render. Both /api/oauth/google/callback and
+  // /api/oauth/facebook/callback redirect back here with ?success=<provider>
+  // or ?error=<reason>.
+  useEffect(() => {
+    const error = searchParams.get("error");
+    const success = searchParams.get("success");
+    if (!error && !success) return;
+
+    if (error) {
+      toast.error(
+        ERROR_MESSAGES[error] ?? "Connection failed. Please try again.",
+      );
+    }
+    if (success) {
+      toast.success(
+        `${SUCCESS_LABELS[success] ?? success} connected successfully.`,
+      );
+      // Refresh the connections list so the newly connected card appears.
+      void utils.connections.list.invalidate();
+    }
+    // Strip the query params from the URL after handling.
+    router.replace("/connections");
+  }, [searchParams, router, utils]);
+
+  // Empty-state CTAs share one mutation. Server returns { redirectUrl }; we
+  // navigate the window to it so Google/Facebook can prompt for consent.
+  const [pendingProvider, setPendingProvider] = useState<
+    "google" | "facebook" | null
+  >(null);
+
+  const connectMutation = api.connections.connect.useMutation({
+    onSuccess: (data) => {
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      } else {
+        setPendingProvider(null);
+      }
+    },
+    onError: () => {
+      setPendingProvider(null);
+    },
+  });
+
+  function handleConnect(provider: "google" | "facebook") {
+    setPendingProvider(provider);
+    connectMutation.mutate({ provider });
+  }
 
   return (
     <div>
@@ -111,16 +187,24 @@ export function ConnectionsClient() {
               size="sm"
               aria-label="Connect Google Sheets"
               className="min-h-[2.75rem]"
+              onClick={() => handleConnect("google")}
+              disabled={pendingProvider !== null}
             >
-              Connect Google Sheets
+              {pendingProvider === "google"
+                ? "Connecting…"
+                : "Connect Google Sheets"}
             </Button>
             <Button
               size="sm"
               variant="outline"
               aria-label="Connect Facebook Ads"
               className="min-h-[2.75rem]"
+              onClick={() => handleConnect("facebook")}
+              disabled={pendingProvider !== null}
             >
-              Connect Facebook Ads
+              {pendingProvider === "facebook"
+                ? "Connecting…"
+                : "Connect Facebook Ads"}
             </Button>
           </div>
         </div>

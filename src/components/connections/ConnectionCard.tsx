@@ -101,7 +101,16 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
   // --- connect / reconnect ---
   const [isConnecting, setIsConnecting] = useState(false);
   const connectMutation = api.connections.connect.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Server returns { redirectUrl } pointing at our /api/oauth/<provider>
+      // route, which then bounces to Google/Facebook's consent screen. We must
+      // actually navigate the window; the OAuth callback redirects back to
+      // /connections and the list refreshes there.
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      // Fallback (mutation returned no redirectUrl): show optimistic state.
       setOptimisticStatus("connected");
       void utils.connections.list.invalidate();
     },

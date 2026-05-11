@@ -44,12 +44,21 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  render,
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // Base UI defaults nativeButton=true and refuses to wire up click semantics
+  // if the render target is not a <button>. When callers pass a `render` prop
+  // (e.g. <Button render={<Link/>}> for navigation), default to nativeButton=false
+  // so the rendered element (anchor, etc.) gets working interactions. Callers can
+  // override explicitly by passing nativeButton themselves.
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      render={render}
+      nativeButton={nativeButton ?? !render}
       {...props}
     />
   )

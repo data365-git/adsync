@@ -3,7 +3,15 @@ import { Provider, ConnectionStatus } from "@prisma/client";
 import { encryptToken, decryptToken } from "~/lib/crypto";
 import { google } from "googleapis";
 
-const SCOPES = ["https://www.googleapis.com/auth/spreadsheets"];
+// openid / email / profile are required so we can call oauth2.userinfo.get()
+// after the token exchange to display which Google account is connected.
+// spreadsheets is the actual data-source scope.
+const SCOPES = [
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/spreadsheets",
+];
 
 export function getOAuthClient() {
   const clientId = process.env.GOOGLE_OAUTH_SHEETS_CLIENT_ID;

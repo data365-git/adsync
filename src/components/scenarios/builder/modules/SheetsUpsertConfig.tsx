@@ -58,6 +58,9 @@ export function SheetsUpsertConfig({
           Spreadsheet ID
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          The ID from your Google Sheet's URL: docs.google.com/spreadsheets/d/[THIS-PART]/edit
+        </p>
         <Input
           id="sheets-upsert-id"
           type="text"
@@ -66,16 +69,11 @@ export function SheetsUpsertConfig({
           onChange={(e) => onChange({ ...config, spreadsheetId: e.target.value })}
           aria-required="true"
           aria-invalid={!!errors?.spreadsheetId}
-          aria-describedby={errors?.spreadsheetId ? "sheets-upsert-id-error" : "sheets-upsert-id-hint"}
         />
-        {errors?.spreadsheetId ? (
-          <p id="sheets-upsert-id-error" role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+        {errors?.spreadsheetId && (
+          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
             <span aria-hidden="true">&#x26A0;</span>
             {errors.spreadsheetId}
-          </p>
-        ) : (
-          <p id="sheets-upsert-id-hint" className="text-xs text-muted-foreground">
-            Found in the Sheets URL: <code className="font-mono">/spreadsheets/d/[ID]/</code>
           </p>
         )}
       </div>
@@ -86,6 +84,9 @@ export function SheetsUpsertConfig({
           Tab name
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          The exact name of the sheet tab to write to (case-sensitive). It must already exist.
+        </p>
         <Input
           id="sheets-upsert-tab"
           type="text"
@@ -109,8 +110,8 @@ export function SheetsUpsertConfig({
           Key fields
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
-        <p className="text-xs text-muted-foreground">
-          Rows matching these fields are updated; the rest are appended.
+        <p className="text-xs text-muted-foreground mb-2">
+          Fields that uniquely identify a row. If a row with the same key values already exists, it will be updated rather than added.
         </p>
         <div className="flex gap-2">
           <Input
@@ -170,6 +171,9 @@ export function SheetsUpsertConfig({
           Fields to write
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Choose which fields from the previous step to write as columns. The column header in Sheets will match the field name.
+        </p>
         <FieldMappingPicker
           availableFields={availableFields}
           value={mappedFields}

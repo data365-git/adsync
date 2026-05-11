@@ -9,8 +9,22 @@ import { ManualConfig } from "./modules/ManualConfig";
 import { FbAccountInsightsConfig } from "./modules/FbAccountInsightsConfig";
 import { FbCampaignInsightsConfig } from "./modules/FbCampaignInsightsConfig";
 import { FbAdInsightsConfig } from "./modules/FbAdInsightsConfig";
+import { FbListAdAccountsConfig } from "./modules/FbListAdAccountsConfig";
+import { FbListAdsConfig } from "./modules/FbListAdsConfig";
+import { FbGetAdConfig } from "./modules/FbGetAdConfig";
 import { SheetsAppendConfig } from "./modules/SheetsAppendConfig";
 import { SheetsUpsertConfig } from "./modules/SheetsUpsertConfig";
+import { SheetsFindRowsConfig } from "./modules/SheetsFindRowsConfig";
+import { SheetsUpdateRowConfig } from "./modules/SheetsUpdateRowConfig";
+import { SheetsDeleteRowConfig } from "./modules/SheetsDeleteRowConfig";
+import { SheetsGetRowConfig } from "./modules/SheetsGetRowConfig";
+import { SheetsCreateTabConfig } from "./modules/SheetsCreateTabConfig";
+import { BitrixCreateLeadConfig } from "./modules/BitrixCreateLeadConfig";
+import { BitrixUpdateLeadConfig } from "./modules/BitrixUpdateLeadConfig";
+import { BitrixFindLeadsConfig } from "./modules/BitrixFindLeadsConfig";
+import { BitrixCreateDealConfig } from "./modules/BitrixCreateDealConfig";
+import { BitrixUpdateDealConfig } from "./modules/BitrixUpdateDealConfig";
+import { BitrixCreateSmartProcessItemConfig } from "./modules/BitrixCreateSmartProcessItemConfig";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import { getModule } from "~/lib/modules";
 import { humanizeCronShort } from "~/lib/cron-builder";
@@ -19,6 +33,108 @@ import type { ModuleType, ScenarioStep } from "~/server/mocks/types";
 
 /** A step that may not yet be saved to the server — scenarioId is optional */
 export type DraftStep = Omit<ScenarioStep, "scenarioId"> & { scenarioId?: string };
+
+// ─── Module config renderer props (shared interface) ─────────────────────────
+
+interface ModuleConfigProps {
+  config: Record<string, unknown>;
+  onChange: (config: Record<string, unknown>) => void;
+  errors?: Record<string, string>;
+  prevStepModuleType?: ModuleType;
+}
+
+// ─── MODULE_CONFIG_MAP ────────────────────────────────────────────────────────
+// Maps every ModuleType to a renderer factory.
+// Renderer wrapper logic is Agent C's zone — only add entries here.
+
+type ModuleConfigRenderer = (props: ModuleConfigProps) => React.ReactNode;
+
+const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
+  "trigger.schedule": ({ config, onChange, errors }) => (
+    <ScheduleConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "trigger.manual": ({ config, onChange }) => (
+    <ManualConfig config={config} onChange={onChange} />
+  ),
+  // Legacy — same config shape as fb.ad_insights (fbAccountId/dateWindowDays/metrics)
+  "fb.account_insights": ({ config, onChange, errors }) => (
+    <FbAccountInsightsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "fb.campaign_insights": ({ config, onChange, errors }) => (
+    <FbCampaignInsightsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "fb.ad_insights": ({ config, onChange, errors }) => (
+    <FbAdInsightsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "fb.list_ad_accounts": ({ config, onChange, errors }) => (
+    <FbListAdAccountsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "fb.list_ads": ({ config, onChange, errors }) => (
+    <FbListAdsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "fb.get_ad": ({ config, onChange, errors }) => (
+    <FbGetAdConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "sheets.append": ({ config, onChange, errors, prevStepModuleType }) => (
+    <SheetsAppendConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepModuleType={prevStepModuleType}
+    />
+  ),
+  "sheets.upsert": ({ config, onChange, errors, prevStepModuleType }) => (
+    <SheetsUpsertConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepModuleType={prevStepModuleType}
+    />
+  ),
+  "sheets.find_rows": ({ config, onChange, errors }) => (
+    <SheetsFindRowsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "sheets.update_row": ({ config, onChange, errors, prevStepModuleType }) => (
+    <SheetsUpdateRowConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepModuleType={prevStepModuleType}
+    />
+  ),
+  "sheets.delete_row": ({ config, onChange, errors }) => (
+    <SheetsDeleteRowConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "sheets.get_row": ({ config, onChange, errors }) => (
+    <SheetsGetRowConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "sheets.create_tab": ({ config, onChange, errors }) => (
+    <SheetsCreateTabConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "bitrix.create_lead": ({ config, onChange, errors }) => (
+    <BitrixCreateLeadConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "bitrix.update_lead": ({ config, onChange, errors }) => (
+    <BitrixUpdateLeadConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "bitrix.find_leads": ({ config, onChange, errors }) => (
+    <BitrixFindLeadsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "bitrix.create_deal": ({ config, onChange, errors }) => (
+    <BitrixCreateDealConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "bitrix.update_deal": ({ config, onChange, errors }) => (
+    <BitrixUpdateDealConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "bitrix.create_smart_process_item": ({ config, onChange, errors, prevStepModuleType }) => (
+    <BitrixCreateSmartProcessItemConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepModuleType={prevStepModuleType}
+    />
+  ),
+};
 
 // ─── Validation helpers ───────────────────────────────────────────────────────
 
@@ -248,65 +364,14 @@ export function StepCard({
   );
 
   function renderConfig() {
-    switch (step.moduleType) {
-      case "trigger.schedule":
-        return (
-          <ScheduleConfig
-            config={step.config}
-            onChange={onConfigChange}
-            errors={showErrors ? errors : undefined}
-          />
-        );
-      case "trigger.manual":
-        return (
-          <ManualConfig
-            config={step.config}
-            onChange={onConfigChange}
-          />
-        );
-      case "fb.account_insights":
-        return (
-          <FbAccountInsightsConfig
-            config={step.config}
-            onChange={onConfigChange}
-            errors={showErrors ? errors : undefined}
-          />
-        );
-      case "fb.campaign_insights":
-        return (
-          <FbCampaignInsightsConfig
-            config={step.config}
-            onChange={onConfigChange}
-            errors={showErrors ? errors : undefined}
-          />
-        );
-      case "fb.ad_insights":
-        return (
-          <FbAdInsightsConfig
-            config={step.config}
-            onChange={onConfigChange}
-            errors={showErrors ? errors : undefined}
-          />
-        );
-      case "sheets.append":
-        return (
-          <SheetsAppendConfig
-            config={step.config}
-            onChange={onConfigChange}
-            errors={showErrors ? errors : undefined}
-            prevStepModuleType={prevStepModuleType}
-          />
-        );
-      case "sheets.upsert":
-        return (
-          <SheetsUpsertConfig
-            config={step.config}
-            onChange={onConfigChange}
-            errors={showErrors ? errors : undefined}
-            prevStepModuleType={prevStepModuleType}
-          />
-        );
-    }
+    const renderer = MODULE_CONFIG_MAP[step.moduleType];
+    if (!renderer) return null;
+    return renderer({
+      config: step.config,
+      onChange: onConfigChange,
+      errors: showErrors ? errors : undefined,
+      prevStepModuleType,
+    });
   }
 
   return (

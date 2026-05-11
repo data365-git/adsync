@@ -4,7 +4,7 @@ import { Provider, ConnectionStatus } from "@prisma/client";
 import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { getAuthedClient } from "~/integrations/google/oauth";
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
+// ─── Shared helpers ──────────────────────────────────────────────────────────
 
 function toFrontendConnection(conn: {
   id: string;
@@ -34,7 +34,7 @@ function toFrontendConnection(conn: {
   };
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
+// ─── Router ──────────────────────────────────────────────────────────────────
 
 export const connectionsRouter = createTRPCRouter({
   list: authedProcedure.query(async ({ ctx }) => {
@@ -47,8 +47,7 @@ export const connectionsRouter = createTRPCRouter({
   connect: authedProcedure
     .input(z.object({ provider: z.enum(["google", "facebook"]) }))
     .mutation(async ({ input }) => {
-      // Returns the OAuth initiation URL.
-      // Actual token storage happens in the OAuth callback routes.
+      // Returns the OAuth initiation URL; actual token storage happens in the callback routes.
       const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
       const url =
         input.provider === "google"
@@ -76,7 +75,7 @@ export const connectionsRouter = createTRPCRouter({
       if (!conn) throw new Error(`Connection ${input.id} not found`);
 
       if (conn.provider === Provider.GOOGLE_SHEETS) {
-        // getAuthedClient auto-refreshes if the token is expiring within 5 min
+        // Force a token refresh by calling getAuthedClient (auto-refreshes if expiring within 5 min)
         await getAuthedClient(ctx.userId);
         const updated = await db.oAuthConnection.findUniqueOrThrow({
           where: { id: conn.id },
@@ -87,7 +86,19 @@ export const connectionsRouter = createTRPCRouter({
         });
       }
 
-      // AGENT-C-TODO: Facebook refresh logic goes here
+      // Facebook: tokens are long-lived and don't refresh via API.
+      // If the token is expired, surface EXPIRED status so UI prompts reconnect.
+      if (conn.expiresAt && conn.expiresAt < new Date()) {
+        await db.oAuthConnection.update({
+          where: { id: conn.id },
+          data: { status: ConnectionStatus.EXPIRED },
+        });
+        return toFrontendConnection({
+          ...conn,
+          status: ConnectionStatus.EXPIRED,
+          connectedAt: conn.connectedAt,
+        });
+      }
       return toFrontendConnection({ ...conn, connectedAt: conn.connectedAt });
     }),
 });

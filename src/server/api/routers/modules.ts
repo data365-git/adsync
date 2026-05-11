@@ -47,7 +47,7 @@ export const modulesRouter = createTRPCRouter({
         config: z.record(z.string(), z.unknown()).optional(),
       }),
     )
-    .query(({ input }): Record<string, unknown> => {
+    .query(({ input }): Record<string, unknown>[] => {
       const mod = getModule(input.moduleType);
       if (!mod) throw new Error(`Unknown module type: ${input.moduleType}`);
       return mod.sampleOutput;

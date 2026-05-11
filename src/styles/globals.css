@@ -7,6 +7,13 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Phase 1.6 brand tokens — used by integration icon tiles. No dark-mode
+     overrides: brand colors stay constant across themes. */
+  --color-fb-blue: #1877f2;
+  --color-sheets-green: #0f9d58;
+  --color-schedule-slate: oklch(0.554 0.046 257.417);
+  --color-manual-indigo: #6366f1;
 }
 
 @theme inline {

@@ -36,6 +36,9 @@ export function FbAccountInsightsConfig({
           Ad account
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Which Facebook ad account to pull data from. Only accounts you&apos;ve connected appear here.
+        </p>
         <Select
           value={fbAccountId}
           onValueChange={(val) => {
@@ -67,6 +70,9 @@ export function FbAccountInsightsConfig({
           Date window (days)
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          How many days back from today this pull should cover. Larger windows give more history but make pulls slower.
+        </p>
         <Input
           id="fb-acc-datewindow"
           type="number"
@@ -81,13 +87,11 @@ export function FbAccountInsightsConfig({
           aria-invalid={!!errors?.dateWindowDays}
           className="w-28"
         />
-        {errors?.dateWindowDays ? (
+        {errors?.dateWindowDays && (
           <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
             <span aria-hidden="true">&#x26A0;</span>
             {errors.dateWindowDays}
           </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">1–30 days of historical data to pull.</p>
         )}
       </div>
 
@@ -97,6 +101,9 @@ export function FbAccountInsightsConfig({
           Metrics
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
+        <p className="text-xs text-muted-foreground mb-2">
+          The performance metrics to include in each row. Select all you&apos;ll need — you can filter in Sheets later.
+        </p>
         <MetricsMultiSelect
           value={metrics}
           onChange={(m) => onChange({ ...config, metrics: m })}

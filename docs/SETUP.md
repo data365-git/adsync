@@ -250,7 +250,7 @@ openssl rand -base64 32     # for NEXTAUTH_SECRET
 **Complete `.env` after filling in all values:**
 
 ```dotenv
-DATABASE_URL=postgresql://automation:automation@localhost:5432/automation
+DATABASE_URL=postgresql://automation:automation@localhost:5434/automation
 NEXTAUTH_SECRET=<generated above>
 NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=<from step 2.4>
@@ -268,7 +268,7 @@ FB_GRAPH_API_VERSION=v22.0
 
 **Checklist for Section 4:**
 - [ ] `.env` exists at repo root (not `.env.example`)
-- [ ] `DATABASE_URL` points to `localhost:5432/automation`
+- [ ] `DATABASE_URL` points to `localhost:5434/automation` (compose.yml maps host 5434 to container 5432 because this machine has native Postgres on 5432 and 5433)
 - [ ] `NEXTAUTH_SECRET` is a base64 string (~44 chars)
 - [ ] `NEXTAUTH_URL` is `http://localhost:3000`
 - [ ] Both `GOOGLE_CLIENT_ID` and `GOOGLE_OAUTH_SHEETS_CLIENT_ID` are filled in (they are different values)
@@ -327,7 +327,7 @@ manual setup done
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | `docker: command not found` or Docker Desktop not starting | Docker Desktop not installed or not running | Install from https://docker.com/products/docker-desktop. Restart PowerShell after install. On Windows, Docker Desktop must be running (check system tray). |
-| `pnpm db:up` errors with `port 5432 already in use` | Another Postgres instance running on 5432 | Run `netstat -ano | Select-String "5432"` to find the PID. Either stop the other service or change compose.yml port to `"5433:5432"` and update `DATABASE_URL` to use port 5433. |
+| `pnpm db:up` errors with `port already in use` | Another Postgres instance running on the configured host port | Run `netstat -ano | Select-String ":543"` to find the conflicting PID and port. Either stop the other service or change the host side of the port mapping in `compose.yml` (e.g., `"5435:5432"`) and update `DATABASE_URL` to match. This repo ships with `5434:5432` for that reason — adjust if 5434 is also in use on your machine. |
 | `pnpm prisma migrate deploy` fails with connection refused | Postgres container is not yet ready | Wait 5 seconds after `pnpm db:up` and retry. The first run requires pulling the image. |
 | `pnpm prisma migrate deploy` fails with "type already exists" | DB has stale enums from a previous partial migration | Run `pnpm db:reset` (destroys volume, recreates container) then retry from `pnpm db:up`. |
 | `pnpm dev` fails with "Missing environment variable" | `.env` file missing or has angle-bracket placeholders | Open `.env`, confirm every value is filled in (no `<...>` markers remain). |

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { cn } from "~/lib/utils";
 import { getIntegrationMeta } from "~/lib/integration-icons";
-import type { ModuleType } from "~/server/mocks/types";
 import type { ModuleDefinition } from "~/lib/modules";
 
 interface ModuleLibraryCardProps {
@@ -22,7 +21,7 @@ export function ModuleLibraryCard({
   onKeyDown,
   setRef,
 }: ModuleLibraryCardProps) {
-  const { Icon, tileBg, iconColor } = getIntegrationMeta(module.id as ModuleType);
+  const { Icon, tileBg, iconColor } = getIntegrationMeta(module.id);
 
   return (
     <button

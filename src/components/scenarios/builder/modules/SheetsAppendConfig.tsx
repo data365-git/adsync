@@ -43,7 +43,7 @@ export function SheetsAppendConfig({
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
         <p className="text-xs text-muted-foreground mb-2">
-          The ID from your Google Sheet's URL: docs.google.com/spreadsheets/d/[THIS-PART]/edit
+          The ID from your Google Sheet&apos;s URL: docs.google.com/spreadsheets/d/[THIS-PART]/edit
         </p>
         <Input
           id="sheets-append-id"

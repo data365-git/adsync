@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { GripVerticalIcon, ChevronDownIcon } from "lucide-react";
+import { GripVerticalIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { ModuleConfigShell } from "./modules/ModuleConfigShell";
 import { ScheduleConfig } from "./modules/ScheduleConfig";

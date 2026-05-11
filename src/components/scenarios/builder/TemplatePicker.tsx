@@ -6,7 +6,6 @@ import { PlusIcon } from "lucide-react";
 import { SCENARIO_TEMPLATES } from "~/lib/scenario-templates";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import { cn } from "~/lib/utils";
-import type { ModuleType } from "~/server/mocks/types";
 
 interface TemplatePickerProps {
   /** If set, auto-navigate to builder with this template pre-selected */
@@ -48,7 +47,7 @@ export function TemplatePicker({ selectedTemplateId: _selectedTemplateId }: Temp
 
           // Derive brand from the TERMINAL (last) action step
           const lastStep = steps[steps.length - 1];
-          const lastModuleType = lastStep?.moduleType as ModuleType | undefined;
+          const lastModuleType = lastStep?.moduleType;
           const meta = lastModuleType ? getIntegrationMeta(lastModuleType) : null;
 
           return (

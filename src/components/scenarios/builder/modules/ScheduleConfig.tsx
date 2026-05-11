@@ -95,7 +95,7 @@ function FrequencySelect({ value, onChange }: FrequencySelectProps) {
       <Select
         value={value}
         onValueChange={(v) => {
-          if (v !== null) onChange(v as Frequency);
+          if (v !== null) onChange(v);
         }}
       >
         <SelectTrigger id="sched-frequency" className="w-full">

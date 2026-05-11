@@ -110,7 +110,11 @@ function SampleTab({ moduleType }: { moduleType: ModuleType }) {
   const rows = mod.sampleOutput.slice(0, 3);
 
   function truncate(val: unknown): string {
-    const str = String(val ?? "");
+    if (val === null || val === undefined) return "";
+    let str: string;
+    if (typeof val === "string") str = val;
+    else if (typeof val === "number" || typeof val === "boolean" || typeof val === "bigint") str = val.toString();
+    else str = JSON.stringify(val) ?? "";
     return str.length > 20 ? str.slice(0, 20) + "…" : str;
   }
 

@@ -37,7 +37,7 @@ export function FbAccountInsightsConfig({
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
         <p className="text-xs text-muted-foreground mb-2">
-          Which Facebook ad account to pull data from. Only accounts you've connected appear here.
+          Which Facebook ad account to pull data from. Only accounts you&apos;ve connected appear here.
         </p>
         <Select
           value={fbAccountId}
@@ -102,7 +102,7 @@ export function FbAccountInsightsConfig({
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
         <p className="text-xs text-muted-foreground mb-2">
-          The performance metrics to include in each row. Select all you'll need — you can filter in Sheets later.
+          The performance metrics to include in each row. Select all you&apos;ll need — you can filter in Sheets later.
         </p>
         <MetricsMultiSelect
           value={metrics}

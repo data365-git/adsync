@@ -8,6 +8,7 @@ import { getAuthedClient } from "~/integrations/google/oauth";
 
 function toFrontendConnection(conn: {
   id: string;
+  userId: string;
   provider: Provider;
   status: ConnectionStatus;
   email: string | null;
@@ -16,6 +17,7 @@ function toFrontendConnection(conn: {
 }) {
   return {
     id: conn.id,
+    userId: conn.userId,
     provider:
       conn.provider === Provider.GOOGLE_SHEETS
         ? ("google" as const)

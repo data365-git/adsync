@@ -44,11 +44,11 @@ export function ProfileSection({ user }: ProfileSectionProps) {
           </Avatar>
           <dl className="space-y-1">
             <div>
-              <dt className="text-xs text-muted-foreground">Name</dt>
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</dt>
               <dd className="text-sm font-medium text-foreground">{user.name}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted-foreground">Email</dt>
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Email</dt>
               <dd className="text-sm text-foreground">{user.email}</dd>
             </div>
           </dl>

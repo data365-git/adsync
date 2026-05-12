@@ -42,7 +42,9 @@ export function LastRunBadge({ lastRunAt, lastRunStatus, isRunning }: Props) {
   if (isRunning) {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="text-xs text-muted-foreground">just now</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          just now
+        </span>
         <span
           className={cn(
             "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
@@ -68,7 +70,7 @@ export function LastRunBadge({ lastRunAt, lastRunStatus, isRunning }: Props) {
 
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
         <Clock className="size-3 shrink-0" aria-hidden />
         {relativeTime(lastRunAt)}
       </span>

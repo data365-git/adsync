@@ -1,21 +1,24 @@
 import Link from "next/link";
 
-import { formatDuration } from "~/lib/utils";
+import { cn, formatDuration } from "~/lib/utils";
 import type { Run } from "~/server/mocks/types";
 import { MOCK_SCENARIOS } from "~/server/mocks/data";
 
 interface MetadataItemProps {
   label: string;
   value: React.ReactNode;
+  valueClassName?: string;
 }
 
-function MetadataItem({ label, value }: MetadataItemProps) {
+function MetadataItem({ label, value, valueClassName }: MetadataItemProps) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd className="text-sm font-medium text-foreground">{value}</dd>
+      <dd className={cn("text-sm font-medium text-foreground", valueClassName)}>
+        {value}
+      </dd>
     </div>
   );
 }
@@ -81,16 +84,23 @@ export function RunMetadataGrid({ run }: RunMetadataGridProps) {
         <MetadataItem
           label="Started"
           value={formatAbsoluteDate(run.startedAt)}
+          valueClassName="tabular-nums"
         />
         <MetadataItem
           label="Finished"
           value={formatAbsoluteDate(run.finishedAt)}
+          valueClassName="tabular-nums"
         />
         <MetadataItem
           label="Duration"
           value={formatDuration(run.durationMs)}
+          valueClassName="tabular-nums"
         />
-        <MetadataItem label="Rows written" value={formatRowsWritten(run)} />
+        <MetadataItem
+          label="Rows written"
+          value={formatRowsWritten(run)}
+          valueClassName="tabular-nums"
+        />
       </dl>
     </section>
   );

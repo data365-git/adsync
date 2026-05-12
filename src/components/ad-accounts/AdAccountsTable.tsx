@@ -36,8 +36,15 @@ function SortIcon({
   sort: SortKey | null;
   dir: SortDir | null;
 }) {
-  if (sort !== column) return <ArrowUpDown className="ml-1 inline size-3 text-muted-foreground" aria-hidden />;
-  if (dir === "asc") return <ArrowUp className="ml-1 inline size-3" aria-hidden />;
+  if (sort !== column)
+    return (
+      <ArrowUpDown
+        className="text-muted-foreground ml-1 inline size-3"
+        aria-hidden
+      />
+    );
+  if (dir === "asc")
+    return <ArrowUp className="ml-1 inline size-3" aria-hidden />;
   return <ArrowDown className="ml-1 inline size-3" aria-hidden />;
 }
 
@@ -103,20 +110,23 @@ function SkeletonCards() {
   return (
     <div className="flex flex-col gap-3">
       {[1, 2, 3].map((i) => (
-        <div key={i} className="rounded-xl border p-4 flex flex-col gap-3 h-[168px]">
+        <div
+          key={i}
+          className="flex h-[168px] flex-col gap-3 rounded-xl border p-4"
+        >
           <div className="flex items-start justify-between">
-            <div className="flex flex-col gap-1 flex-1">
+            <div className="flex flex-1 flex-col gap-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-44" />
             </div>
-            <Skeleton className="h-11 w-11 rounded-lg shrink-0" />
+            <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
           </div>
           <Skeleton className="h-3.5 w-40" />
           <div className="flex flex-col gap-1">
             <Skeleton className="h-3.5 w-16" />
             <Skeleton className="h-5 w-20 rounded-full" />
           </div>
-          <div className="flex items-center justify-between pt-1 border-t">
+          <div className="flex items-center justify-between border-t pt-1">
             <Skeleton className="h-[18px] w-16 rounded-full" />
             <Skeleton className="h-11 w-24 rounded-lg" />
           </div>
@@ -167,7 +177,7 @@ export function AdAccountsTable() {
     return (
       <>
         {/* Desktop skeleton */}
-        <div className="hidden md:block rounded-xl border">
+        <div className="border-border hidden overflow-hidden rounded-xl border md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -195,11 +205,11 @@ export function AdAccountsTable() {
   // --- Error state ---
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-destructive/30 bg-destructive/5 py-16 text-center">
-        <AlertCircle className="size-8 text-destructive" aria-hidden />
+      <div className="border-destructive/30 bg-destructive/5 flex flex-col items-center justify-center gap-4 rounded-xl border py-16 text-center">
+        <AlertCircle className="text-destructive size-8" aria-hidden />
         <div className="flex flex-col gap-1">
           <p className="text-sm font-medium">Failed to load ad accounts</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             Check your connection and try again.
           </p>
         </div>
@@ -232,7 +242,7 @@ export function AdAccountsTable() {
   return (
     <>
       {/* Desktop table */}
-      <div className="hidden md:block rounded-xl border">
+      <div className="border-border hidden overflow-hidden rounded-xl border md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -240,7 +250,7 @@ export function AdAccountsTable() {
                 <button
                   type="button"
                   onClick={() => handleSort("name")}
-                  className="inline-flex items-center font-medium text-foreground hover:text-foreground/80 focus-visible:outline-none focus-visible:underline"
+                  className="text-foreground hover:text-foreground/80 inline-flex items-center font-medium focus-visible:underline focus-visible:outline-none"
                   aria-label={`Sort by name${sort === "name" ? `, currently ${dir}` : ""}`}
                 >
                   Name
@@ -254,14 +264,14 @@ export function AdAccountsTable() {
                 <button
                   type="button"
                   onClick={() => handleSort("lastRun")}
-                  className="inline-flex items-center font-medium text-foreground hover:text-foreground/80 focus-visible:outline-none focus-visible:underline"
+                  className="text-foreground hover:text-foreground/80 inline-flex items-center font-medium focus-visible:underline focus-visible:outline-none"
                   aria-label={`Sort by last run${sort === "lastRun" ? `, currently ${dir}` : ""}`}
                 >
                   Last Run
                   <SortIcon column="lastRun" sort={sort} dir={dir} />
                 </button>
               </TableHead>
-              <TableHead className="w-10 sr-only">Actions</TableHead>
+              <TableHead className="sr-only w-10">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -273,7 +283,7 @@ export function AdAccountsTable() {
       </div>
 
       {/* Mobile card layout */}
-      <div className="md:hidden flex flex-col gap-3">
+      <div className="flex flex-col gap-3 md:hidden">
         {sorted.map((account) => (
           <AdAccountCard key={account.id} account={account} />
         ))}

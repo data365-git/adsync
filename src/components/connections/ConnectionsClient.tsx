@@ -23,8 +23,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     "OAuth state mismatch (possible session change). Please try again.",
   facebook_exchange_failed:
     "Failed to complete Facebook connection. Check server logs for details.",
-  bitrix_invalid_code:
-    "Bitrix24 connection failed: invalid authorization code",
+  bitrix_invalid_code: "Bitrix24 connection failed: invalid authorization code",
   bitrix_upsert_failed:
     "Bitrix24 connection failed: could not save credentials",
 };
@@ -39,7 +38,7 @@ function CardSkeleton() {
   return (
     <div
       aria-hidden="true"
-      className="flex flex-col overflow-hidden rounded-xl bg-card ring-1 ring-foreground/10"
+      className="border-border bg-card flex flex-col overflow-hidden rounded-xl border"
     >
       <div className="flex items-center gap-3 border-b px-4 py-4">
         <Skeleton className="size-8 shrink-0 rounded-full" />
@@ -49,13 +48,13 @@ function CardSkeleton() {
         </div>
         <Skeleton className="h-5 w-20 rounded-full" />
       </div>
-      <div className="flex min-h-[5rem] flex-col gap-3 px-4 pt-4">
+      <div className="flex flex-col gap-3 px-4 pt-4">
         <div className="space-y-1.5">
           <Skeleton className="h-3 w-36" />
           <Skeleton className="h-3 w-48" />
         </div>
       </div>
-      <div className="flex gap-2 border-t bg-muted/50 px-4 py-3">
+      <div className="bg-muted/50 flex gap-2 border-t px-4 py-3">
         <Skeleton className="h-[2.75rem] flex-1 rounded-lg" />
         <Skeleton className="h-[2.75rem] w-24 rounded-lg" />
       </div>
@@ -127,8 +126,8 @@ export function ConnectionsClient() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Connections</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h1 className="text-foreground text-xl font-semibold">Connections</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
           Manage your Google Sheets, Facebook Ads, and Bitrix24 integrations.
         </p>
       </div>
@@ -137,17 +136,17 @@ export function ConnectionsClient() {
       {isError && (
         <div
           role="alert"
-          className="mb-6 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm"
+          className="border-destructive/30 bg-destructive/10 mb-6 flex items-start gap-3 rounded-xl border p-4 text-sm"
         >
           <AlertCircle
-            className="mt-0.5 size-4 shrink-0 text-destructive"
+            className="text-destructive mt-0.5 size-4 shrink-0"
             aria-hidden="true"
           />
           <div className="flex-1">
-            <p className="font-medium text-destructive">
+            <p className="text-destructive font-medium">
               Could not load connections.
             </p>
-            <p className="mt-0.5 text-muted-foreground">
+            <p className="text-muted-foreground mt-0.5">
               Check your network and try again.
             </p>
           </div>
@@ -179,20 +178,19 @@ export function ConnectionsClient() {
       {/* Empty state */}
       {!isLoading && !isError && connections?.length === 0 && (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
-          <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-            <Plug className="size-6 text-muted-foreground" aria-hidden="true" />
+          <div className="bg-muted flex size-12 items-center justify-center rounded-full">
+            <Plug className="text-muted-foreground size-6" aria-hidden="true" />
           </div>
-          <h2 className="mt-4 text-sm font-medium text-foreground">
+          <h2 className="text-foreground mt-4 text-sm font-medium">
             No connections yet
           </h2>
-          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1.5 max-w-sm text-sm">
             Connect Google Sheets, Facebook, or Bitrix24 to get started.
           </p>
           <div className="mt-6 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-3">
             <Button
-              size="sm"
+              size="lg"
               aria-label="Connect Google Sheets"
-              className="min-h-[2.75rem]"
               onClick={() => handleConnect("google")}
               disabled={pendingProvider !== null}
             >
@@ -201,10 +199,9 @@ export function ConnectionsClient() {
                 : "Connect Google Sheets"}
             </Button>
             <Button
-              size="sm"
+              size="lg"
               variant="outline"
               aria-label="Connect Facebook Ads"
-              className="min-h-[2.75rem]"
               onClick={() => handleConnect("facebook")}
               disabled={pendingProvider !== null}
             >
@@ -213,10 +210,10 @@ export function ConnectionsClient() {
                 : "Connect Facebook Ads"}
             </Button>
             <Button
-              size="sm"
+              size="lg"
               variant="outline"
               aria-label="Connect Bitrix24"
-              className="min-h-[2.75rem] gap-1.5 bg-bitrix-cyan/10 text-bitrix-cyan hover:bg-bitrix-cyan/20 hover:text-bitrix-cyan"
+              className="bg-brand-bitrix/10 text-brand-bitrix hover:bg-brand-bitrix/20 hover:text-brand-bitrix gap-1.5"
               onClick={() => handleConnect("bitrix")}
               disabled={pendingProvider !== null}
             >
@@ -231,7 +228,7 @@ export function ConnectionsClient() {
 
       {/* Success state */}
       {!isLoading && !isError && connections && connections.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {connections.map((connection) => (
             <ConnectionCard key={connection.id} connection={connection} />
           ))}

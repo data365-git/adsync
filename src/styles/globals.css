@@ -67,12 +67,14 @@
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
-  --color-error: var(--error);
-  --color-error-foreground: var(--error-foreground);
+  --color-brand-google: var(--brand-google);
+  --color-brand-facebook: var(--brand-facebook);
+  --color-brand-bitrix: var(--brand-bitrix);
   --color-status-queued: var(--status-queued);
   --color-status-running: var(--status-running);
   --color-status-success: var(--status-success);
   --color-status-failed: var(--status-failed);
+  --color-status-warning: var(--status-warning);
 }
 
 :root {
@@ -109,16 +111,18 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
   --destructive-foreground: oklch(0.985 0 0);
-  --success: #22c55e;
-  --success-foreground: #ffffff;
-  --warning: #f59e0b;
-  --warning-foreground: #1f2937;
-  --error: #ef4444;
-  --error-foreground: #ffffff;
-  --status-queued: #64748b;
-  --status-running: #3b82f6;
-  --status-success: #22c55e;
-  --status-failed: #ef4444;
+  --brand-google: #4285f4;
+  --brand-facebook: #1877f2;
+  --brand-bitrix: #2fc6f6;
+  --success: oklch(0.62 0.17 145);
+  --success-foreground: oklch(0.98 0 0);
+  --warning: oklch(0.75 0.16 75);
+  --warning-foreground: oklch(0.3 0.1 75);
+  --status-queued: oklch(0.55 0.02 250);
+  --status-running: oklch(0.62 0.2 250);
+  --status-success: var(--success);
+  --status-failed: var(--destructive);
+  --status-warning: var(--warning);
 }
 
 .dark {
@@ -154,16 +158,15 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
   --destructive-foreground: oklch(0.985 0 0);
-  --success: #4ade80;
-  --success-foreground: #052e16;
-  --warning: #fbbf24;
-  --warning-foreground: #1f1300;
-  --error: #f87171;
-  --error-foreground: #1c0606;
-  --status-queued: #94a3b8;
-  --status-running: #60a5fa;
-  --status-success: #4ade80;
-  --status-failed: #f87171;
+  --success: oklch(0.7 0.17 145);
+  --success-foreground: oklch(0.15 0 0);
+  --warning: oklch(0.78 0.17 75);
+  --warning-foreground: oklch(0.2 0.08 75);
+  --status-queued: oklch(0.65 0.02 250);
+  --status-running: oklch(0.7 0.2 250);
+  --status-success: var(--success);
+  --status-failed: var(--destructive);
+  --status-warning: var(--warning);
 }
 
 @layer base {

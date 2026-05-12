@@ -39,17 +39,19 @@ export function RunsTable({
         role="alert"
         className="flex flex-col items-center justify-center gap-4 py-16 text-center"
       >
-        <AlertCircle
-          className="size-10 text-destructive"
-          aria-hidden="true"
-        />
+        <AlertCircle className="text-destructive size-10" aria-hidden="true" />
         <div>
-          <p className="font-medium text-foreground">Failed to load runs</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-foreground font-medium">Failed to load runs</p>
+          <p className="text-muted-foreground mt-1 text-sm">
             Something went wrong. Please try again.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onRetry} className="gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRetry}
+          className="gap-1.5"
+        >
           <RefreshCw className="size-3.5" aria-hidden="true" />
           Retry
         </Button>
@@ -58,7 +60,7 @@ export function RunsTable({
   }
 
   return (
-    <div>
+    <div className="border-border overflow-hidden rounded-xl border">
       <Table aria-label="Sync runs" aria-busy={isLoading}>
         <TableHeader>
           <TableRow className="hover:bg-transparent">

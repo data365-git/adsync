@@ -609,12 +609,12 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
             <div className="text-muted-foreground flex items-center gap-2 text-sm">
               {isDirty && (
                 <span className="flex items-center gap-1">
-                  <span className="inline-block size-1.5 rounded-full bg-amber-500" />
+                  <span className="bg-status-warning inline-block size-1.5 rounded-full" />
                   Unsaved changes
                 </span>
               )}
               {!isDirty && submitAttempted && (
-                <span className="text-green-600">All changes saved</span>
+                <span className="text-status-success">All changes saved</span>
               )}
             </div>
             <div className="flex items-center gap-2">

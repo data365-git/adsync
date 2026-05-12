@@ -62,7 +62,7 @@ export function LoginCard() {
            */}
           <Link
             href="/connections"
-            className="focus-visible:ring-ring flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-transparent bg-[#1a73e8] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:opacity-80"
+            className="focus-visible:ring-ring flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-transparent bg-[var(--brand-google)] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:opacity-80"
             aria-label="Sign in with Google"
           >
             {/* White Google "G" — placed on blue so the multi-color logo

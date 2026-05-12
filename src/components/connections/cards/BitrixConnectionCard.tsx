@@ -43,7 +43,7 @@ function StatusIcon({ status }: StatusIconProps) {
   if (status === "connected") {
     return (
       <CheckCircle
-        className="size-4 shrink-0 text-green-500"
+        className="text-status-success size-4 shrink-0"
         aria-hidden="true"
       />
     );
@@ -51,13 +51,13 @@ function StatusIcon({ status }: StatusIconProps) {
   if (status === "expired") {
     return (
       <AlertCircle
-        className="size-4 shrink-0 text-amber-500"
+        className="text-status-warning size-4 shrink-0"
         aria-hidden="true"
       />
     );
   }
   return (
-    <Circle className="size-4 shrink-0 text-slate-400" aria-hidden="true" />
+    <Circle className="text-status-queued size-4 shrink-0" aria-hidden="true" />
   );
 }
 
@@ -107,14 +107,14 @@ export function BitrixConnectionCard({
         <CardHeader className="border-b">
           <div className="flex items-center gap-3">
             {/* Brand tile */}
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bitrix-cyan/10">
-              <BitrixIcon className="h-5 w-5 text-bitrix-cyan" />
+            <div className="bg-brand-bitrix/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+              <BitrixIcon className="text-brand-bitrix h-5 w-5" />
             </div>
 
             <div className="min-w-0 flex-1">
               <CardTitle>Bitrix24 CRM</CardTitle>
               {connection?.email && (
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                <p className="text-muted-foreground mt-0.5 truncate text-xs">
                   {connection.email}
                 </p>
               )}
@@ -126,10 +126,10 @@ export function BitrixConnectionCard({
               <span
                 className={
                   status === "connected"
-                    ? "text-xs font-medium text-green-600 dark:text-green-400"
+                    ? "text-status-success text-xs font-medium"
                     : status === "expired"
-                      ? "text-xs font-medium text-amber-600 dark:text-amber-400"
-                      : "text-xs font-medium text-muted-foreground"
+                      ? "text-status-warning text-xs font-medium"
+                      : "text-muted-foreground text-xs font-medium"
                 }
               >
                 {statusLabel(status)}
@@ -140,7 +140,7 @@ export function BitrixConnectionCard({
 
         {/* ── Body ── */}
         <CardContent className="flex min-h-[5rem] flex-col justify-between gap-3 pt-4">
-          <div className="space-y-1 text-xs text-muted-foreground">
+          <div className="text-muted-foreground space-y-1 text-xs">
             <p>
               Automate leads, deals, and smart process items in your Bitrix24
               org.
@@ -148,13 +148,13 @@ export function BitrixConnectionCard({
 
             {isConnected && connection?.connectedAt && (
               <p className="mt-1">
-                <span className="font-medium text-foreground">Connected</span>{" "}
+                <span className="text-foreground font-medium">Connected</span>{" "}
                 {format(connection.connectedAt, "MMM d, yyyy")}
               </p>
             )}
 
             {isExpired && connection?.connectedAt && (
-              <p className="mt-1 text-amber-600 dark:text-amber-400">
+              <p className="text-status-warning mt-1">
                 Token expired — please reconnect to resume Bitrix24 syncs.
               </p>
             )}
@@ -165,13 +165,11 @@ export function BitrixConnectionCard({
         <CardFooter className="flex flex-wrap gap-2">
           {showConnectCta && (
             <Button
-              size="sm"
+              size="lg"
               onClick={handleConnect}
               disabled={isConnecting}
-              aria-label={
-                isExpired ? "Reconnect Bitrix24" : "Connect Bitrix24"
-              }
-              className="min-h-[2.75rem] flex-1"
+              aria-label={isExpired ? "Reconnect Bitrix24" : "Connect Bitrix24"}
+              className="flex-1"
             >
               {isConnecting ? (
                 <>
@@ -193,12 +191,12 @@ export function BitrixConnectionCard({
             <>
               {/* Reconnect with a different account */}
               <Button
-                size="sm"
+                size="lg"
                 variant="outline"
                 onClick={handleConnect}
                 disabled={isConnecting}
                 aria-label="Reconnect Bitrix24 with a different account"
-                className="min-h-[2.75rem] flex-1"
+                className="flex-1"
               >
                 {isConnecting ? (
                   <>
@@ -214,14 +212,16 @@ export function BitrixConnectionCard({
               </Button>
 
               {/* Disconnect confirmation popover */}
-              <Popover open={isDisconnectOpen} onOpenChange={setIsDisconnectOpen}>
+              <Popover
+                open={isDisconnectOpen}
+                onOpenChange={setIsDisconnectOpen}
+              >
                 <PopoverTrigger
                   render={
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="lg"
                       aria-label="Disconnect Bitrix24 connection"
-                      className="min-h-[2.75rem]"
                     />
                   }
                 >
@@ -235,30 +235,28 @@ export function BitrixConnectionCard({
                 >
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-foreground text-sm font-medium">
                         Disconnect Bitrix24?
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         This will disconnect Bitrix24. Running scenarios that
                         use Bitrix modules will fail. Continue?
                       </p>
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button
-                        size="sm"
+                        size="lg"
                         variant="outline"
                         onClick={() => setIsDisconnectOpen(false)}
                         aria-label="Cancel disconnect"
-                        className="min-h-[2.75rem]"
                       >
                         Cancel
                       </Button>
                       <Button
-                        size="sm"
+                        size="lg"
                         variant="destructive"
                         onClick={handleConfirmDisconnect}
                         aria-label="Confirm disconnect Bitrix24"
-                        className="min-h-[2.75rem]"
                       >
                         Confirm
                       </Button>

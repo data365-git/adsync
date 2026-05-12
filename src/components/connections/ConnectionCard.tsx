@@ -84,7 +84,7 @@ function ProviderIcon({ provider }: ProviderIconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="size-8 shrink-0 text-bitrix-cyan"
+      className="text-brand-bitrix size-8 shrink-0"
       fill="currentColor"
       aria-hidden="true"
       focusable="false"
@@ -197,7 +197,7 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
   // All hooks above run unconditionally (React rules). After hooks, we can
   // safely early-return for a specific provider. Uses lowercase 'bitrix' —
   // the tRPC toFrontendConnection normalizer returns lowercase, NOT 'BITRIX24'.
-  if (connection.provider === 'bitrix') {
+  if (connection.provider === "bitrix") {
     return (
       <BitrixConnectionCard
         connection={connection}
@@ -219,7 +219,7 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
             <div className="min-w-0 flex-1">
               <CardTitle>{providerLabel}</CardTitle>
               {connection.email && (
-                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                <p className="text-muted-foreground mt-0.5 truncate text-xs">
                   {connection.email}
                 </p>
               )}
@@ -230,17 +230,17 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
         </CardHeader>
 
         {/* Reserve min-height so card doesn't jump when expiry warning appears/disappears */}
-        <CardContent className="flex min-h-[5rem] flex-col justify-between gap-3 pt-4">
-          <div className="space-y-1 text-xs text-muted-foreground">
+        <CardContent className="flex flex-col justify-between gap-3 pt-4">
+          <div className="text-muted-foreground space-y-1 text-xs">
             {connection.connectedAt && (
               <p>
-                <span className="font-medium text-foreground">Connected:</span>{" "}
+                <span className="text-foreground font-medium">Connected:</span>{" "}
                 {format(connection.connectedAt, "MMM d, yyyy")}
               </p>
             )}
             {connection.expiresAt && effectiveStatus !== "disconnected" && (
               <p>
-                <span className="font-medium text-foreground">Expires:</span>{" "}
+                <span className="text-foreground font-medium">Expires:</span>{" "}
                 {format(connection.expiresAt, "MMM d, yyyy, h:mm a")}
               </p>
             )}
@@ -261,12 +261,12 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
             <>
               {/* Reconnect always visible — user may want to re-auth with different account */}
               <Button
-                size="sm"
+                size="lg"
                 variant="outline"
                 onClick={handleReconnect}
                 disabled={isAnyLoading}
                 aria-label={`Reconnect ${providerLabel} with a different account`}
-                className="min-h-[2.75rem] flex-1"
+                className="flex-1"
               >
                 {isRefreshing ? (
                   <>
@@ -288,11 +288,11 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
             </>
           ) : (
             <Button
-              size="sm"
+              size="lg"
               onClick={handleConnect}
               disabled={isAnyLoading}
               aria-label={`Connect ${providerLabel}`}
-              className="min-h-[2.75rem] flex-1"
+              className="flex-1"
             >
               {isConnecting ? (
                 <>

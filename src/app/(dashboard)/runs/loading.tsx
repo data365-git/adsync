@@ -17,16 +17,22 @@ export default function RunsLoading() {
       </div>
 
       {/* Table skeleton — 8 rows, each matching the real row height (~40px) */}
-      <div className="overflow-hidden rounded-xl ring-1 ring-foreground/10">
+      <div className="border-border overflow-hidden rounded-xl border">
         {/* Header */}
-        <div className="flex items-center border-b bg-card px-2 py-2.5">
-          {["w-24", "w-32", "w-20", "w-16", "hidden md:flex w-16", "hidden md:flex w-12", "w-5"].map(
-            (cls, i) => (
-              <div key={i} className={`mr-4 flex-shrink-0 ${cls}`}>
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ),
-          )}
+        <div className="bg-card flex items-center border-b px-2 py-2.5">
+          {[
+            "w-24",
+            "w-32",
+            "w-20",
+            "w-16",
+            "hidden md:flex w-16",
+            "hidden md:flex w-12",
+            "w-5",
+          ].map((cls, i) => (
+            <div key={i} className={`mr-4 flex-shrink-0 ${cls}`}>
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
         </div>
 
         {/* Rows */}

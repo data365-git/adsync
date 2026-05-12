@@ -25,7 +25,10 @@ interface DeleteDataDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function DeleteDataDialog({ open, onOpenChange }: DeleteDataDialogProps) {
+export function DeleteDataDialog({
+  open,
+  onOpenChange,
+}: DeleteDataDialogProps) {
   const [inputValue, setInputValue] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const confirmed = inputValue === CONFIRM_WORD;
@@ -68,8 +71,11 @@ export function DeleteDataDialog({ open, onOpenChange }: DeleteDataDialogProps) 
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogMedia className="bg-error/10">
-            <TriangleAlert className="size-6 text-error" aria-hidden="true" />
+          <AlertDialogMedia className="bg-destructive/10">
+            <TriangleAlert
+              className="text-destructive size-6"
+              aria-hidden="true"
+            />
           </AlertDialogMedia>
           <AlertDialogTitle>Delete all data?</AlertDialogTitle>
           <AlertDialogDescription>
@@ -81,10 +87,10 @@ export function DeleteDataDialog({ open, onOpenChange }: DeleteDataDialogProps) 
         <div className="space-y-2 px-0">
           <label
             htmlFor="delete-confirm-input"
-            className="block text-xs font-medium text-muted-foreground"
+            className="text-muted-foreground block text-xs font-medium"
           >
             Type{" "}
-            <span className="font-mono font-semibold text-foreground">
+            <span className="text-foreground font-mono font-semibold">
               {CONFIRM_WORD}
             </span>{" "}
             to confirm
@@ -102,7 +108,11 @@ export function DeleteDataDialog({ open, onOpenChange }: DeleteDataDialogProps) 
             aria-describedby="delete-hint"
           />
           {inputValue.length > 0 && !confirmed && (
-            <p id="delete-hint" className="text-xs text-error" role="alert">
+            <p
+              id="delete-hint"
+              className="text-destructive text-xs"
+              role="alert"
+            >
               Type DELETE in uppercase to enable the button.
             </p>
           )}

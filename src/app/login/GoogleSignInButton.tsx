@@ -40,10 +40,8 @@ export function GoogleSignInButton() {
   return (
     <button
       type="button"
-      onClick={() =>
-        void signIn("google", { redirectTo: "/connections" })
-      }
-      className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-transparent bg-[#4285F4] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4285F4]/60 focus-visible:ring-offset-2 active:opacity-80"
+      onClick={() => void signIn("google", { redirectTo: "/connections" })}
+      className="focus-visible:ring-ring flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-transparent bg-[#1a73e8] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:opacity-80"
       aria-label="Sign in with Google"
     >
       <span className="flex size-5 items-center justify-center rounded-sm bg-white p-0.5">

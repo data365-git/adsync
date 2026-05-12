@@ -42,10 +42,12 @@ export function DateWindowSlider({
         {/* Floating tooltip above thumb */}
         <div
           className="pointer-events-none absolute top-0 flex -translate-x-1/2 items-center"
-          style={{ left: `calc(${tooltipPos}% + ${(0.5 - tooltipPos / 100) * 12}px)` }}
+          style={{
+            left: `calc(${tooltipPos}% + ${(0.5 - tooltipPos / 100) * 12}px)`,
+          }}
           aria-hidden="true"
         >
-          <div className="rounded-md bg-foreground px-1.5 py-0.5 text-xs font-medium text-background shadow-sm">
+          <div className="bg-foreground text-background rounded-md px-1.5 py-0.5 text-xs font-medium shadow-sm">
             Last {value} {value === 1 ? "day" : "days"}
           </div>
         </div>
@@ -76,7 +78,7 @@ export function DateWindowSlider({
           aria-valuemax={30}
           aria-valuenow={value}
           aria-valuetext={`Last ${value} days`}
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-input outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110 [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:shadow-sm"
+          className="bg-input focus-visible:ring-ring [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:bg-primary h-2 w-full cursor-pointer appearance-none rounded-full outline-none focus-visible:ring-2 [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:shadow-sm [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
           style={{
             background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${tooltipPos}%, hsl(var(--input)) ${tooltipPos}%, hsl(var(--input)) 100%)`,
           }}
@@ -85,7 +87,7 @@ export function DateWindowSlider({
 
       {/* Preset quick-picks */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Quick select:</span>
+        <span className="text-muted-foreground text-xs">Quick select:</span>
         <div className="flex gap-1">
           {presets.map((preset) => (
             <button
@@ -106,7 +108,7 @@ export function DateWindowSlider({
             </button>
           ))}
         </div>
-        <span className="ml-auto text-xs font-medium text-foreground">
+        <span className="text-foreground ml-auto text-xs font-medium">
           Last {value} {value === 1 ? "day" : "days"}
         </span>
       </div>

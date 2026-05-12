@@ -29,9 +29,7 @@ export function UserMenu({ user }: { user: User }) {
         className="focus-visible:ring-ring inline-flex h-9 w-9 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
       >
         <Avatar className="h-9 w-9">
-          {user.image ? (
-            <AvatarImage src={user.image} alt={user.name} />
-          ) : null}
+          {user.image ? <AvatarImage src={user.image} alt={user.name} /> : null}
           <AvatarFallback>{initialsFor(user.name)}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
@@ -44,12 +42,7 @@ export function UserMenu({ user }: { user: User }) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          render={
-            <Link
-              href="/settings"
-              className="flex items-center gap-2"
-            />
-          }
+          render={<Link href="/settings" className="flex items-center gap-2" />}
         >
           <UserIcon className="h-4 w-4" aria-hidden />
           <span>Settings</span>

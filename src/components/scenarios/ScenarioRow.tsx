@@ -92,7 +92,7 @@ export function ScenarioRow({
     <>
       <TableRow
         tabIndex={0}
-        className="h-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset hover:bg-muted/50"
+        className="focus-visible:ring-ring hover:bg-muted/50 h-14 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             window.location.href = `/scenarios/${scenario.id}`;
@@ -100,17 +100,17 @@ export function ScenarioRow({
         }}
       >
         {/* Name */}
-        <TableCell className="min-w-[180px] max-w-[280px]">
+        <TableCell className="max-w-[280px] min-w-[180px]">
           <div className="flex flex-col gap-0.5">
             <Link
               href={`/scenarios/${scenario.id}`}
-              className="font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+              className="text-foreground font-medium hover:underline focus-visible:underline focus-visible:outline-none"
               tabIndex={-1}
             >
               {scenario.name}
             </Link>
             {runCount !== undefined && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {runCount === 0
                   ? "No runs"
                   : `${runCount} run${runCount === 1 ? "" : "s"}`}
@@ -146,7 +146,7 @@ export function ScenarioRow({
         <TableCell className="w-10">
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-expanded:bg-muted"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring aria-expanded:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
               aria-label={`Scenario options for ${scenario.name}`}
             >
               <MoreHorizontal className="size-4" aria-hidden />
@@ -174,9 +174,7 @@ export function ScenarioRow({
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={duplicateMutation.isPending}
-                onClick={() =>
-                  duplicateMutation.mutate({ id: scenario.id })
-                }
+                onClick={() => duplicateMutation.mutate({ id: scenario.id })}
               >
                 {duplicateMutation.isPending ? (
                   <Loader2

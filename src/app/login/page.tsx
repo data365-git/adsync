@@ -34,21 +34,25 @@ export default async function LoginPage({
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="bg-background flex min-h-screen items-center justify-center p-6"
+    >
       <div className="w-full max-w-[400px]">
-        <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-8 shadow-sm">
+        <div className="bg-card ring-foreground/10 rounded-xl p-8 shadow-sm ring-1">
           <div className="mb-6 text-center">
-            <h1 className="text-xl font-semibold tracking-tight text-card-foreground">
+            <h1 className="text-card-foreground text-xl font-semibold tracking-tight">
               Sign in to Automation
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-sm">
               Access is restricted to approved accounts.
             </p>
           </div>
 
           <GoogleSignInButton />
 
-          <p className="mt-6 text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-6 text-center text-xs">
             By signing in you agree to let this app access your Google account
             data as described in the setup guide.
           </p>

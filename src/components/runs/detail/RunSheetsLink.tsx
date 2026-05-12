@@ -23,11 +23,14 @@ export function RunSheetsLink({ sheetsUrl }: RunSheetsLinkProps) {
             aria-label="View results in Google Sheets (opens in new tab)"
           />
         }
-        className="gap-2 bg-[#1a7f4b] text-white hover:bg-[#166d3f] focus-visible:ring-[#1a7f4b]/50 dark:bg-[#1a7f4b] dark:hover:bg-[#166d3f]"
+        className="focus-visible:ring-ring gap-2 bg-[#1a7f4b] text-white hover:bg-[#166d3f] dark:bg-[#1a7f4b] dark:hover:bg-[#166d3f]"
       >
         <TableProperties className="size-4 shrink-0" aria-hidden="true" />
         View in Google Sheets
-        <ExternalLink className="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+        <ExternalLink
+          className="size-3.5 shrink-0 opacity-70"
+          aria-hidden="true"
+        />
       </Button>
     </div>
   );

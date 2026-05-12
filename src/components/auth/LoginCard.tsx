@@ -37,16 +37,20 @@ function GoogleLogo({ className }: { className?: string }) {
 
 export function LoginCard() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-6">
+    <main
+      id="main"
+      tabIndex={-1}
+      className="bg-background flex min-h-screen items-center justify-center p-6"
+    >
       <div className="w-full max-w-[400px]">
         {/* Card */}
-        <div className="rounded-xl bg-card ring-1 ring-foreground/10 p-8 shadow-sm">
+        <div className="bg-card ring-foreground/10 rounded-xl p-8 shadow-sm ring-1">
           {/* Heading */}
           <div className="mb-6 text-center">
-            <h1 className="text-xl font-semibold tracking-tight text-card-foreground">
+            <h1 className="text-card-foreground text-xl font-semibold tracking-tight">
               Sign in to Automation
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-sm">
               Access is restricted to approved accounts.
             </p>
           </div>
@@ -58,7 +62,7 @@ export function LoginCard() {
            */}
           <Link
             href="/connections"
-            className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-transparent bg-[#4285F4] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4285F4]/60 focus-visible:ring-offset-2 active:opacity-80"
+            className="focus-visible:ring-ring flex h-11 w-full items-center justify-center gap-3 rounded-lg border border-transparent bg-[#1a73e8] px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:opacity-80"
             aria-label="Sign in with Google"
           >
             {/* White Google "G" — placed on blue so the multi-color logo
@@ -69,7 +73,7 @@ export function LoginCard() {
             Sign in with Google
           </Link>
 
-          <p className="mt-6 text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-6 text-center text-xs">
             By signing in you agree to let this app access your Google account
             data as described in the setup guide.
           </p>

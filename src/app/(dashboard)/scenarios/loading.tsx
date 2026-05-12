@@ -17,29 +17,29 @@ export default function ScenariosLoading() {
       {/* Page header skeleton */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <div className="h-7 w-28 rounded-md bg-muted animate-pulse" />
-          <div className="h-4 w-72 rounded bg-muted animate-pulse" />
+          <div className="bg-muted h-7 w-28 rounded-md motion-safe:animate-pulse motion-reduce:opacity-70" />
+          <div className="bg-muted h-4 w-72 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
         </div>
-        <div className="h-8 w-32 rounded-lg bg-muted animate-pulse shrink-0" />
+        <div className="bg-muted h-8 w-32 shrink-0 rounded-lg motion-safe:animate-pulse motion-reduce:opacity-70" />
       </div>
 
       {/* Banner skeleton */}
-      <div className="flex items-center gap-3 rounded-xl border bg-muted/50 px-4 py-3">
-        <div className="h-8 w-8 rounded-md bg-muted animate-pulse shrink-0" />
-        <div className="flex flex-col gap-1 flex-1">
-          <div className="h-4 w-40 rounded bg-muted animate-pulse" />
-          <div className="h-3 w-80 rounded bg-muted animate-pulse" />
+      <div className="bg-muted/50 flex items-center gap-3 rounded-xl border px-4 py-3">
+        <div className="bg-muted h-8 w-8 shrink-0 rounded-md motion-safe:animate-pulse motion-reduce:opacity-70" />
+        <div className="flex flex-1 flex-col gap-1">
+          <div className="bg-muted h-4 w-40 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
+          <div className="bg-muted h-3 w-80 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
         </div>
       </div>
 
       {/* Filter bar skeleton */}
-      <div className="flex items-center gap-2 h-6">
-        <div className="h-[14px] w-6 rounded-full bg-muted animate-pulse" />
-        <div className="h-4 w-44 rounded bg-muted animate-pulse" />
+      <div className="flex h-6 items-center gap-2">
+        <div className="bg-muted h-[14px] w-6 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
+        <div className="bg-muted h-4 w-44 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
       </div>
 
       {/* Desktop skeleton table */}
-      <div className="hidden md:block rounded-xl border">
+      <div className="hidden rounded-xl border md:block">
         <Table aria-label="Loading scenarios">
           <TableHeader>
             <TableRow>
@@ -47,7 +47,7 @@ export default function ScenariosLoading() {
               <TableHead>Kind</TableHead>
               <TableHead>Enabled</TableHead>
               <TableHead>Last Run</TableHead>
-              <TableHead className="w-10 sr-only">Actions</TableHead>
+              <TableHead className="sr-only w-10">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -55,24 +55,24 @@ export default function ScenariosLoading() {
               <TableRow key={i} className="h-14">
                 <td className="p-2">
                   <div className="flex flex-col gap-1">
-                    <div className="h-4 w-44 rounded bg-muted animate-pulse" />
-                    <div className="h-3 w-14 rounded bg-muted animate-pulse" />
+                    <div className="bg-muted h-4 w-44 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
+                    <div className="bg-muted h-3 w-14 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
                   </div>
                 </td>
                 <td className="p-2">
-                  <div className="h-5 w-16 rounded-full bg-muted animate-pulse" />
+                  <div className="bg-muted h-5 w-16 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
                 </td>
                 <td className="p-2">
-                  <div className="h-[18px] w-8 rounded-full bg-muted animate-pulse" />
+                  <div className="bg-muted h-[18px] w-8 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
                 </td>
                 <td className="p-2">
                   <div className="flex flex-col gap-1">
-                    <div className="h-3.5 w-16 rounded bg-muted animate-pulse" />
-                    <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
+                    <div className="bg-muted h-3.5 w-16 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
+                    <div className="bg-muted h-5 w-20 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
                   </div>
                 </td>
                 <td className="p-2">
-                  <div className="h-8 w-8 rounded-lg bg-muted animate-pulse" />
+                  <div className="bg-muted h-8 w-8 rounded-lg motion-safe:animate-pulse motion-reduce:opacity-70" />
                 </td>
               </TableRow>
             ))}
@@ -81,29 +81,29 @@ export default function ScenariosLoading() {
       </div>
 
       {/* Mobile card skeletons */}
-      <div className="md:hidden flex flex-col gap-3">
+      <div className="flex flex-col gap-3 md:hidden">
         {[1, 2, 3, 4].map((i) => (
           <div
             key={i}
-            className="rounded-xl border p-4 flex flex-col gap-3 h-[180px] animate-pulse"
+            className="flex h-[180px] flex-col gap-3 rounded-xl border p-4 motion-safe:animate-pulse motion-reduce:opacity-70"
           >
             <div className="flex items-start justify-between">
-              <div className="flex flex-col gap-1 flex-1">
-                <div className="h-4 w-36 rounded bg-muted" />
-                <div className="h-5 w-16 rounded-full bg-muted" />
+              <div className="flex flex-1 flex-col gap-1">
+                <div className="bg-muted h-4 w-36 rounded" />
+                <div className="bg-muted h-5 w-16 rounded-full" />
               </div>
-              <div className="h-11 w-11 rounded-lg bg-muted shrink-0" />
+              <div className="bg-muted h-11 w-11 shrink-0 rounded-lg" />
             </div>
             <div className="flex items-start gap-2">
-              <div className="h-3.5 w-14 rounded bg-muted" />
+              <div className="bg-muted h-3.5 w-14 rounded" />
               <div className="flex flex-col gap-1">
-                <div className="h-3.5 w-16 rounded bg-muted" />
-                <div className="h-5 w-20 rounded-full bg-muted" />
+                <div className="bg-muted h-3.5 w-16 rounded" />
+                <div className="bg-muted h-5 w-20 rounded-full" />
               </div>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="h-[18px] w-16 rounded-full bg-muted" />
-              <div className="h-11 w-24 rounded-lg bg-muted" />
+            <div className="flex items-center justify-between border-t pt-2">
+              <div className="bg-muted h-[18px] w-16 rounded-full" />
+              <div className="bg-muted h-11 w-24 rounded-lg" />
             </div>
           </div>
         ))}

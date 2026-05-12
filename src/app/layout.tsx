@@ -20,6 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="bg-background text-foreground min-h-screen antialiased">
+        <a
+          href="#main"
+          className="focus:bg-background focus:ring-ring sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:shadow focus:ring-2"
+        >
+          Skip to content
+        </a>
         <ThemeProvider>
           <NuqsAdapter>
             <TRPCReactProvider>{children}</TRPCReactProvider>

@@ -28,11 +28,11 @@ export function AddStepButton({
         type="button"
         onClick={() => onClick(insertAtPosition)}
         className={cn(
-          "group flex items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5",
-          "text-xs font-medium text-foreground",
+          "group border-border flex items-center gap-1.5 rounded-full border border-dashed px-3 py-1.5",
+          "text-foreground text-xs font-medium",
           "opacity-70 transition-opacity duration-150",
           "hover:opacity-100 focus-visible:opacity-100",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         )}
         aria-label={label ?? `Add step at position ${insertAtPosition}`}
       >

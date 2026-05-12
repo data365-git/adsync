@@ -36,10 +36,13 @@ export function BitrixCreateLeadConfig({
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-lead-title">
           Lead title
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+          <span className="text-destructive ml-1" aria-hidden="true">
+            *
+          </span>
         </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Short descriptive title for the lead (e.g. &quot;Website inquiry — Alice&quot;)
+        <p className="text-muted-foreground mb-2 text-xs">
+          Short descriptive title for the lead (e.g. &quot;Website inquiry —
+          Alice&quot;)
         </p>
         <Input
           id="bitrix-lead-title"
@@ -51,7 +54,11 @@ export function BitrixCreateLeadConfig({
           aria-invalid={!!errors?.title}
         />
         {errors?.title && (
-          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+          <p
+            role="alert"
+            aria-live="polite"
+            className="text-destructive flex items-center gap-1.5 text-xs"
+          >
             <span aria-hidden="true">&#x26A0;</span>
             {errors.title}
           </p>
@@ -63,9 +70,13 @@ export function BitrixCreateLeadConfig({
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-lead-name">
             First name
-            <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+            <span className="text-destructive ml-1" aria-hidden="true">
+              *
+            </span>
           </Label>
-          <p className="text-xs text-muted-foreground mb-2">Contact first name</p>
+          <p className="text-muted-foreground mb-2 text-xs">
+            Contact first name
+          </p>
           <Input
             id="bitrix-lead-name"
             type="text"
@@ -76,7 +87,11 @@ export function BitrixCreateLeadConfig({
             aria-invalid={!!errors?.name}
           />
           {errors?.name && (
-            <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+            <p
+              role="alert"
+              aria-live="polite"
+              className="text-destructive flex items-center gap-1.5 text-xs"
+            >
               <span aria-hidden="true">&#x26A0;</span>
               {errors.name}
             </p>
@@ -84,7 +99,9 @@ export function BitrixCreateLeadConfig({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-lead-lastname">Last name</Label>
-          <p className="text-xs text-muted-foreground mb-2">Contact last name</p>
+          <p className="text-muted-foreground mb-2 text-xs">
+            Contact last name
+          </p>
           <Input
             id="bitrix-lead-lastname"
             type="text"
@@ -99,7 +116,9 @@ export function BitrixCreateLeadConfig({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-lead-phone">Phone</Label>
-          <p className="text-xs text-muted-foreground mb-2">Phone number in any format</p>
+          <p className="text-muted-foreground mb-2 text-xs">
+            Phone number in any format
+          </p>
           <Input
             id="bitrix-lead-phone"
             type="text"
@@ -110,7 +129,9 @@ export function BitrixCreateLeadConfig({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-lead-email">Email</Label>
-          <p className="text-xs text-muted-foreground mb-2">Contact email address</p>
+          <p className="text-muted-foreground mb-2 text-xs">
+            Contact email address
+          </p>
           <Input
             id="bitrix-lead-email"
             type="text"
@@ -125,7 +146,9 @@ export function BitrixCreateLeadConfig({
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-lead-source">
           Source
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+          <span className="text-destructive ml-1" aria-hidden="true">
+            *
+          </span>
         </Label>
         <Select
           value={sourceId}
@@ -148,7 +171,11 @@ export function BitrixCreateLeadConfig({
           </SelectContent>
         </Select>
         {errors?.sourceId && (
-          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+          <p
+            role="alert"
+            aria-live="polite"
+            className="text-destructive flex items-center gap-1.5 text-xs"
+          >
             <span aria-hidden="true">&#x26A0;</span>
             {errors.sourceId}
           </p>
@@ -158,7 +185,7 @@ export function BitrixCreateLeadConfig({
       {/* Comments — full width textarea */}
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-lead-comments">Comments</Label>
-        <p className="text-xs text-muted-foreground mb-2">
+        <p className="text-muted-foreground mb-2 text-xs">
           Additional notes to attach to the lead
         </p>
         <textarea
@@ -167,7 +194,7 @@ export function BitrixCreateLeadConfig({
           placeholder="Additional notes…"
           value={comments}
           onChange={(e) => onChange({ ...config, comments: e.target.value })}
-          className="w-full min-h-[72px] rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+          className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring min-h-[72px] w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
     </div>

@@ -132,9 +132,9 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
           onChange(h, m);
         }}
         className={cn(
-          "h-9 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 text-sm",
-          "outline-none transition-colors placeholder:text-muted-foreground",
-          "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+          "border-input h-9 w-full min-w-0 rounded-lg border bg-transparent px-3 text-sm",
+          "placeholder:text-muted-foreground transition-colors outline-none",
+          "focus-visible:border-ring focus-visible:ring-ring focus-visible:ring-2",
           "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
           "[&::-webkit-calendar-picker-indicator]:hidden",
         )}
@@ -167,7 +167,11 @@ function DayOfWeekPills({ selected, onChange }: DayOfWeekPillsProps) {
   return (
     <div className="space-y-1.5">
       <Label>Days of week</Label>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Days of week">
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Days of week"
+      >
         {DOW_LABELS.map((label, idx) => {
           const isSelected = selected.includes(idx);
           return (
@@ -186,10 +190,10 @@ function DayOfWeekPills({ selected, onChange }: DayOfWeekPillsProps) {
               }}
               className={cn(
                 "inline-flex min-h-[36px] min-w-[40px] cursor-pointer items-center justify-center rounded-md px-2.5 text-sm font-medium transition-colors",
-                "outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:border-ring",
+                "focus-visible:ring-ring focus-visible:border-ring outline-none focus-visible:ring-2",
                 isSelected
                   ? "bg-primary text-primary-foreground border border-transparent"
-                  : "border border-border bg-transparent text-foreground hover:bg-muted",
+                  : "border-border text-foreground hover:bg-muted border bg-transparent",
               )}
             >
               {label}
@@ -234,7 +238,12 @@ function MinutePicker({ minute, onChange }: MinutePickerProps) {
         className="w-24"
       />
       {error && (
-        <p id="minute-error" role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+        <p
+          id="minute-error"
+          role="alert"
+          aria-live="polite"
+          className="text-destructive flex items-center gap-1.5 text-xs"
+        >
           <span aria-hidden="true">&#x26A0;</span>
           {error}
         </p>
@@ -271,12 +280,17 @@ function DayOfMonthInput({ value, onChange }: DayOfMonthInputProps) {
         className="w-24"
       />
       {isInvalid ? (
-        <p id="dom-error" role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+        <p
+          id="dom-error"
+          role="alert"
+          aria-live="polite"
+          className="text-destructive flex items-center gap-1.5 text-xs"
+        >
           <span aria-hidden="true">&#x26A0;</span>
           Day must be between 1 and 31.
         </p>
       ) : (
-        <p id="dom-hint" className="text-xs text-muted-foreground">
+        <p id="dom-hint" className="text-muted-foreground text-xs">
           If the month has fewer days, the run is skipped.
         </p>
       )}
@@ -347,18 +361,21 @@ function RawCronInput({ expression, onChange, onSimplify }: RawCronInputProps) {
           aria-describedby="raw-cron-preview"
           spellCheck={false}
         />
-        <p id="raw-cron-preview" className="text-xs text-muted-foreground">
+        <p id="raw-cron-preview" className="text-muted-foreground text-xs">
           {preview || "Enter a valid 5-field cron expression"}
         </p>
       </div>
 
       {simplifiableFreq && (
-        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
-          <InfoIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <div className="border-border bg-muted/40 flex items-start gap-2 rounded-lg border px-3 py-2">
+          <InfoIcon
+            className="text-muted-foreground mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
           <div className="flex-1 space-y-1">
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               This matches the{" "}
-              <span className="font-medium capitalize text-foreground">
+              <span className="text-foreground font-medium capitalize">
                 {simplifiableFreq}
               </span>{" "}
               pattern — you can switch to simplified mode.
@@ -389,7 +406,9 @@ function TimezoneSelect({ value, onChange, error }: TimezoneSelectProps) {
     <div className="space-y-1.5">
       <Label htmlFor="sched-timezone">
         Timezone
-        <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+        <span className="text-destructive ml-1" aria-hidden="true">
+          *
+        </span>
       </Label>
       <Select
         value={value}
@@ -413,7 +432,11 @@ function TimezoneSelect({ value, onChange, error }: TimezoneSelectProps) {
         </SelectContent>
       </Select>
       {error && (
-        <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+        <p
+          role="alert"
+          aria-live="polite"
+          className="text-destructive flex items-center gap-1.5 text-xs"
+        >
           <span aria-hidden="true">&#x26A0;</span>
           {error}
         </p>
@@ -430,13 +453,13 @@ function CronPreview({ expr }: CronPreviewProps) {
   if (!expr.trim()) return null;
   return (
     <div
-      className="rounded-lg border border-border bg-muted/40 px-3 py-2"
+      className="border-border bg-muted/40 rounded-lg border px-3 py-2"
       aria-live="polite"
       aria-label="Schedule preview"
     >
-      <p className="text-xs text-muted-foreground">Schedule preview</p>
+      <p className="text-muted-foreground text-xs">Schedule preview</p>
       <p className="mt-0.5 font-mono text-sm font-medium">{expr}</p>
-      <p className="mt-0.5 text-xs text-muted-foreground">
+      <p className="text-muted-foreground mt-0.5 text-xs">
         {humanizeCronShort(expr)}
       </p>
     </div>
@@ -572,14 +595,20 @@ export function ScheduleConfig({
 
       <TimezoneSelect
         value={initialTimezone}
-        onChange={(tz) => onChange({ ...config, cronExpression: derivedCron, timezone: tz })}
+        onChange={(tz) =>
+          onChange({ ...config, cronExpression: derivedCron, timezone: tz })
+        }
         error={errors?.timezone}
       />
 
       <CronPreview expr={derivedCron} />
 
       {errors?.cronExpression && (
-        <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+        <p
+          role="alert"
+          aria-live="polite"
+          className="text-destructive flex items-center gap-1.5 text-xs"
+        >
           <span aria-hidden="true">&#x26A0;</span>
           {errors.cronExpression}
         </p>

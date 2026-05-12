@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { MoreHorizontal, Pencil, Play, Trash2 } from "lucide-react";
 import {
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function AdAccountRow({ account }: Props) {
+  const router = useRouter();
   const [isRunning, setIsRunning] = useState(false);
 
   const runNowMutation = api.adAccounts.runNow.useMutation({
@@ -48,22 +50,30 @@ export function AdAccountRow({ account }: Props) {
   });
 
   const schedule = formatCron(account.cronExpression);
+  const href = `/ad-accounts/${account.id}`;
+  const openAccount = () => router.push(href);
 
   return (
     <TableRow
+      role="button"
       tabIndex={0}
-      className="h-14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset hover:bg-muted/50"
+      aria-label={`Open ${account.label}`}
+      className="focus-visible:ring-ring hover:bg-muted/50 h-14 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+      onClick={openAccount}
       onKeyDown={(e) => {
-        if (e.key === "Enter") {
-          window.location.href = `/ad-accounts/${account.id}`;
+        if (e.key === "Enter" || e.key === " ") {
+          if (e.key === " ") {
+            e.preventDefault();
+          }
+          openAccount();
         }
       }}
     >
       {/* Name */}
-      <TableCell className="min-w-[160px] max-w-[240px]">
+      <TableCell className="max-w-[240px] min-w-[160px]">
         <Link
-          href={`/ad-accounts/${account.id}`}
-          className="font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none"
+          href={href}
+          className="text-foreground font-medium hover:underline focus-visible:underline focus-visible:outline-none"
           tabIndex={-1}
         >
           {account.label}
@@ -74,7 +84,7 @@ export function AdAccountRow({ account }: Props) {
       <TableCell className="min-w-[180px]">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger className="font-mono text-xs text-muted-foreground truncate block max-w-[180px] text-left">
+            <TooltipTrigger className="text-muted-foreground block max-w-[180px] truncate text-left font-mono text-xs">
               {account.fbAccountId}
             </TooltipTrigger>
             <TooltipContent side="top">{account.fbAccountId}</TooltipContent>
@@ -83,7 +93,10 @@ export function AdAccountRow({ account }: Props) {
       </TableCell>
 
       {/* Enabled toggle */}
-      <TableCell>
+      <TableCell
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
         <EnabledToggle
           id={account.id}
           initialEnabled={account.enabled}
@@ -94,7 +107,7 @@ export function AdAccountRow({ account }: Props) {
       {/* Schedule */}
       <TableCell className="min-w-[140px]">
         {schedule === "No schedule" ? (
-          <span className="text-xs text-muted-foreground">No schedule</span>
+          <span className="text-muted-foreground text-xs">No schedule</span>
         ) : (
           <span className="text-xs">{schedule}</span>
         )}
@@ -110,11 +123,16 @@ export function AdAccountRow({ account }: Props) {
       </TableCell>
 
       {/* Actions */}
-      <TableCell className="w-10">
+      <TableCell
+        className="w-10"
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-expanded:bg-muted"
+            className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring aria-expanded:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
             aria-label={`Actions for ${account.label}`}
+            onClick={(event) => event.stopPropagation()}
           >
             <MoreHorizontal className="size-4" aria-hidden />
           </DropdownMenuTrigger>

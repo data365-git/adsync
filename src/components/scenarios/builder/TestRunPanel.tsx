@@ -1,7 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2Icon, RefreshCwIcon, XCircleIcon, XIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  RefreshCwIcon,
+  XCircleIcon,
+  XIcon,
+} from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { formatDuration } from "~/lib/utils";
@@ -26,7 +31,9 @@ interface TestRunPanelProps {
 
 // Derive a compact output table from a result's output object.
 // We show at most 5 columns from the first-level keys.
-function outputTableRows(output: Record<string, unknown>): Array<[string, string]> {
+function outputTableRows(
+  output: Record<string, unknown>,
+): Array<[string, string]> {
   const entries = Object.entries(output).slice(0, 5);
   return entries.map(([k, v]) => [
     k,
@@ -48,16 +55,17 @@ function DockHeader({ results, isLoading, onClose }: DockHeaderProps) {
   const totalMs = results.reduce((acc, r) => acc + r.durationMs, 0);
 
   return (
-    <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2.5">
+    <div className="border-border flex shrink-0 items-center justify-between border-b px-4 py-2.5">
       <div className="flex items-center gap-2">
         <p className="text-sm font-semibold">Test results</p>
         {!isLoading && total > 0 && (
-          <span className="text-xs text-muted-foreground">
-            {succeeded} of {total} step{total !== 1 ? "s" : ""} succeeded · {formatDuration(totalMs)} total
+          <span className="text-muted-foreground text-xs">
+            {succeeded} of {total} step{total !== 1 ? "s" : ""} succeeded ·{" "}
+            {formatDuration(totalMs)} total
           </span>
         )}
         {isLoading && (
-          <span className="text-xs text-muted-foreground">Running…</span>
+          <span className="text-muted-foreground text-xs">Running…</span>
         )}
       </div>
       <Button
@@ -90,12 +98,15 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
 
   if (isLoading) {
     return (
-      <div className="flex-1 overflow-y-auto divide-y divide-border">
+      <div className="divide-border flex-1 divide-y overflow-y-auto">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex animate-pulse items-center gap-3 px-4 py-3">
-            <div className="size-7 rounded-lg bg-muted" />
-            <div className="h-3.5 w-32 rounded bg-muted" />
-            <div className="ml-auto h-3.5 w-12 rounded bg-muted" />
+          <div
+            key={i}
+            className="flex items-center gap-3 px-4 py-3 motion-safe:animate-pulse motion-reduce:opacity-70"
+          >
+            <div className="bg-muted size-7 rounded-lg" />
+            <div className="bg-muted h-3.5 w-32 rounded" />
+            <div className="bg-muted ml-auto h-3.5 w-12 rounded" />
           </div>
         ))}
       </div>
@@ -105,13 +116,13 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
   if (results.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">No results yet.</p>
+        <p className="text-muted-foreground text-sm">No results yet.</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-y-auto divide-y divide-border">
+    <div className="divide-border flex-1 divide-y overflow-y-auto">
       {results.map((result, idx) => {
         const moduleType = stepModuleTypes[idx];
         const mod = moduleType ? getModule(moduleType) : undefined;
@@ -135,7 +146,7 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
           <div key={result.stepId}>
             {/* Agent C — iterator context block: slate left-border above the result row */}
             {upstreamProducesArray && (
-              <div className="mx-4 mt-2 mb-1 flex items-start gap-2 rounded-md border-l-2 border-slate-300 bg-slate-50 py-2 pl-3 pr-3 dark:border-slate-600 dark:bg-slate-900/40">
+              <div className="mx-4 mt-2 mb-1 flex items-start gap-2 rounded-md border-l-2 border-slate-300 bg-slate-50 py-2 pr-3 pl-3 dark:border-slate-600 dark:bg-slate-900/40">
                 <RefreshCwIcon
                   className="mt-0.5 size-3.5 shrink-0 text-slate-500"
                   aria-hidden="true"
@@ -145,7 +156,9 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
                     Iterates per item from Step {idx} ({prevModName})
                   </p>
                   {upstreamRunCount !== undefined && (
-                    <p>Will run {upstreamRunCount} times during a real execution</p>
+                    <p>
+                      Will run {upstreamRunCount} times during a real execution
+                    </p>
                   )}
                   <p className="text-slate-500 dark:text-slate-400">
                     Showing result for first item (item[0]) below
@@ -158,7 +171,7 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
             <button
               type="button"
               onClick={() => toggleRow(idx)}
-              className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              className="hover:bg-muted/50 focus-visible:ring-ring flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
               aria-expanded={isExpanded}
               aria-label={`Step ${idx + 1}: ${mod?.name ?? moduleType ?? "Unknown"} — ${result.status}`}
             >
@@ -174,7 +187,10 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
                   <meta.Icon className={cn("size-3.5", meta.iconColor)} />
                 </span>
               ) : (
-                <span className="size-7 shrink-0 rounded-lg bg-muted" aria-hidden="true" />
+                <span
+                  className="bg-muted size-7 shrink-0 rounded-lg"
+                  aria-hidden="true"
+                />
               )}
 
               {/* Module name */}
@@ -184,28 +200,37 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
               </span>
 
               {/* Duration badge */}
-              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
+              <span className="bg-muted text-muted-foreground shrink-0 rounded-full px-2 py-0.5 font-mono text-xs">
                 {formatDuration(result.durationMs)}
               </span>
 
               {/* Status icon */}
               {result.status === "success" ? (
-                <CheckCircle2Icon className="size-4 shrink-0 text-green-500" aria-label="Success" />
+                <CheckCircle2Icon
+                  className="size-4 shrink-0 text-green-500"
+                  aria-label="Success"
+                />
               ) : (
-                <XCircleIcon className="size-4 shrink-0 text-red-500" aria-label="Failed" />
+                <XCircleIcon
+                  className="size-4 shrink-0 text-red-500"
+                  aria-label="Failed"
+                />
               )}
             </button>
 
             {/* Inline detail table — 3-row x ≤5-col output */}
             {isExpanded && tableRows.length > 0 && (
-              <div className="border-t border-border bg-muted/30 px-4 py-3">
-                <table className="w-full min-w-0 text-xs" aria-label={`Output for step ${idx + 1}`}>
+              <div className="border-border bg-muted/30 border-t px-4 py-3">
+                <table
+                  className="w-full min-w-0 text-xs"
+                  aria-label={`Output for step ${idx + 1}`}
+                >
                   <thead>
                     <tr>
                       {tableRows.map(([key]) => (
                         <th
                           key={key}
-                          className="pb-1 pr-3 text-left font-medium text-muted-foreground"
+                          className="text-muted-foreground pr-3 pb-1 text-left font-medium"
                         >
                           {key}
                         </th>
@@ -215,7 +240,10 @@ function DockBody({ results, stepModuleTypes, isLoading }: DockBodyProps) {
                   <tbody>
                     <tr>
                       {tableRows.map(([key, val]) => (
-                        <td key={key} className="max-w-[160px] truncate pr-3 font-mono">
+                        <td
+                          key={key}
+                          className="max-w-[160px] truncate pr-3 font-mono"
+                        >
                           {val}
                         </td>
                       ))}
@@ -257,18 +285,22 @@ export function TestRunPanel({
       aria-live="polite"
       aria-busy={isLoading}
       className={cn(
-        "fixed bottom-0 left-[var(--sidebar-width,16rem)] right-0 z-30",
-        "flex flex-col bg-background border-t border-border shadow-lg",
+        "fixed right-0 bottom-0 left-[var(--sidebar-width,16rem)] z-30",
+        "bg-background border-border flex flex-col border-t shadow-lg",
         "h-[280px]",
         // Slide-in transition; respect prefers-reduced-motion
         "motion-reduce:transition-opacity motion-reduce:duration-150",
         isOpen
-          ? "translate-y-0 motion-reduce:opacity-100 transition-transform duration-200"
+          ? "translate-y-0 transition-transform duration-200 motion-reduce:opacity-100"
           : "translate-y-full motion-reduce:opacity-0",
       )}
     >
       <DockHeader results={results} isLoading={isLoading} onClose={onClose} />
-      <DockBody results={results} stepModuleTypes={stepModuleTypes} isLoading={isLoading} />
+      <DockBody
+        results={results}
+        stepModuleTypes={stepModuleTypes}
+        isLoading={isLoading}
+      />
     </div>
   );
 }

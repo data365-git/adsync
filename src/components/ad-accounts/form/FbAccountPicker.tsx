@@ -94,23 +94,25 @@ export function FbAccountPicker({
               setOpen((v) => !v);
             }
           }}
-          className={`flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`focus-visible:border-ring focus-visible:ring-ring flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${
             error
-              ? "border-destructive ring-3 ring-destructive/20"
+              ? "border-destructive ring-destructive/20 ring-3"
               : "border-input hover:bg-muted/50"
-          } ${open ? "border-ring ring-3 ring-ring/50" : ""}`}
+          } ${open ? "border-ring ring-ring/50 ring-3" : ""}`}
         >
           {loading ? (
             <span className="text-muted-foreground">Loading accounts…</span>
           ) : selected ? (
             <span className="flex flex-1 items-center gap-2 truncate text-left">
               <span className="font-medium">{selected.name}</span>
-              <span className="text-xs text-muted-foreground">{selected.id}</span>
+              <span className="text-muted-foreground text-xs">
+                {selected.id}
+              </span>
             </span>
           ) : (
             <span className="text-muted-foreground">Search ad accounts…</span>
           )}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             {selected && (
               <span
                 role="button"
@@ -123,24 +125,27 @@ export function FbAccountPicker({
                     handleClear(e as unknown as React.MouseEvent);
                   }
                 }}
-                className="rounded p-0.5 hover:bg-muted"
+                className="hover:bg-muted rounded p-0.5"
               >
-                <XIcon className="size-3.5 text-muted-foreground" />
+                <XIcon className="text-muted-foreground size-3.5" />
               </span>
             )}
             <ChevronDownIcon
-              className={`size-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+              className={`text-muted-foreground size-4 transition-transform ${open ? "rotate-180" : ""}`}
             />
           </div>
         </button>
 
         {open && (
           <div
-            className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-md"
+            className="border-border bg-popover absolute z-50 mt-1 w-full overflow-hidden rounded-xl border shadow-md"
             onKeyDown={handleKeyDown}
           >
             <Command>
-              <CommandInput placeholder="Search by name or account ID…" autoFocus />
+              <CommandInput
+                placeholder="Search by name or account ID…"
+                autoFocus
+              />
               <CommandList id="fb-account-picker-listbox">
                 <CommandEmpty>No accounts found.</CommandEmpty>
                 <CommandGroup heading="Facebook Ad Accounts">
@@ -154,7 +159,7 @@ export function FbAccountPicker({
                     >
                       <span className="flex flex-col gap-0.5">
                         <span className="font-medium">{account.name}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground text-xs">
                           {account.id}
                         </span>
                       </span>
@@ -170,7 +175,7 @@ export function FbAccountPicker({
         <p
           role="alert"
           aria-live="polite"
-          className="flex items-center gap-1.5 text-xs text-destructive"
+          className="text-destructive flex items-center gap-1.5 text-xs"
         >
           <span aria-hidden="true">&#x26A0;</span>
           {error}

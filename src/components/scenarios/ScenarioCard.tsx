@@ -89,20 +89,20 @@ export function ScenarioCard({
 
   return (
     <>
-      <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
+      <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
         {/* Header: name + badge + kebab */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex min-w-0 flex-col gap-1">
             <Link
               href={`/scenarios/${scenario.id}`}
-              className="font-medium text-foreground hover:underline focus-visible:underline focus-visible:outline-none truncate"
+              className="text-foreground truncate font-medium hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {scenario.name}
             </Link>
             <div className="flex items-center gap-2">
               <ScenarioKindBadge kind={scenario.kind} />
               {runCount !== undefined && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   {runCount === 0
                     ? "No runs"
                     : `${runCount} run${runCount === 1 ? "" : "s"}`}
@@ -113,7 +113,7 @@ export function ScenarioCard({
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary aria-expanded:bg-muted"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring aria-expanded:bg-muted inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
               aria-label={`Scenario options for ${scenario.name}`}
             >
               <MoreHorizontal className="size-4" aria-hidden />
@@ -141,9 +141,7 @@ export function ScenarioCard({
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={duplicateMutation.isPending}
-                onClick={() =>
-                  duplicateMutation.mutate({ id: scenario.id })
-                }
+                onClick={() => duplicateMutation.mutate({ id: scenario.id })}
               >
                 {duplicateMutation.isPending ? (
                   <Loader2
@@ -169,7 +167,7 @@ export function ScenarioCard({
 
         {/* Last run */}
         <div className="flex items-start gap-2">
-          <span className="shrink-0 pt-0.5 text-xs text-muted-foreground">
+          <span className="text-muted-foreground shrink-0 pt-0.5 text-xs">
             Last run:
           </span>
           <LastRunCell
@@ -187,7 +185,7 @@ export function ScenarioCard({
               initialEnabled={scenario.enabled}
               name={scenario.name}
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               {scenario.enabled ? "Enabled" : "Disabled"}
             </span>
           </div>
@@ -197,10 +195,13 @@ export function ScenarioCard({
             disabled={runNowMutation.isPending}
             onClick={() => runNowMutation.mutate({ id: scenario.id })}
             aria-label={`Run now: ${scenario.name}`}
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50"
+            className="border-border bg-background hover:bg-muted focus-visible:ring-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
           >
             {isRunning ? (
-              <Loader2 className="size-3.5 motion-safe:animate-spin" aria-hidden />
+              <Loader2
+                className="size-3.5 motion-safe:animate-spin"
+                aria-hidden
+              />
             ) : (
               <Play className="size-3.5" aria-hidden />
             )}

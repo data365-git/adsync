@@ -99,17 +99,17 @@ export function MetricsMultiSelect({
           data-invalid={error ? "true" : undefined}
           onClick={() => setOpen((v) => !v)}
           className={cn(
-            "flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+            "focus-visible:border-ring focus-visible:ring-ring flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-2",
             error
-              ? "border-destructive ring-3 ring-destructive/20"
+              ? "border-destructive ring-destructive/20 ring-3"
               : "border-input hover:bg-muted/50",
-            open ? "border-ring ring-3 ring-ring/50" : "",
+            open ? "border-ring ring-ring/50 ring-3" : "",
           )}
         >
           <span className="flex items-center gap-2">
             {selectedCount > 0 ? (
               <>
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
                   {selectedCount}
                 </span>
                 <span className="text-sm">
@@ -120,7 +120,7 @@ export function MetricsMultiSelect({
               <span className="text-muted-foreground">Select metrics…</span>
             )}
           </span>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex shrink-0 items-center gap-1">
             {selectedCount > 0 && (
               <span
                 role="button"
@@ -136,14 +136,14 @@ export function MetricsMultiSelect({
                     clearAll();
                   }
                 }}
-                className="rounded p-0.5 hover:bg-muted"
+                className="hover:bg-muted rounded p-0.5"
               >
-                <XIcon className="size-3.5 text-muted-foreground" />
+                <XIcon className="text-muted-foreground size-3.5" />
               </span>
             )}
             <ChevronDownIcon
               className={cn(
-                "size-4 text-muted-foreground transition-transform",
+                "text-muted-foreground size-4 transition-transform",
                 open && "rotate-180",
               )}
             />
@@ -151,9 +151,9 @@ export function MetricsMultiSelect({
         </button>
 
         {open && (
-          <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-border bg-popover shadow-md">
+          <div className="border-border bg-popover absolute z-50 mt-1 w-full overflow-hidden rounded-xl border shadow-md">
             {/* Search input */}
-            <div className="border-b border-border px-2 py-1.5">
+            <div className="border-border border-b px-2 py-1.5">
               <input
                 type="text"
                 placeholder="Search metrics…"
@@ -166,14 +166,14 @@ export function MetricsMultiSelect({
                     triggerRef.current?.focus();
                   }
                 }}
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
                 autoFocus
               />
             </div>
 
             <div className="max-h-72 overflow-y-auto p-1">
               {filtered.length === 0 ? (
-                <p className="py-6 text-center text-sm text-muted-foreground">
+                <p className="text-muted-foreground py-6 text-center text-sm">
                   No metrics found.
                 </p>
               ) : (
@@ -191,7 +191,7 @@ export function MetricsMultiSelect({
                       <button
                         type="button"
                         onClick={() => toggleGroup(group)}
-                        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted"
+                        className="hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1 text-left"
                       >
                         <div
                           className={cn(
@@ -215,13 +215,13 @@ export function MetricsMultiSelect({
                             </svg>
                           )}
                           {!allSelected && someSelected && (
-                            <span className="block h-px w-2 bg-primary" />
+                            <span className="bg-primary block h-px w-2" />
                           )}
                         </div>
-                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
                           {group}
                         </span>
-                        <span className="ml-auto text-xs text-muted-foreground">
+                        <span className="text-muted-foreground ml-auto text-xs">
                           {groupMetrics.filter((m) => value.includes(m)).length}
                           /{groupMetrics.length}
                         </span>
@@ -239,7 +239,7 @@ export function MetricsMultiSelect({
                               aria-selected={checked}
                               onClick={() => toggleMetric(metric)}
                               className={cn(
-                                "flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-muted",
+                                "hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm",
                                 checked && "text-foreground",
                               )}
                             >
@@ -276,14 +276,14 @@ export function MetricsMultiSelect({
 
             {/* Footer */}
             {selectedCount > 0 && (
-              <div className="border-t border-border px-2 py-1.5 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
+              <div className="border-border flex items-center justify-between border-t px-2 py-1.5">
+                <span className="text-muted-foreground text-xs">
                   {selectedCount} selected
                 </span>
                 <button
                   type="button"
                   onClick={clearAll}
-                  className="text-xs text-destructive hover:underline"
+                  className="text-destructive text-xs hover:underline"
                 >
                   Clear all
                 </button>
@@ -297,7 +297,7 @@ export function MetricsMultiSelect({
         <p
           role="alert"
           aria-live="polite"
-          className="flex items-center gap-1.5 text-xs text-destructive"
+          className="text-destructive flex items-center gap-1.5 text-xs"
         >
           <span aria-hidden="true">&#x26A0;</span>
           {error}

@@ -32,7 +32,7 @@ export function ModuleLibraryCard({
       className={cn(
         "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left",
         "transition-all duration-100",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+        "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         isSelected
           ? "border-primary/50 bg-primary/5"
           : "border-border bg-card hover:border-primary/40 hover:shadow-sm",
@@ -52,8 +52,8 @@ export function ModuleLibraryCard({
 
       {/* Text */}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{module.name}</p>
-        <p className="mt-0.5 text-xs text-muted-foreground line-clamp-3">
+        <p className="text-foreground text-sm font-medium">{module.name}</p>
+        <p className="text-muted-foreground mt-0.5 line-clamp-3 text-xs">
           {module.description}
         </p>
       </div>

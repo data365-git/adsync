@@ -30,21 +30,21 @@ export function TokenExpiryWarning({
   return (
     <div
       role="alert"
-      className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-xs"
+      className="border-warning/30 bg-warning/10 flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs"
     >
       <AlertTriangle
-        className="mt-0.5 size-3.5 shrink-0 text-warning-foreground"
+        className="text-warning-foreground mt-0.5 size-3.5 shrink-0"
         aria-hidden="true"
       />
       <div className="min-w-0 flex-1">
-        <span className="font-medium text-warning-foreground">
+        <span className="text-warning-foreground font-medium">
           Expires in {timeRemaining}.
         </span>{" "}
         <button
           type="button"
           onClick={onReconnect}
           disabled={isReconnecting}
-          className="font-medium text-warning-foreground underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50"
+          className="text-warning-foreground focus-visible:ring-ring font-medium underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
           aria-label="Reconnect now to prevent expiry"
         >
           {isReconnecting ? "Reconnecting…" : "Reconnect now."}

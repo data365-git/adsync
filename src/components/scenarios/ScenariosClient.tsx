@@ -59,7 +59,8 @@ export function ScenariosClient() {
 
   const hasFilters = includeQuickSetup;
   // "filters applied with zero results" vs "no data at all"
-  const isFilteredEmpty = !isLoading && filteredScenarios.length === 0 && (data?.length ?? 0) > 0;
+  const isFilteredEmpty =
+    !isLoading && filteredScenarios.length === 0 && (data?.length ?? 0) > 0;
   const isAbsolutelyEmpty = !isLoading && (data?.length ?? 0) === 0;
 
   const handleDuplicated = useCallback(
@@ -95,12 +96,12 @@ export function ScenariosClient() {
       <div className="flex flex-col gap-4">
         <QuickSetupBanner />
         {/* Filter bar skeleton */}
-        <div className="flex items-center gap-2 h-6 animate-pulse">
-          <div className="h-4 w-8 rounded-full bg-muted" />
-          <div className="h-4 w-36 rounded bg-muted" />
+        <div className="flex h-6 items-center gap-2 motion-safe:animate-pulse motion-reduce:opacity-70">
+          <div className="bg-muted h-4 w-8 rounded-full" />
+          <div className="bg-muted h-4 w-36 rounded" />
         </div>
         {/* Desktop skeleton */}
-        <div className="hidden md:block rounded-xl border">
+        <div className="hidden rounded-xl border md:block">
           <Table aria-label="Scenarios">
             <TableHeader>
               <TableRow>
@@ -108,7 +109,7 @@ export function ScenariosClient() {
                 <TableHead>Kind</TableHead>
                 <TableHead>Enabled</TableHead>
                 <TableHead>Last Run</TableHead>
-                <TableHead className="w-10 sr-only">Actions</TableHead>
+                <TableHead className="sr-only w-10">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -116,24 +117,24 @@ export function ScenariosClient() {
                 <TableRow key={i} className="h-14">
                   <td className="p-2">
                     <div className="flex flex-col gap-1">
-                      <div className="h-4 w-44 rounded bg-muted animate-pulse" />
-                      <div className="h-3 w-16 rounded bg-muted animate-pulse" />
+                      <div className="bg-muted h-4 w-44 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
+                      <div className="bg-muted h-3 w-16 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
                     </div>
                   </td>
                   <td className="p-2">
-                    <div className="h-5 w-16 rounded-full bg-muted animate-pulse" />
+                    <div className="bg-muted h-5 w-16 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
                   </td>
                   <td className="p-2">
-                    <div className="h-[18px] w-8 rounded-full bg-muted animate-pulse" />
+                    <div className="bg-muted h-[18px] w-8 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
                   </td>
                   <td className="p-2">
                     <div className="flex flex-col gap-1">
-                      <div className="h-3.5 w-16 rounded bg-muted animate-pulse" />
-                      <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
+                      <div className="bg-muted h-3.5 w-16 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
+                      <div className="bg-muted h-5 w-20 rounded-full motion-safe:animate-pulse motion-reduce:opacity-70" />
                     </div>
                   </td>
                   <td className="p-2">
-                    <div className="h-8 w-8 rounded-lg bg-muted animate-pulse" />
+                    <div className="bg-muted h-8 w-8 rounded-lg motion-safe:animate-pulse motion-reduce:opacity-70" />
                   </td>
                 </TableRow>
               ))}
@@ -141,29 +142,29 @@ export function ScenariosClient() {
           </Table>
         </div>
         {/* Mobile skeleton */}
-        <div className="md:hidden flex flex-col gap-3">
+        <div className="flex flex-col gap-3 md:hidden">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="rounded-xl border p-4 flex flex-col gap-3 h-[180px] animate-pulse"
+              className="flex h-[180px] flex-col gap-3 rounded-xl border p-4 motion-safe:animate-pulse motion-reduce:opacity-70"
             >
               <div className="flex items-start justify-between">
-                <div className="flex flex-col gap-1 flex-1">
-                  <div className="h-4 w-36 rounded bg-muted" />
-                  <div className="h-5 w-16 rounded-full bg-muted" />
+                <div className="flex flex-1 flex-col gap-1">
+                  <div className="bg-muted h-4 w-36 rounded" />
+                  <div className="bg-muted h-5 w-16 rounded-full" />
                 </div>
-                <div className="h-11 w-11 rounded-lg bg-muted shrink-0" />
+                <div className="bg-muted h-11 w-11 shrink-0 rounded-lg" />
               </div>
               <div className="flex items-start gap-2">
-                <div className="h-3.5 w-14 rounded bg-muted" />
+                <div className="bg-muted h-3.5 w-14 rounded" />
                 <div className="flex flex-col gap-1">
-                  <div className="h-3.5 w-16 rounded bg-muted" />
-                  <div className="h-5 w-20 rounded-full bg-muted" />
+                  <div className="bg-muted h-3.5 w-16 rounded" />
+                  <div className="bg-muted h-5 w-20 rounded-full" />
                 </div>
               </div>
-              <div className="flex items-center justify-between pt-2 border-t">
-                <div className="h-[18px] w-16 rounded-full bg-muted" />
-                <div className="h-11 w-24 rounded-lg bg-muted" />
+              <div className="flex items-center justify-between border-t pt-2">
+                <div className="bg-muted h-[18px] w-16 rounded-full" />
+                <div className="bg-muted h-11 w-24 rounded-lg" />
               </div>
             </div>
           ))}
@@ -177,11 +178,11 @@ export function ScenariosClient() {
     return (
       <div className="flex flex-col gap-4">
         <QuickSetupBanner />
-        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-destructive/30 bg-destructive/5 py-16 text-center">
-          <AlertCircle className="size-8 text-destructive" aria-hidden />
+        <div className="border-destructive/30 bg-destructive/5 flex flex-col items-center justify-center gap-4 rounded-xl border py-16 text-center">
+          <AlertCircle className="text-destructive size-8" aria-hidden />
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">Failed to load scenarios</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               Check your connection and try again.
             </p>
           </div>
@@ -243,7 +244,7 @@ export function ScenariosClient() {
       />
 
       {/* Desktop table */}
-      <div className="hidden md:block rounded-xl border">
+      <div className="hidden rounded-xl border md:block">
         <Table aria-label="Scenarios">
           <TableHeader>
             <TableRow>
@@ -251,7 +252,7 @@ export function ScenariosClient() {
               <TableHead>Kind</TableHead>
               <TableHead>Enabled</TableHead>
               <TableHead>Last Run</TableHead>
-              <TableHead className="w-10 sr-only">Actions</TableHead>
+              <TableHead className="sr-only w-10">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -269,7 +270,7 @@ export function ScenariosClient() {
       </div>
 
       {/* Mobile card list */}
-      <div className="md:hidden flex flex-col gap-3">
+      <div className="flex flex-col gap-3 md:hidden">
         {filteredScenarios.map((scenario) => (
           <ScenarioCard
             key={scenario.id}
@@ -300,7 +301,7 @@ function FilterBar({
         aria-label="Show Quick Setup scenarios"
       />
       {/* Clicking the span label also toggles via the switch's own click area */}
-      <span className="select-none text-sm text-muted-foreground">
+      <span className="text-muted-foreground text-sm select-none">
         Show Quick Setup scenarios
       </span>
     </div>

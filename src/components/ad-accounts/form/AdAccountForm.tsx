@@ -14,7 +14,11 @@ import { Switch } from "~/components/ui/switch";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "~/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "~/components/ui/input-group";
 import { FormSection } from "./FormSection";
 import { FbAccountPicker } from "./FbAccountPicker";
 import { LevelCheckboxes } from "./LevelCheckboxes";
@@ -58,10 +62,7 @@ function accountToFormValues(account: AdAccount): AdAccountFormValues {
   };
 }
 
-function deepEqual(
-  a: AdAccountFormValues,
-  b: AdAccountFormValues,
-): boolean {
+function deepEqual(a: AdAccountFormValues, b: AdAccountFormValues): boolean {
   return (
     a.label === b.label &&
     a.fbAccountId === b.fbAccountId &&
@@ -107,46 +108,43 @@ function validateAll(values: AdAccountFormValues): FormErrors {
 function FormSkeleton() {
   return (
     <div
-      className="space-y-8 animate-pulse"
+      className="space-y-8 motion-safe:animate-pulse motion-reduce:opacity-70"
       aria-busy="true"
       aria-label="Loading form"
     >
       {/* Enabled toggle skeleton */}
-      <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 p-4">
-        <div className="h-5 w-8 rounded-full bg-muted" />
+      <div className="border-border bg-muted/30 flex items-center gap-3 rounded-xl border p-4">
+        <div className="bg-muted h-5 w-8 rounded-full" />
         <div className="space-y-1">
-          <div className="h-4 w-28 rounded bg-muted" />
-          <div className="h-3 w-48 rounded bg-muted" />
+          <div className="bg-muted h-4 w-28 rounded" />
+          <div className="bg-muted h-3 w-48 rounded" />
         </div>
       </div>
 
       {/* Section skeletons */}
-      {[
-        { fields: 2 },
-        { fields: 4 },
-        { fields: 2 },
-        { fields: 3 },
-      ].map((section, i) => (
-        <div key={i} className="space-y-4">
-          <div className="border-b border-border pb-3">
-            <div className="h-4 w-32 rounded bg-muted" />
+      {[{ fields: 2 }, { fields: 4 }, { fields: 2 }, { fields: 3 }].map(
+        (section, i) => (
+          <div key={i} className="space-y-4">
+            <div className="border-border border-b pb-3">
+              <div className="bg-muted h-4 w-32 rounded" />
+            </div>
+            <div className="space-y-3">
+              {Array.from({ length: section.fields }).map((_, j) => (
+                <div key={j} className="space-y-1.5">
+                  <div className="bg-muted h-3 w-24 rounded" />
+                  <div className="bg-muted h-8 w-full rounded-lg" />
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-3">
-            {Array.from({ length: section.fields }).map((_, j) => (
-              <div key={j} className="space-y-1.5">
-                <div className="h-3 w-24 rounded bg-muted" />
-                <div className="h-8 w-full rounded-lg bg-muted" />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+        ),
+      )}
 
       {/* Footer skeleton */}
-      <div className="sticky bottom-0 border-t border-border bg-background/95 py-4">
+      <div className="border-border bg-background/95 sticky bottom-0 border-t py-4">
         <div className="flex items-center justify-end gap-2">
-          <div className="h-8 w-20 rounded-lg bg-muted" />
-          <div className="h-8 w-24 rounded-lg bg-muted" />
+          <div className="bg-muted h-8 w-20 rounded-lg" />
+          <div className="bg-muted h-8 w-24 rounded-lg" />
         </div>
       </div>
     </div>
@@ -164,7 +162,8 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
     [initialData],
   );
 
-  const [values, setValues] = React.useState<AdAccountFormValues>(initialValues);
+  const [values, setValues] =
+    React.useState<AdAccountFormValues>(initialValues);
   const [errors, setErrors] = React.useState<FormErrors>({});
   const [touched, setTouched] = React.useState<
     Partial<Record<keyof AdAccountFormValues, boolean>>
@@ -295,7 +294,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
         {saveError && (
           <div
             role="alert"
-            className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            className="border-destructive/30 bg-destructive/5 text-destructive flex items-start gap-3 rounded-xl border p-4 text-sm"
           >
             <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
             <div>
@@ -305,7 +304,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
             <button
               type="button"
               onClick={() => setSaveError(null)}
-              className="ml-auto rounded p-0.5 hover:bg-destructive/10"
+              className="hover:bg-destructive/10 ml-auto rounded p-0.5"
               aria-label="Dismiss error"
             >
               <XIcon className="size-4" />
@@ -336,7 +335,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
             </label>
             <p
               id="enabled-description"
-              className="mt-0.5 text-xs text-muted-foreground"
+              className="text-muted-foreground mt-0.5 text-xs"
             >
               {enabledDescription}
             </p>
@@ -352,7 +351,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
           <div className="space-y-1.5">
             <Label htmlFor="account-label">
               Label
-              <span className="ml-1 text-destructive" aria-hidden="true">
+              <span className="text-destructive ml-1" aria-hidden="true">
                 *
               </span>
             </Label>
@@ -376,17 +375,17 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
                   id="label-error"
                   role="alert"
                   aria-live="polite"
-                  className="flex items-center gap-1.5 text-xs text-destructive"
+                  className="text-destructive flex items-center gap-1.5 text-xs"
                 >
                   <span aria-hidden="true">&#x26A0;</span>
                   {getError("label")}
                 </p>
               ) : (
-                <p id="label-hint" className="text-xs text-muted-foreground">
+                <p id="label-hint" className="text-muted-foreground text-xs">
                   A short name for your own reference
                 </p>
               )}
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="text-muted-foreground ml-auto text-xs">
                 {values.label.length}/60
               </span>
             </div>
@@ -396,7 +395,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
           <div className="space-y-1.5">
             <Label>
               Facebook Ad Account
-              <span className="ml-1 text-destructive" aria-hidden="true">
+              <span className="text-destructive ml-1" aria-hidden="true">
                 *
               </span>
             </Label>
@@ -420,7 +419,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
           <div className="space-y-1.5">
             <Label>
               Sync levels
-              <span className="ml-1 text-destructive" aria-hidden="true">
+              <span className="text-destructive ml-1" aria-hidden="true">
                 *
               </span>
             </Label>
@@ -436,7 +435,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
           <div className="space-y-1.5">
             <Label>
               Metrics
-              <span className="ml-1 text-destructive" aria-hidden="true">
+              <span className="text-destructive ml-1" aria-hidden="true">
                 *
               </span>
             </Label>
@@ -446,7 +445,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
               onBlur={() => blurField("metrics")}
               error={getError("metrics")}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Grouped by Delivery, Cost, Conversion, Video. At least one
               required.
             </p>
@@ -472,7 +471,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
           <div className="space-y-1.5">
             <Label htmlFor="spreadsheet-id">
               Spreadsheet ID
-              <span className="ml-1 text-destructive" aria-hidden="true">
+              <span className="text-destructive ml-1" aria-hidden="true">
                 *
               </span>
             </Label>
@@ -499,17 +498,15 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
                 id="spreadsheet-error"
                 role="alert"
                 aria-live="polite"
-                className="flex items-center gap-1.5 text-xs text-destructive"
+                className="text-destructive flex items-center gap-1.5 text-xs"
               >
                 <span aria-hidden="true">&#x26A0;</span>
                 {getError("spreadsheetId")}
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Found in the Sheets URL:{" "}
-                <code className="font-mono text-xs">
-                  /spreadsheets/d/[ID]/
-                </code>
+                <code className="font-mono text-xs">/spreadsheets/d/[ID]/</code>
               </p>
             )}
           </div>
@@ -517,7 +514,9 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
           {/* Campaign tab name — always shown when CAMPAIGN level selected */}
           <div
             className={`overflow-hidden transition-all duration-150 ${
-              campaignLevelSelected ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+              campaignLevelSelected
+                ? "max-h-32 opacity-100"
+                : "max-h-0 opacity-0"
             }`}
             aria-hidden={!campaignLevelSelected}
           >
@@ -541,7 +540,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
                   id="campaign-tab-error"
                   role="alert"
                   aria-live="polite"
-                  className="flex items-center gap-1.5 text-xs text-destructive"
+                  className="text-destructive flex items-center gap-1.5 text-xs"
                 >
                   <span aria-hidden="true">&#x26A0;</span>
                   {getError("campaignTabName")}
@@ -577,7 +576,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
                   id="ad-tab-error"
                   role="alert"
                   aria-live="polite"
-                  className="flex items-center gap-1.5 text-xs text-destructive"
+                  className="text-destructive flex items-center gap-1.5 text-xs"
                 >
                   <span aria-hidden="true">&#x26A0;</span>
                   {getError("adTabName")}
@@ -605,9 +604,9 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
         </FormSection>
 
         {/* ── Sticky footer ─────────────────────────────────────────────── */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm supports-backdrop-filter:backdrop-blur-sm md:left-[240px]">
+        <div className="border-border bg-background/95 fixed right-0 bottom-0 left-0 z-40 border-t shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm supports-backdrop-filter:backdrop-blur-sm md:left-[240px]">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 md:px-8">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
               {isDirty && (
                 <span className="flex items-center gap-1">
                   <span className="inline-block size-1.5 rounded-full bg-amber-500" />

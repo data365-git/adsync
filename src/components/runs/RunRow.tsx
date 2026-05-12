@@ -64,14 +64,14 @@ export function RunRow({ run }: RunRowProps) {
 
   return (
     <TableRow
-      className="cursor-pointer focus-within:bg-muted/50"
+      className="focus-within:bg-muted/50 cursor-pointer"
       aria-label={`Run ${run.id} — ${accountLabel} — ${TRIGGER_LABEL[run.trigger]} — ${run.status}`}
     >
       {/* When */}
       <TableCell>
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger className="underline decoration-dashed decoration-muted-foreground underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <TooltipTrigger className="decoration-muted-foreground focus-visible:ring-ring underline decoration-dashed underline-offset-2 focus-visible:ring-2 focus-visible:outline-none">
               <time dateTime={run.startedAt.toISOString()} className="text-sm">
                 {relativeTime}
               </time>
@@ -86,13 +86,13 @@ export function RunRow({ run }: RunRowProps) {
         <div className="flex items-center gap-1.5">
           <Link
             href={`/scenarios/${run.scenarioId}`}
-            className="max-w-[12rem] truncate text-sm text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+            className="text-foreground focus-visible:ring-ring max-w-[12rem] truncate rounded text-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
             title={scenarioName}
           >
             {scenarioName}
           </Link>
           {isQuickSetup ? (
-            <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted/50 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="border-border bg-muted/50 text-muted-foreground inline-flex shrink-0 items-center rounded-full border px-1.5 py-0 text-[10px] font-medium tracking-wide uppercase">
               Quick
             </span>
           ) : null}
@@ -108,7 +108,7 @@ export function RunRow({ run }: RunRowProps) {
 
       {/* Trigger */}
       <TableCell>
-        <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+        <span className="border-border bg-muted/50 text-muted-foreground inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">
           {TRIGGER_LABEL[run.trigger]}
         </span>
       </TableCell>
@@ -125,7 +125,7 @@ export function RunRow({ run }: RunRowProps) {
 
       {/* Duration — hidden on mobile */}
       <TableCell className="hidden md:table-cell">
-        <span className="text-sm tabular-nums text-muted-foreground">
+        <span className="text-muted-foreground text-sm tabular-nums">
           {formatDuration(run.durationMs)}
         </span>
       </TableCell>
@@ -137,7 +137,7 @@ export function RunRow({ run }: RunRowProps) {
             errorPreview.truncated ? (
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger className="max-w-[10rem] overflow-hidden text-ellipsis whitespace-nowrap text-xs text-status-failed focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <TooltipTrigger className="text-status-failed focus-visible:ring-ring max-w-[10rem] overflow-hidden text-xs text-ellipsis whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none">
                     {errorPreview.text}
                   </TooltipTrigger>
                   <TooltipContent
@@ -149,7 +149,7 @@ export function RunRow({ run }: RunRowProps) {
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <span className="text-xs text-status-failed">
+              <span className="text-status-failed text-xs">
                 {errorPreview.text}
               </span>
             )
@@ -157,7 +157,7 @@ export function RunRow({ run }: RunRowProps) {
 
           <Link
             href={`/runs/${run.id}`}
-            className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto shrink-0 rounded p-1 focus-visible:ring-2 focus-visible:outline-none"
             aria-label={`View details for run ${run.id}`}
             tabIndex={0}
           >

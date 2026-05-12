@@ -16,7 +16,7 @@ export function RunsEmptyState({
       <div
         role="status"
         aria-live="polite"
-        className="flex flex-col items-center justify-center gap-4 py-16 text-center"
+        className="flex flex-col items-center justify-center gap-4 py-10 text-center sm:py-16"
       >
         <SearchX
           className="size-10 text-muted-foreground"
@@ -39,7 +39,7 @@ export function RunsEmptyState({
     <div
       role="status"
       aria-live="polite"
-      className="flex flex-col items-center justify-center gap-4 py-16 text-center"
+      className="flex flex-col items-center justify-center gap-4 py-10 text-center sm:py-16"
     >
       <Inbox
         className="size-10 text-muted-foreground"

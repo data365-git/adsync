@@ -9,7 +9,7 @@ type Props = {
 export function AdAccountEmptyState({ hasFilters = false }: Props) {
   if (hasFilters) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-16 text-center">
+      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-10 text-center sm:py-16">
         <div className="rounded-full bg-muted p-3">
           <LayoutGrid className="size-6 text-muted-foreground" aria-hidden />
         </div>
@@ -24,7 +24,7 @@ export function AdAccountEmptyState({ hasFilters = false }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-10 text-center sm:py-16">
       <div className="rounded-full bg-muted p-3">
         <LayoutGrid className="size-6 text-muted-foreground" aria-hidden />
       </div>

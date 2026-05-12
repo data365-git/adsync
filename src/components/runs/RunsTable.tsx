@@ -37,7 +37,7 @@ export function RunsTable({
     return (
       <div
         role="alert"
-        className="flex flex-col items-center justify-center gap-4 py-16 text-center"
+        className="flex flex-col items-center justify-center gap-4 py-10 text-center sm:py-16"
       >
         <AlertCircle className="text-destructive size-10" aria-hidden="true" />
         <div>

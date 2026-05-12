@@ -177,7 +177,7 @@ export function ConnectionsClient() {
 
       {/* Empty state */}
       {!isLoading && !isError && connections?.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-10 text-center sm:py-16">
           <div className="bg-muted flex size-12 items-center justify-center rounded-full">
             <Plug className="text-muted-foreground size-6" aria-hidden="true" />
           </div>

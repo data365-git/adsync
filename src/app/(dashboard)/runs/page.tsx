@@ -12,9 +12,10 @@ export default async function RunsPage() {
 
   return (
     <HydrateClient>
+      {/* gap-6 / space-y-6 (24 px) = standard page rhythm; space-y-8 (32 px) = data-dense detail pages & multi-section forms */}
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-xl font-semibold">Sync Runs</h1>
+          <h1 className="text-xl font-semibold tracking-tight">Sync Runs</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             History of all Facebook Ads sync runs across your ad accounts.
           </p>

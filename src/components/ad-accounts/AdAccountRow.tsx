@@ -58,7 +58,7 @@ export function AdAccountRow({ account }: Props) {
       role="button"
       tabIndex={0}
       aria-label={`Open ${account.label}`}
-      className="focus-visible:ring-ring hover:bg-muted/50 h-14 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+      className="focus-visible:ring-ring hover:bg-muted/50 h-18 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
       onClick={openAccount}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -73,7 +73,7 @@ export function AdAccountRow({ account }: Props) {
       <TableCell className="max-w-[240px] min-w-[160px]">
         <Link
           href={href}
-          className="text-foreground font-medium hover:underline focus-visible:underline focus-visible:outline-none"
+          className="text-foreground text-base hover:underline focus-visible:underline focus-visible:outline-none"
           tabIndex={-1}
         >
           {account.label}
@@ -84,7 +84,7 @@ export function AdAccountRow({ account }: Props) {
       <TableCell className="min-w-[180px]">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger className="text-muted-foreground block max-w-[180px] truncate text-left font-mono text-xs">
+            <TooltipTrigger className="text-muted-foreground block max-w-[180px] truncate text-left font-mono text-sm">
               {account.fbAccountId}
             </TooltipTrigger>
             <TooltipContent side="top">{account.fbAccountId}</TooltipContent>
@@ -107,9 +107,9 @@ export function AdAccountRow({ account }: Props) {
       {/* Schedule */}
       <TableCell className="min-w-[140px]">
         {schedule === "No schedule" ? (
-          <span className="text-muted-foreground text-xs">No schedule</span>
+          <span className="text-muted-foreground text-sm">No schedule</span>
         ) : (
-          <span className="text-xs">{schedule}</span>
+          <span className="text-sm">{schedule}</span>
         )}
       </TableCell>
 

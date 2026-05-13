@@ -6,6 +6,10 @@ import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
+  // Hide the floating Next.js dev indicator (the "N" badge in the bottom-left)
+  // — it overlaps page content and the user prefers a clean viewport.
+  devIndicators: false,
+
   // googleapis and its auth deps are CJS-only packages with complex require()
   // chains. Tell Next.js (both webpack and Turbopack) to leave them as native
   // Node.js requires instead of bundling them — avoids HMR graph corruption in

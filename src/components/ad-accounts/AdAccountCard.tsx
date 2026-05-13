@@ -45,17 +45,17 @@ export function AdAccountCard({ account }: Props) {
   const schedule = formatCron(account.cronExpression);
 
   return (
-    <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
+    <div className="bg-card flex flex-col gap-4 rounded-xl border p-6">
       {/* Header row: name + kebab */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-0.5">
           <Link
             href={`/ad-accounts/${account.id}`}
-            className="text-foreground truncate font-medium hover:underline focus-visible:underline focus-visible:outline-none"
+            className="text-foreground truncate text-base hover:underline focus-visible:underline focus-visible:outline-none"
           >
             {account.label}
           </Link>
-          <span className="text-muted-foreground truncate font-mono text-xs">
+          <span className="text-muted-foreground truncate font-mono text-sm">
             {account.fbAccountId}
           </span>
         </div>
@@ -96,7 +96,7 @@ export function AdAccountCard({ account }: Props) {
       </div>
 
       {/* Schedule */}
-      <div className="flex items-center gap-2 text-xs">
+      <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground shrink-0">Schedule:</span>
         {schedule === "No schedule" ? (
           <span className="text-muted-foreground italic">No schedule</span>
@@ -107,7 +107,7 @@ export function AdAccountCard({ account }: Props) {
 
       {/* Last run */}
       <div className="flex items-start gap-2">
-        <span className="text-muted-foreground shrink-0 pt-0.5 text-xs">
+        <span className="text-muted-foreground shrink-0 pt-0.5 text-sm">
           Last run:
         </span>
         <LastRunBadge
@@ -118,14 +118,14 @@ export function AdAccountCard({ account }: Props) {
       </div>
 
       {/* Footer: enabled toggle + run now */}
-      <div className="flex items-center justify-between gap-3 border-t pt-1">
+      <div className="flex items-center justify-between gap-3 border-t pt-2">
         <div className="flex items-center gap-2">
           <EnabledToggle
             id={account.id}
             initialEnabled={account.enabled}
             label={account.label}
           />
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-sm">
             {account.enabled ? "Enabled" : "Disabled"}
           </span>
         </div>

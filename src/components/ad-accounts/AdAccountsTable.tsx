@@ -78,7 +78,7 @@ function SkeletonRows() {
   return (
     <>
       {[1, 2, 3].map((i) => (
-        <TableRow key={i} className="h-14">
+        <TableRow key={i} className="h-18">
           <td className="p-2">
             <Skeleton className="h-4 w-36" />
           </td>
@@ -108,11 +108,11 @@ function SkeletonRows() {
 
 function SkeletonCards() {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-4">
       {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className="flex h-[168px] flex-col gap-3 rounded-xl border p-4"
+          className="flex h-[200px] flex-col gap-4 rounded-xl border p-6"
         >
           <div className="flex items-start justify-between">
             <div className="flex flex-1 flex-col gap-1">
@@ -136,7 +136,14 @@ function SkeletonCards() {
   );
 }
 
-export function AdAccountsTable() {
+interface AdAccountsTableProps {
+  /** When provided, the empty state's "Add your first ad account" CTA calls
+   *  this instead of navigating to /ad-accounts/new — used by the page client
+   *  to open the create modal in place. */
+  onAddClick?: () => void;
+}
+
+export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -235,7 +242,7 @@ export function AdAccountsTable() {
 
   // --- Empty state ---
   if (sorted.length === 0) {
-    return <AdAccountEmptyState />;
+    return <AdAccountEmptyState onAddClick={onAddClick} />;
   }
 
   // --- Success state ---
@@ -283,7 +290,7 @@ export function AdAccountsTable() {
       </div>
 
       {/* Mobile card layout */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col gap-4 md:hidden">
         {sorted.map((account) => (
           <AdAccountCard key={account.id} account={account} />
         ))}

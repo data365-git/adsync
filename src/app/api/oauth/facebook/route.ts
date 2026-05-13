@@ -3,6 +3,8 @@ import { auth } from "~/server/auth";
 import { getAuthorizationUrl } from "~/integrations/facebook/oauth";
 import { randomBytes } from "crypto";
 
+export const runtime = "nodejs";
+
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.redirect("/login");

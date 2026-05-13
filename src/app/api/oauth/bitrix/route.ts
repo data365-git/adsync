@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { auth } from "~/server/auth";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {

@@ -8,7 +8,10 @@ import {
   XIcon,
   AlertCircleIcon,
   RotateCcwIcon,
+  UserIcon,
+  Clock as ClockIcon,
 } from "lucide-react";
+import { FacebookIcon, GoogleSheetsIcon } from "~/lib/integration-icons";
 import { api } from "~/trpc/react";
 import { Switch } from "~/components/ui/switch";
 import { Input } from "~/components/ui/input";
@@ -38,6 +41,13 @@ import type { AdAccount } from "~/server/mocks/types";
 interface AdAccountFormProps {
   mode: "new" | "edit";
   initialData?: AdAccount;
+  /**
+   * Optional success/cancel handlers. When provided (e.g. when the form is
+   * embedded in a modal) the form calls these instead of navigating to
+   * /ad-accounts via the router. Useful for in-place create/edit dialogs.
+   */
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 // ─── Field-level error type ───────────────────────────────────────────────────
@@ -153,7 +163,12 @@ function FormSkeleton() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
+export function AdAccountForm({
+  mode,
+  initialData,
+  onSuccess,
+  onCancel,
+}: AdAccountFormProps) {
   const router = useRouter();
 
   const initialValues = React.useMemo(
@@ -239,7 +254,8 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
       // config field-for-field.
       // ────────────────────────────────────────────────────────────────────
 
-      router.push("/ad-accounts");
+      if (onSuccess) onSuccess();
+      else router.push("/ad-accounts");
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "An unexpected error occurred.";
@@ -249,16 +265,21 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
 
   // ─── Discard ────────────────────────────────────────────────────────────────
 
+  function exitWithoutSaving() {
+    if (onCancel) onCancel();
+    else router.push("/ad-accounts");
+  }
+
   function handleDiscard() {
     if (isDirty) {
       setDiscardDialogOpen(true);
     } else {
-      router.push("/ad-accounts");
+      exitWithoutSaving();
     }
   }
 
   function handleConfirmDiscard() {
-    router.push("/ad-accounts");
+    exitWithoutSaving();
   }
 
   // ─── Derived ────────────────────────────────────────────────────────────────
@@ -346,6 +367,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
         <FormSection
           title="Account Identity"
           description="Name this configuration and link your Facebook Ad Account."
+          Icon={UserIcon}
         >
           {/* Label */}
           <div className="space-y-1.5">
@@ -414,6 +436,9 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
         <FormSection
           title="Data to Sync"
           description="Choose which levels and metrics to pull from Facebook Insights."
+          Icon={FacebookIcon}
+          tileBg="bg-fb-blue/10"
+          iconColor="text-fb-blue"
         >
           {/* Levels */}
           <div className="space-y-1.5">
@@ -466,6 +491,9 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
         <FormSection
           title="Destination"
           description="Configure the Google Sheets spreadsheet where data will be written."
+          Icon={GoogleSheetsIcon}
+          tileBg="bg-sheets-green/10"
+          iconColor="text-sheets-green"
         >
           {/* Spreadsheet ID */}
           <div className="space-y-1.5">
@@ -590,6 +618,7 @@ export function AdAccountForm({ mode, initialData }: AdAccountFormProps) {
         <FormSection
           title="Schedule"
           description="Set when this account should automatically sync data."
+          Icon={ClockIcon}
         >
           <CronBuilder
             cronExpression={values.cronExpression}

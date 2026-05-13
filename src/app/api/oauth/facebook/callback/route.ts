@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { exchangeCode } from "~/integrations/facebook/oauth";
 
+export const runtime = "nodejs";
+
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.redirect("/login");

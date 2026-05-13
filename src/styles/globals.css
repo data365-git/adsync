@@ -19,6 +19,9 @@
   /* Phase 3 brand tokens */
   --color-bitrix-cyan: #2fc6f6;
   --color-watch-violet: #8b5cf6;
+
+  /* Phase 3 — webhook trigger */
+  --color-webhook-emerald: #10b981;
 }
 
 @theme inline {
@@ -177,6 +180,6 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply font-sans scroll-smooth;
   }
 }

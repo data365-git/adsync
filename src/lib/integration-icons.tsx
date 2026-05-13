@@ -1,5 +1,5 @@
 import type { ComponentType, SVGProps } from "react";
-import { Clock, Eye, Zap } from "lucide-react";
+import { Clock, Eye, Webhook, Zap } from "lucide-react";
 
 import type { ModuleType } from "~/server/mocks/types";
 
@@ -56,13 +56,18 @@ export const WatchIcon: ComponentType<SVGProps<SVGSVGElement>> = (props) => (
   <Eye {...props} />
 );
 
+export const WebhookIcon: ComponentType<SVGProps<SVGSVGElement>> = (props) => (
+  <Webhook {...props} />
+);
+
 export type IntegrationTone =
   | "fb-blue"
   | "sheets-green"
   | "schedule-slate"
   | "manual-indigo"
   | "bitrix-cyan"
-  | "watch-violet";
+  | "watch-violet"
+  | "webhook-emerald";
 
 export interface IntegrationMeta {
   Icon: ComponentType<SVGProps<SVGSVGElement>>;
@@ -88,6 +93,14 @@ export function getIntegrationMeta(moduleType: ModuleType): IntegrationMeta {
       tone: "manual-indigo",
       tileBg: "bg-manual-indigo/10",
       iconColor: "text-manual-indigo",
+    };
+  }
+  if (moduleType === "trigger.webhook") {
+    return {
+      Icon: WebhookIcon,
+      tone: "webhook-emerald",
+      tileBg: "bg-webhook-emerald/10",
+      iconColor: "text-webhook-emerald",
     };
   }
   if (moduleType.startsWith("trigger.watch.")) {

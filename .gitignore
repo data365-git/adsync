@@ -54,3 +54,34 @@ yarn-error.log*
 # Lighthouse per-route JSON reports — regenerate on demand, only summary tracked
 docs/lighthouse/**/*.json
 !docs/lighthouse/**/summary.json
+
+# ─── Personal / scratch artifacts (never push to GitHub) ─────────────────────
+# Ad-hoc screenshots you paste into the chat for debugging UI issues. These
+# accumulate fast and are useless to anyone else.
+docs/errros/
+docs/errors/
+
+# Codex / external-agent handoff prompts — single-session scratch, not docs.
+docs/codex-audit-fix-prompts.md
+
+# AI-generated specs / scratch from /superpowers — keep them locally if useful,
+# don't pollute the repo's history.
+docs/superpowers/
+
+# Windows / macOS thumbnail caches that sneak in alongside screenshots
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# Editor scratch
+*.swp
+*.swo
+*~
+
+# Loose images at the repo root (drag-and-drop screenshots, etc.)
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+/*.webp
+/*.bmp

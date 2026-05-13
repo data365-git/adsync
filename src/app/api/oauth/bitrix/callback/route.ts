@@ -7,6 +7,8 @@ import { db } from "~/server/db";
 import { encryptToken } from "~/lib/crypto";
 import { ConnectionStatus, Provider } from "@prisma/client";
 
+export const runtime = "nodejs";
+
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {

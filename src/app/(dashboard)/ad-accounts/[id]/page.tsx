@@ -17,9 +17,9 @@ export async function generateMetadata({
   try {
     const caller = createCaller({ headers: new Headers() });
     const account = await caller.adAccounts.getById({ id });
-    return { title: `${account.label} — Automation` };
+    return { title: `${account.label} — adsync` };
   } catch {
-    return { title: "Ad Account — Automation" };
+    return { title: "Ad Account — adsync" };
   }
 }
 

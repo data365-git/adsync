@@ -4,7 +4,7 @@ import { ChevronLeftIcon } from "lucide-react";
 import { AdAccountForm } from "~/components/ad-accounts/form/AdAccountForm";
 
 export const metadata: Metadata = {
-  title: "New Ad Account — Automation",
+  title: "New Ad Account — adsync",
 };
 
 export default function NewAdAccountPage() {

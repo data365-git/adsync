@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { AlertCircle, Plug } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { ConnectionCard } from "~/components/connections/ConnectionCard";
+import { DisconnectedProviderCard } from "~/components/connections/DisconnectedProviderCard";
 import { Skeleton } from "~/components/ui/skeleton";
-import { BitrixIcon } from "~/lib/integration-icons";
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_denied: "You denied access to Google Sheets. Try again to connect.",
@@ -55,12 +55,21 @@ function CardSkeleton() {
         </div>
       </div>
       <div className="bg-muted/50 flex gap-2 border-t px-4 py-3">
-        <Skeleton className="h-[2.75rem] flex-1 rounded-lg" />
-        <Skeleton className="h-[2.75rem] w-24 rounded-lg" />
+        <Skeleton className="h-11 flex-1 rounded-lg" />
+        <Skeleton className="h-11 w-24 rounded-lg" />
       </div>
     </div>
   );
 }
+
+const PROVIDERS: {
+  provider: "google" | "facebook" | "bitrix";
+  label: string;
+}[] = [
+  { provider: "google", label: "Google Sheets" },
+  { provider: "facebook", label: "Facebook Ads" },
+  { provider: "bitrix", label: "Bitrix24" },
+];
 
 export function ConnectionsClient() {
   const router = useRouter();
@@ -175,63 +184,49 @@ export function ConnectionsClient() {
         </div>
       )}
 
-      {/* Empty state */}
-      {!isLoading && !isError && connections?.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-10 text-center sm:py-16">
-          <div className="bg-muted flex size-12 items-center justify-center rounded-full">
-            <Plug className="text-muted-foreground size-6" aria-hidden="true" />
-          </div>
-          <h2 className="text-foreground mt-4 text-sm font-medium">
-            No connections yet
-          </h2>
-          <p className="text-muted-foreground mt-1.5 max-w-sm text-sm">
-            Connect Google Sheets, Facebook, or Bitrix24 to get started.
-          </p>
-          <div className="mt-6 grid w-full max-w-lg grid-cols-1 gap-3 sm:grid-cols-3">
-            <Button
-              size="lg"
-              aria-label="Connect Google Sheets"
-              onClick={() => handleConnect("google")}
-              disabled={pendingProvider !== null}
-            >
-              {pendingProvider === "google"
-                ? "Connecting…"
-                : "Connect Google Sheets"}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              aria-label="Connect Facebook Ads"
-              onClick={() => handleConnect("facebook")}
-              disabled={pendingProvider !== null}
-            >
-              {pendingProvider === "facebook"
-                ? "Connecting…"
-                : "Connect Facebook Ads"}
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              aria-label="Connect Bitrix24"
-              className="bg-brand-bitrix/10 text-brand-bitrix hover:bg-brand-bitrix/20 hover:text-brand-bitrix gap-1.5"
-              onClick={() => handleConnect("bitrix")}
-              disabled={pendingProvider !== null}
-            >
-              <BitrixIcon className="size-4 shrink-0" aria-hidden="true" />
-              {pendingProvider === "bitrix"
-                ? "Connecting…"
-                : "Connect Bitrix24"}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Success state */}
-      {!isLoading && !isError && connections && connections.length > 0 && (
+      {/* All 3 provider cards — always rendered once data is available */}
+      {!isLoading && !isError && (
         <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {connections.map((connection) => (
-            <ConnectionCard key={connection.id} connection={connection} />
-          ))}
+          {PROVIDERS.map(({ provider, label }) => {
+            const existing = connections?.find((c) => c.provider === provider);
+
+            if (provider === "bitrix") {
+              return (
+                <ConnectionCard
+                  key={existing ? existing.id : "bitrix-disconnected"}
+                  // ConnectionCard internally routes bitrix to BitrixConnectionCard
+                  // and handles connect/disconnect mutations via its own hooks.
+                  // When no connection exists yet we synthesise a placeholder row
+                  // so the card renders in disconnected state with a Connect CTA.
+                  connection={
+                    existing ?? {
+                      id: "",
+                      userId: "",
+                      provider: "bitrix",
+                      status: "disconnected",
+                      email: null,
+                      expiresAt: null,
+                      connectedAt: null,
+                    }
+                  }
+                />
+              );
+            }
+
+            if (existing) {
+              return <ConnectionCard key={existing.id} connection={existing} />;
+            }
+
+            return (
+              <DisconnectedProviderCard
+                key={provider}
+                provider={provider}
+                label={label}
+                onConnect={handleConnect}
+                pending={pendingProvider === provider}
+              />
+            );
+          })}
         </div>
       )}
     </div>

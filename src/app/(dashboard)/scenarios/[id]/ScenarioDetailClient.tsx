@@ -89,12 +89,17 @@ import {
   TabsContent,
 } from "~/components/ui/tabs";
 import { cn } from "~/lib/utils";
-import { BuilderHeader } from "~/components/scenarios/builder/BuilderHeader";
+import {
+  BuilderHeader,
+  BUILDER_HEADER_HEIGHT_PX,
+} from "~/components/scenarios/builder/BuilderHeader";
 import { preserveCompatibleTriggerConfig } from "~/components/scenarios/builder/ScenarioBuilder";
 import { StepCard, validateStepConfig, type DraftStep } from "~/components/scenarios/builder/StepCard";
 import { StepConnector } from "~/components/scenarios/builder/StepConnector";
 import { AddStepButton } from "~/components/scenarios/builder/AddStepButton";
 import { ModuleLibraryModal } from "~/components/scenarios/builder/ModuleLibraryModal";
+import { StepConfigModal } from "~/components/scenarios/builder/StepConfigModal";
+import { toast } from "sonner";
 import { TestRunPanel } from "~/components/scenarios/builder/TestRunPanel";
 import { UnsavedChangesGuard } from "~/components/scenarios/builder/UnsavedChangesGuard";
 import { RunsTab } from "~/components/scenarios/builder/RunsTab";
@@ -183,6 +188,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   const [discardDialogOpen, setDiscardDialogOpen] = React.useState(false);
   const [showTestPanel, setShowTestPanel] = React.useState(false);
   const [testResults, setTestResults] = React.useState<TestStepResult[]>([]);
+  const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null);
+  const [isAutosaving, setIsAutosaving] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [modalInsertAt, setModalInsertAt] = React.useState(2);
   const [modalMode, setModalMode] = React.useState<"insert" | "replace-trigger">(
@@ -196,18 +203,37 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   const isSaving = updateMutation.isPending;
   const isTesting = testRunMutation.isPending;
 
+  // The "last persisted" baseline. `scenario` (from useQuery) is the
+  // initial server fetch and doesn't change after save — so comparing isDirty
+  // against it leaves isDirty=true forever after the first edit+save and
+  // re-triggers the "Discard unsaved changes?" dialog incorrectly. Comparing
+  // against this snapshot (updated after every successful save) fixes that.
+  type BaselineStep = { moduleType: ModuleType; config: Record<string, unknown> };
+  const [savedBaseline, setSavedBaseline] = React.useState<{
+    name: string;
+    enabled: boolean;
+    steps: BaselineStep[];
+  }>(() => ({
+    name: scenario.name,
+    enabled: scenario.enabled,
+    steps: scenario.steps.map((s) => ({
+      moduleType: s.moduleType,
+      config: s.config,
+    })),
+  }));
+
   const isDirty = React.useMemo(() => {
-    if (name !== scenario.name) return true;
-    if (enabled !== scenario.enabled) return true;
-    if (steps.length !== scenario.steps.length) return true;
+    if (name !== savedBaseline.name) return true;
+    if (enabled !== savedBaseline.enabled) return true;
+    if (steps.length !== savedBaseline.steps.length) return true;
     for (let i = 0; i < steps.length; i++) {
       const a = steps[i]!;
-      const b = scenario.steps[i]!;
+      const b = savedBaseline.steps[i]!;
       if (a.moduleType !== b.moduleType) return true;
       if (JSON.stringify(a.config) !== JSON.stringify(b.config)) return true;
     }
     return false;
-  }, [name, enabled, steps, scenario]);
+  }, [name, enabled, steps, savedBaseline]);
 
   const missingFieldsTooltip = computeMissingTooltip(steps);
   const actionSteps = steps.slice(1);
@@ -339,26 +365,75 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
     dragOverRef.current = null;
   }
 
+  function buildStepsPayload() {
+    return steps.map((s) => ({
+      id: s.id.startsWith("draft_") ? undefined : s.id,
+      position: s.position,
+      moduleType: s.moduleType,
+      config: s.config,
+    }));
+  }
+
   async function handleSave() {
     setShowErrors(true);
     if (missingFieldsTooltip) return;
     setSaveError(null);
     try {
-      const stepsPayload = steps.map((s) => ({
-        id: s.id.startsWith("draft_") ? undefined : s.id,
-        position: s.position,
-        moduleType: s.moduleType,
-        config: s.config,
-      }));
       await updateMutation.mutateAsync({
         id: scenario.id,
-        data: { name, enabled, steps: stepsPayload },
+        data: { name, enabled, steps: buildStepsPayload() },
       });
+      // Snapshot what we just persisted so isDirty returns to false and the
+      // discard-changes guard doesn't fire on the next navigation attempt.
+      setSavedBaseline({
+        name,
+        enabled,
+        steps: steps.map((s) => ({ moduleType: s.moduleType, config: s.config })),
+      });
+      setLastSavedAt(new Date());
+      toast.success("Scenario saved");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
       setSaveError(msg);
+      toast.error("Failed to save scenario");
     }
   }
+
+  // Autosave: 1.5s after the user stops editing, push to the server. Skipped
+  // when there are missing required fields (we don't want autosave forcing the
+  // "needs config" badges on — that's reserved for explicit Save attempts).
+  React.useEffect(() => {
+    if (!isDirty) return;
+    if (missingFieldsTooltip) return;
+    const handle = setTimeout(() => {
+      void (async () => {
+        setIsAutosaving(true);
+        try {
+          await updateMutation.mutateAsync({
+            id: scenario.id,
+            data: { name, enabled, steps: buildStepsPayload() },
+          });
+          // Roll the baseline forward so isDirty becomes false — keeps the
+          // discard dialog from firing on every navigation post-autosave.
+          setSavedBaseline({
+        name,
+        enabled,
+        steps: steps.map((s) => ({ moduleType: s.moduleType, config: s.config })),
+      });
+          setLastSavedAt(new Date());
+          // Brief, low-key toast — proves to the user that autosave fired.
+          // Short duration (1.2s) keeps it out of the way during rapid editing.
+          toast.success("Saved", { duration: 1200 });
+        } catch {
+          // Autosave failures are silent here — manual Save surfaces them via saveError.
+        } finally {
+          setIsAutosaving(false);
+        }
+      })();
+    }, 1500);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDirty, missingFieldsTooltip, name, enabled, steps]);
 
   async function handleTest() {
     setShowTestPanel(true);
@@ -491,11 +566,33 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         isTriggerSlot={modalMode === "replace-trigger" || modalInsertAt === 1}
       />
 
-      {/* Builder header — now receives steps, scenarioId, scenarioRuns for C.1/C.2 */}
+      {/* Step configuration modal — opens when the user clicks a step card. */}
+      <StepConfigModal
+        open={expandedStepId !== null}
+        onOpenChange={(o) => {
+          if (!o) setExpandedStepId(null);
+        }}
+        step={steps.find((s) => s.id === expandedStepId) ?? null}
+        prevStepModuleType={
+          (() => {
+            const idx = steps.findIndex((s) => s.id === expandedStepId);
+            if (idx <= 0) return undefined;
+            return steps[idx - 1]?.moduleType;
+          })()
+        }
+        onConfigChange={(config) => {
+          if (expandedStepId) handleConfigChange(expandedStepId, config);
+        }}
+        showErrors={showErrors}
+      />
+
+      {/* Builder header — fixed-positioned, so reserve space below via the spacer */}
       <BuilderHeader
         name={name}
         enabled={enabled}
         isSaving={isSaving}
+        isAutosaving={isAutosaving}
+        lastSavedAt={lastSavedAt}
         isTesting={isTesting}
         isDirty={isDirty}
         missingFieldsTooltip={showErrors ? missingFieldsTooltip : null}
@@ -508,6 +605,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         scenarioId={scenario.id}
         scenarioRuns={scenarioRuns}
       />
+      {/* Spacer to push content below the fixed header */}
+      <div style={{ height: BUILDER_HEADER_HEIGHT_PX }} aria-hidden />
 
       {/* Tabs */}
       <Tabs

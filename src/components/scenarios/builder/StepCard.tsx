@@ -25,6 +25,8 @@ import { BitrixFindLeadsConfig } from "./modules/BitrixFindLeadsConfig";
 import { BitrixCreateDealConfig } from "./modules/BitrixCreateDealConfig";
 import { BitrixUpdateDealConfig } from "./modules/BitrixUpdateDealConfig";
 import { BitrixCreateSmartProcessItemConfig } from "./modules/BitrixCreateSmartProcessItemConfig";
+import { WatchBitrixNewLeadConfig } from "./modules/WatchBitrixNewLeadConfig";
+import { WatchSheetsNewRowsConfig } from "./modules/WatchSheetsNewRowsConfig";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import { getModule } from "~/lib/modules";
 import { humanizeCronShort } from "~/lib/cron-builder";
@@ -57,6 +59,12 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   ),
   "trigger.manual": ({ config, onChange }) => (
     <ManualConfig config={config} onChange={onChange} />
+  ),
+  "trigger.watch.sheets_new_rows": ({ config, onChange, errors }) => (
+    <WatchSheetsNewRowsConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "trigger.watch.bitrix_new_lead": ({ config, onChange, errors }) => (
+    <WatchBitrixNewLeadConfig config={config} onChange={onChange} errors={errors} />
   ),
   // Legacy — same config shape as fb.ad_insights (fbAccountId/dateWindowDays/metrics)
   "fb.account_insights": ({ config, onChange, errors }) => (
@@ -213,7 +221,7 @@ function validateStepConfig(
   return errors;
 }
 
-export { validateStepConfig };
+export { validateStepConfig, MODULE_CONFIG_MAP };
 
 // ─── summarizeStep ────────────────────────────────────────────────────────────
 
@@ -226,6 +234,9 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
     }
     case "trigger.manual":
       return "Triggered by hand";
+
+    case "trigger.webhook":
+      return "Triggered via HTTP POST";
 
     case "fb.account_insights":
     case "fb.campaign_insights":
@@ -275,6 +286,117 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
       return `${spreadsheetId ? "My Tracker" : "—"} / ${tabName ?? "—"} · ${fieldCount} field${fieldCount !== 1 ? "s" : ""} · key: ${keyStr}`;
     }
 
+    case "trigger.watch.bitrix_new_lead": {
+      const filterField = typeof config.filterField === "string" ? config.filterField : "";
+      const filterValue = typeof config.filterValue === "string" ? config.filterValue : "";
+      const pipeline = typeof config.pipeline === "string" && config.pipeline.trim() ? config.pipeline : null;
+      if (!filterField && !pipeline) return "Watching all new Bitrix leads";
+      const parts: string[] = [];
+      if (pipeline) parts.push(`Pipeline: ${pipeline}`);
+      if (filterField && filterValue) parts.push(`${filterField} = ${filterValue}`);
+      return parts.length > 0 ? parts.join(" · ") : "Watching all new Bitrix leads";
+    }
+
+    case "trigger.watch.sheets_new_rows": {
+      const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
+      const tabName = typeof config.tabName === "string" ? config.tabName : "";
+      const watchColumn = typeof config.watchColumn === "string" ? config.watchColumn : "";
+      if (!spreadsheetId && !tabName) return "Not configured";
+      return `${tabName || "—"} · watch column: ${watchColumn || "—"}`;
+    }
+
+    case "fb.list_ad_accounts":
+      return "List all accessible ad accounts";
+
+    case "fb.list_ads": {
+      const fbAccountId = typeof config.fbAccountId === "string" ? config.fbAccountId : "";
+      if (!fbAccountId) return "Not configured";
+      const status = typeof config.status === "string" && config.status ? config.status : "all";
+      return `${fbAccountId} · ${status}`;
+    }
+
+    case "fb.get_ad": {
+      const adId = typeof config.adId === "string" ? config.adId : "";
+      return adId ? `Ad ID: ${adId}` : "Not configured";
+    }
+
+    case "sheets.find_rows": {
+      const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
+      const searchColumn = typeof config.searchColumn === "string" ? config.searchColumn : "";
+      if (!spreadsheetId) return "Not configured";
+      return searchColumn ? `Search by ${searchColumn}` : "Not configured";
+    }
+
+    case "sheets.update_row": {
+      const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
+      const tabName = typeof config.tabName === "string" ? config.tabName : "";
+      if (!spreadsheetId) return "Not configured";
+      return tabName ? `${tabName} · update row` : "Not configured";
+    }
+
+    case "sheets.delete_row": {
+      const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
+      const tabName = typeof config.tabName === "string" ? config.tabName : "";
+      if (!spreadsheetId) return "Not configured";
+      return tabName ? `${tabName} · delete row` : "Not configured";
+    }
+
+    case "sheets.get_row": {
+      const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
+      const tabName = typeof config.tabName === "string" ? config.tabName : "";
+      const rowIndex = typeof config.rowIndex === "number" ? config.rowIndex : null;
+      if (!spreadsheetId) return "Not configured";
+      return tabName ? `${tabName} · row ${rowIndex ?? "—"}` : "Not configured";
+    }
+
+    case "sheets.create_tab": {
+      const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
+      const newTabName = typeof config.newTabName === "string" ? config.newTabName : "";
+      if (!spreadsheetId) return "Not configured";
+      return newTabName ? `Create tab "${newTabName}"` : "Not configured";
+    }
+
+    case "sheets.watch_new_rows": {
+      const tabName = typeof config.tabName === "string" ? config.tabName : "";
+      const watchColumn = typeof config.watchColumn === "string" ? config.watchColumn : "";
+      if (!tabName) return "Not configured";
+      return `${tabName} · watch column: ${watchColumn || "—"}`;
+    }
+
+    case "bitrix.create_lead": {
+      const title = typeof config.title === "string" ? config.title : "";
+      return title ? `Create lead: ${title}` : "Not configured";
+    }
+
+    case "bitrix.update_lead": {
+      const leadId = typeof config.leadId === "string" ? config.leadId : "";
+      return leadId ? `Update lead #${leadId}` : "Not configured";
+    }
+
+    case "bitrix.find_leads": {
+      const filterField = typeof config.filterField === "string" ? config.filterField : "";
+      const filterValue = typeof config.filterValue === "string" ? config.filterValue : "";
+      if (!filterField) return "Not configured";
+      return `Find leads where ${filterField} = ${filterValue || "—"}`;
+    }
+
+    case "bitrix.create_deal": {
+      const title = typeof config.title === "string" ? config.title : "";
+      return title ? `Create deal: ${title}` : "Not configured";
+    }
+
+    case "bitrix.update_deal": {
+      const dealId = typeof config.dealId === "string" ? config.dealId : "";
+      return dealId ? `Update deal #${dealId}` : "Not configured";
+    }
+
+    case "bitrix.create_smart_process_item": {
+      const title = typeof config.title === "string" ? config.title : "";
+      const entityTypeId = typeof config.entityTypeId === "string" ? config.entityTypeId : "";
+      if (!entityTypeId) return "Not configured";
+      return title ? `Create item: ${title}` : `Entity type ${entityTypeId}`;
+    }
+
     default:
       return "Not configured";
   }
@@ -282,13 +404,18 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
+// Kept exported in case other surfaces (sidebars, runs view) want to compute
+// a step's readiness later — currently unused after the inline-expand → modal
+// refactor, but the logic is the canonical "is this step valid".
 type StepStatus = "ready" | "needs-config" | "empty";
 
-function getStepStatus(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _getStepStatus(
   moduleType: ModuleType,
   config: Record<string, unknown>,
 ): StepStatus {
   if (moduleType === "trigger.manual") return "ready";
+  if (moduleType === "trigger.webhook") return "ready";
 
   // Check if anything is configured at all
   const hasAnyConfig = Object.values(config).some((v) => {
@@ -340,7 +467,7 @@ export function StepCard({
   step,
   isExpanded,
   onToggleExpand,
-  onConfigChange,
+  onConfigChange: _onConfigChange,
   onDelete,
   onChangeTrigger,
   prevStepModuleType,
@@ -356,7 +483,6 @@ export function StepCard({
   const { Icon, tileBg, iconColor } = getIntegrationMeta(step.moduleType);
   const mod = getModule(step.moduleType);
   const summary = summarizeStep(step.moduleType, step.config);
-  const status = getStepStatus(step.moduleType, step.config);
 
   // ── Agent C: iterator badge derivation ───────────────────────────────────────
   // Find the step immediately before this one using the steps array (preferred)
@@ -373,29 +499,21 @@ export function StepCard({
     ? moduleSampleOutputLength(upstreamModuleType)
     : undefined;
 
-  // ── Drag handle — hidden (display:none) for position 1
+  // ── Drag handle — bigger, more visible. Hidden entirely for the trigger step
+  // since its position is fixed. The `touch-none` + `cursor-grab` classes plus
+  // the explicit hover background make it discoverable; HTML5 drag fires from
+  // the surrounding `<div draggable />` wrapper in the parent.
   const dragHandle = isTrigger ? null : (
-    <button
-      type="button"
+    <span
+      role="button"
       aria-label={dragHandleProps?.["aria-label"] ?? `Drag to reorder step ${step.position}`}
       onKeyDown={dragHandleProps?.onKeyDown}
       tabIndex={dragHandleProps?.tabIndex ?? 0}
-      className="rounded-md p-1.5 touch-none cursor-grab active:cursor-grabbing hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="hover:bg-muted hover:text-foreground text-muted-foreground focus-visible:ring-ring inline-flex h-9 w-7 cursor-grab touch-none items-center justify-center rounded-md transition-colors focus-visible:ring-2 focus-visible:outline-none active:cursor-grabbing"
     >
-      <GripVerticalIcon className="size-4 text-muted-foreground" />
-    </button>
+      <GripVerticalIcon className="size-5" aria-hidden />
+    </span>
   );
-
-  function renderConfig() {
-    const renderer = MODULE_CONFIG_MAP[step.moduleType];
-    if (!renderer) return null;
-    return renderer({
-      config: step.config,
-      onChange: onConfigChange,
-      errors: showErrors ? errors : undefined,
-      prevStepModuleType,
-    });
-  }
 
   return (
     <div
@@ -405,7 +523,6 @@ export function StepCard({
         isLifted && "scale-[1.02] shadow-lg",
       )}
     >
-      {/* ── Agent C zone: renderer wrapper passes iterator badge to shell ── */}
       <ModuleConfigShell
         moduleType={step.moduleType}
         position={step.position}
@@ -417,7 +534,6 @@ export function StepCard({
         dragHandle={dragHandle}
         hasError={showErrors && hasError}
         summary={summary}
-        status={status}
         BrandIcon={Icon}
         tileBg={tileBg}
         iconColor={iconColor}
@@ -431,10 +547,7 @@ export function StepCard({
             />
           ) : undefined
         }
-      >
-        {renderConfig()}
-      </ModuleConfigShell>
-      {/* ── End Agent C zone ── */}
+      />
     </div>
   );
 }

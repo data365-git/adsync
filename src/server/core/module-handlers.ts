@@ -51,6 +51,10 @@ function cfg<T>(step: ScenarioStep): T {
 }
 
 // ── Trigger handlers ─────────────────────────────────────────────────────────
+// All triggers in Phase 1 are no-ops at execution time. The real "watch"
+// triggers (Phase 4) fire from polling/webhook sidecars that ENQUEUE runs
+// here — by the time the executor sees the step, the trigger has already
+// fired externally and we just need to pass control to the action steps.
 
 const triggerScheduleHandler: Handler = async (_step, _ctx, _userId) => {
   return { rowCount: 0 };
@@ -58,6 +62,28 @@ const triggerScheduleHandler: Handler = async (_step, _ctx, _userId) => {
 
 const triggerManualHandler: Handler = async (_step, _ctx, _userId) => {
   return { rowCount: 0 };
+};
+
+const triggerWebhookHandler: Handler = async (_step, _ctx, _userId) => {
+  return { rowCount: 0 };
+};
+
+const triggerWatchHandler: Handler = async (_step, _ctx, _userId) => {
+  // Both trigger.watch.sheets_new_rows and trigger.watch.bitrix_new_lead
+  // share this handler — the watch infrastructure (polling, dedup) lives
+  // outside the executor; runs that reach here have already been triggered.
+  return { rowCount: 0 };
+};
+
+// ── Phase 3 mock action handlers ─────────────────────────────────────────────
+// Real implementations land in Phase 2/4. For now they succeed with a small
+// row count so runs visibly complete instead of erroring out with
+// "No handler registered". They DON'T touch the external services.
+
+const mockActionHandler: Handler = async (_step, _ctx, _userId) => {
+  // Mock: pretend one record was created/updated. The Phase 4 implementation
+  // will swap this for the real Bitrix24/Sheets call.
+  return { rowCount: 1 };
 };
 
 // ── Facebook handlers ─────────────────────────────────────────────────────────
@@ -178,13 +204,38 @@ const sheetsUpsertHandler: Handler = async (step, ctx, userId) => {
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 const HANDLERS: Record<string, Handler> = {
+  // Triggers
   "trigger.schedule": triggerScheduleHandler,
   "trigger.manual": triggerManualHandler,
+  "trigger.webhook": triggerWebhookHandler,
+  "trigger.watch.sheets_new_rows": triggerWatchHandler,
+  "trigger.watch.bitrix_new_lead": triggerWatchHandler,
+
+  // Facebook
   "fb.account_insights": fbAccountInsightsHandler,
   "fb.campaign_insights": fbCampaignInsightsHandler,
   "fb.ad_insights": fbAdInsightsHandler,
+  "fb.list_ad_accounts": mockActionHandler,
+  "fb.list_ads": mockActionHandler,
+  "fb.get_ad": mockActionHandler,
+
+  // Google Sheets
   "sheets.append": sheetsAppendHandler,
   "sheets.upsert": sheetsUpsertHandler,
+  "sheets.find_rows": mockActionHandler,
+  "sheets.update_row": mockActionHandler,
+  "sheets.delete_row": mockActionHandler,
+  "sheets.get_row": mockActionHandler,
+  "sheets.create_tab": mockActionHandler,
+  "sheets.watch_new_rows": mockActionHandler,
+
+  // Bitrix24
+  "bitrix.create_lead": mockActionHandler,
+  "bitrix.update_lead": mockActionHandler,
+  "bitrix.find_leads": mockActionHandler,
+  "bitrix.create_deal": mockActionHandler,
+  "bitrix.update_deal": mockActionHandler,
+  "bitrix.create_smart_process_item": mockActionHandler,
 };
 
 export function getHandler(moduleType: string): Handler {

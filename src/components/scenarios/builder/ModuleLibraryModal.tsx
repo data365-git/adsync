@@ -173,7 +173,7 @@ export function ModuleLibraryModal({
 
   function renderCardGrid(mods: typeof filtered) {
     return (
-      <div className="mt-1 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-3">
         {mods.map((mod) => {
           const idx = flatCardIdx++;
           return (
@@ -217,19 +217,19 @@ export function ModuleLibraryModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-lg p-0"
+        className="w-[min(96vw,1024px)] max-w-none p-0 sm:max-w-none"
         showCloseButton={false}
         aria-label="Module library"
       >
-        <DialogHeader className="px-4 pt-4">
-          <DialogTitle>
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="text-lg">
             {isTriggerSlot ? "Choose trigger" : "Add action step"}
           </DialogTitle>
         </DialogHeader>
 
         {/* Search */}
-        <div className="relative px-4 pb-2">
-          <SearchIcon className="pointer-events-none absolute left-7 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <div className="relative px-6 pb-3">
+          <SearchIcon className="pointer-events-none absolute left-9 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             ref={searchRef}
             type="text"
@@ -237,14 +237,14 @@ export function ModuleLibraryModal({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            className="h-9 w-full rounded-lg border border-input bg-transparent pl-9 pr-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 placeholder:text-muted-foreground"
+            className="h-11 w-full rounded-lg border border-input bg-transparent pl-9 pr-3 text-base outline-none focus:border-ring focus:ring-2 focus:ring-ring/50 placeholder:text-muted-foreground"
             aria-label="Search modules"
           />
         </div>
 
         {/* Module list */}
         <div
-          className="max-h-[400px] overflow-y-auto px-4 pb-4"
+          className="max-h-[min(78vh,720px)] overflow-y-auto px-6 pb-6"
           role="listbox"
           aria-label="Available modules"
         >

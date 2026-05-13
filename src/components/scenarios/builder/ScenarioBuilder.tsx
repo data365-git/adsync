@@ -2,17 +2,18 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { InfoIcon, ClockIcon, ZapIcon } from "lucide-react";
+import { InfoIcon, ClockIcon, ZapIcon, WebhookIcon } from "lucide-react";
 import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
 import { getModule } from "~/lib/modules";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import type { ModuleType } from "~/server/mocks/types";
-import { BuilderHeader } from "./BuilderHeader";
+import { BuilderHeader, BUILDER_HEADER_HEIGHT_PX } from "./BuilderHeader";
 import { StepCard, validateStepConfig, type DraftStep } from "./StepCard";
 import { StepConnector } from "./StepConnector";
 import { AddStepButton } from "./AddStepButton";
 import { ModuleLibraryModal } from "./ModuleLibraryModal";
+import { StepConfigModal } from "./StepConfigModal";
 import { TestRunPanel } from "./TestRunPanel";
 import { UnsavedChangesGuard } from "./UnsavedChangesGuard";
 
@@ -40,6 +41,8 @@ export function defaultConfigFor(moduleType: ModuleType): Record<string, unknown
       return { cronExpression: "", timezone: "Asia/Tashkent" };
     case "trigger.manual":
       return {};
+    case "trigger.webhook":
+      return { secret: "" };
     case "fb.account_insights":
     case "fb.campaign_insights":
     case "fb.ad_insights":
@@ -102,12 +105,12 @@ export function computeMissingTooltip(steps: DraftStep[]): string | null {
 // user explicitly choose between Schedule and Manual.
 
 interface TriggerPickerProps {
-  onPick: (moduleType: "trigger.schedule" | "trigger.manual") => void;
+  onPick: (moduleType: "trigger.schedule" | "trigger.manual" | "trigger.webhook") => void;
 }
 
 function TriggerPickerCards({ onPick }: TriggerPickerProps) {
   const TRIGGER_OPTIONS: Array<{
-    moduleType: "trigger.schedule" | "trigger.manual";
+    moduleType: "trigger.schedule" | "trigger.manual" | "trigger.webhook";
     icon: React.ReactNode;
     title: string;
     description: string;
@@ -124,6 +127,12 @@ function TriggerPickerCards({ onPick }: TriggerPickerProps) {
       title: "Manual",
       description: "Trigger by hand when you click.",
     },
+    {
+      moduleType: "trigger.webhook",
+      icon: <WebhookIcon className="size-5" />,
+      title: "Webhook",
+      description: "Fire when an HTTP POST hits your URL.",
+    },
   ];
 
   return (
@@ -131,7 +140,7 @@ function TriggerPickerCards({ onPick }: TriggerPickerProps) {
       <p className="mb-3 text-sm font-medium text-foreground">
         Step 1: When this happens…
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
         {TRIGGER_OPTIONS.map((opt) => {
           const meta = getIntegrationMeta(opt.moduleType);
           return (
@@ -177,7 +186,7 @@ function TriggerPickerCards({ onPick }: TriggerPickerProps) {
 
 const ACTION_GROUPS: Array<{
   label: string;
-  moduleType: "fb.account_insights" | "fb.campaign_insights" | "fb.ad_insights" | "sheets.append" | "sheets.upsert";
+  moduleType: ModuleType;
   groupIcon: React.ReactNode;
 }[]> = [
   [
@@ -189,9 +198,16 @@ const ACTION_GROUPS: Array<{
     { label: "Append Rows", moduleType: "sheets.append", groupIcon: null },
     { label: "Upsert Rows", moduleType: "sheets.upsert", groupIcon: null },
   ],
+  [
+    { label: "Create Lead", moduleType: "bitrix.create_lead", groupIcon: null },
+    { label: "Update Lead", moduleType: "bitrix.update_lead", groupIcon: null },
+    { label: "Find Leads", moduleType: "bitrix.find_leads", groupIcon: null },
+    { label: "Create Deal", moduleType: "bitrix.create_deal", groupIcon: null },
+    { label: "Update Deal", moduleType: "bitrix.update_deal", groupIcon: null },
+  ],
 ];
 
-const ACTION_GROUP_LABELS = ["Facebook Ads", "Google Sheets"];
+const ACTION_GROUP_LABELS = ["Facebook Ads", "Google Sheets", "Bitrix24"];
 
 interface ActionPickerProps {
   onPick: (moduleType: ModuleType) => void;
@@ -270,11 +286,15 @@ export function ScenarioBuilder({
 }: ScenarioBuilderProps) {
   const router = useRouter();
 
+  // Stable initial trigger id — must NOT call Date.now() here, otherwise SSR
+  // and client hydration produce different keys for the same step and React
+  // throws a hydration mismatch. newStepId() is only used for steps added by
+  // user actions (event handlers), which run post-hydration.
   const startingSteps: DraftStep[] = React.useMemo(() => {
     if (initialSteps && initialSteps.length > 0) return initialSteps;
     return [
       {
-        id: newStepId(),
+        id: "draft_step_trigger",
         position: 1,
         moduleType: "trigger.manual",
         config: {},
@@ -334,7 +354,7 @@ export function ScenarioBuilder({
   // Standard "Add step" is shown when trigger + ≥1 action exist
   const showStandardAdd = triggerChosen && steps.length > 1;
 
-  function handlePickTrigger(moduleType: "trigger.schedule" | "trigger.manual") {
+  function handlePickTrigger(moduleType: "trigger.schedule" | "trigger.manual" | "trigger.webhook") {
     setSteps((prev) =>
       prev.map((s) =>
         s.position === 1
@@ -549,6 +569,26 @@ export function ScenarioBuilder({
         isTriggerSlot={modalMode === "replace-trigger" || modalInsertAt === 1}
       />
 
+      {/* Step configuration modal — opens when the user clicks a step card. */}
+      <StepConfigModal
+        open={expandedStepId !== null}
+        onOpenChange={(o) => {
+          if (!o) setExpandedStepId(null);
+        }}
+        step={steps.find((s) => s.id === expandedStepId) ?? null}
+        prevStepModuleType={
+          (() => {
+            const idx = steps.findIndex((s) => s.id === expandedStepId);
+            if (idx <= 0) return undefined;
+            return steps[idx - 1]?.moduleType;
+          })()
+        }
+        onConfigChange={(config) => {
+          if (expandedStepId) handleConfigChange(expandedStepId, config);
+        }}
+        showErrors={showErrors}
+      />
+
       <BuilderHeader
         name={name}
         enabled={enabled}
@@ -563,6 +603,8 @@ export function ScenarioBuilder({
         onBack={handleBack}
         steps={steps}
       />
+      {/* Reserve space for the fixed header */}
+      <div style={{ height: BUILDER_HEADER_HEIGHT_PX }} aria-hidden />
 
       {/* Canvas — adds bottom padding when test panel is open */}
       <div className={cn("mx-auto max-w-2xl px-4 py-6", showTestPanel ? "pb-[280px]" : "pb-24")}>

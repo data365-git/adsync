@@ -4,7 +4,7 @@ import { Button } from "~/components/ui/button";
 import { ScenariosClient } from "~/components/scenarios/ScenariosClient";
 
 export const metadata = {
-  title: "Scenarios | Automation Dashboard",
+  title: "Scenarios | adsync",
 };
 
 export default function ScenariosPage() {
@@ -13,8 +13,8 @@ export default function ScenariosPage() {
       {/* Page header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-semibold tracking-tight">Scenarios</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-medium tracking-tight">Scenarios</h1>
+          <p className="text-base text-muted-foreground">
             Build and manage custom automation flows for Facebook Ads to Google
             Sheets.
           </p>

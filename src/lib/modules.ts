@@ -86,6 +86,31 @@ export const MODULES: ModuleDefinition[] = [
     ],
   },
   {
+    id: "trigger.webhook",
+    name: "Webhook",
+    shortName: "Webhook",
+    description: "Trigger when an HTTP POST request hits the scenario's unique webhook URL.",
+    group: "trigger",
+    icon: "Webhook",
+    configSchema: [
+      {
+        key: "secret",
+        label: "Signing secret (optional)",
+        type: "string",
+        required: false,
+        description: "If set, incoming requests must include X-Webhook-Secret matching this value.",
+      },
+    ],
+    sampleOutput: [
+      {
+        receivedAt: "2026-05-09T10:12:00.000Z",
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: { event: "lead.created", id: "lead_099" },
+      },
+    ],
+  },
+  {
     id: "trigger.manual",
     name: "Manual run",
     shortName: "Manual",

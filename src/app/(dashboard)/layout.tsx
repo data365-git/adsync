@@ -1,6 +1,7 @@
 import { Sidebar } from "~/components/layout/Sidebar";
 import { TopBar } from "~/components/layout/TopBar";
 import { auth } from "~/server/auth";
+import type { User } from "~/server/mocks/types";
 
 export default async function DashboardLayout({
   children,
@@ -9,17 +10,14 @@ export default async function DashboardLayout({
 }) {
   const session = await auth();
 
-  // Build a User-shaped object compatible with TopBar / UserMenu.
-  // Middleware ensures we are authenticated before this layout renders,
-  // so session should always be present. The fallback values are defensive.
-  const user = {
+  const user: User = {
     id: session?.user?.id ?? "",
     email: session?.user?.email ?? "",
-    name: session?.user?.name ?? session?.user?.email ?? "User",
+    name: session?.user?.name ?? "User",
     image: session?.user?.image ?? null,
     allowlisted: true,
-    timezone: "Asia/Tashkent",
-    theme: "system" as const,
+    timezone: (session?.user as { timezone?: string })?.timezone ?? "Asia/Tashkent",
+    theme: ((session?.user as { theme?: string })?.theme as User["theme"]) ?? "system",
     createdAt: new Date(),
   };
 

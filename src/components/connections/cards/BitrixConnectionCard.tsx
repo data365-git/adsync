@@ -162,7 +162,7 @@ export function BitrixConnectionCard({
         </CardContent>
 
         {/* ── Footer ── */}
-        <CardFooter className="flex flex-wrap gap-2">
+        <CardFooter className="flex gap-2">
           {showConnectCta && (
             <Button
               size="lg"
@@ -222,6 +222,7 @@ export function BitrixConnectionCard({
                       variant="ghost"
                       size="lg"
                       aria-label="Disconnect Bitrix24 connection"
+                      className="flex-1"
                     />
                   }
                 >

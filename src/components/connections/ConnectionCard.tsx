@@ -256,7 +256,7 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-wrap gap-2">
+        <CardFooter className="flex gap-2">
           {effectiveStatus === "connected" ? (
             <>
               {/* Reconnect always visible — user may want to re-auth with different account */}
@@ -284,6 +284,7 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
                 providerName={providerLabel}
                 isDisconnecting={isDisconnecting}
                 onConfirm={handleDisconnect}
+                className="flex-1"
               />
             </>
           ) : (

@@ -12,18 +12,21 @@ import {
   AlertDialogTrigger,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { Loader2 } from "lucide-react";
 
 interface DisconnectDialogProps {
   providerName: string;
   isDisconnecting: boolean;
   onConfirm: () => void;
+  className?: string;
 }
 
 export function DisconnectDialog({
   providerName,
   isDisconnecting,
   onConfirm,
+  className,
 }: DisconnectDialogProps) {
   return (
     <AlertDialog>
@@ -33,6 +36,7 @@ export function DisconnectDialog({
             variant="ghost"
             size="sm"
             aria-label={`Disconnect ${providerName} connection`}
+            className={cn(className)}
           />
         }
       >

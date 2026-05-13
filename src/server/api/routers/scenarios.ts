@@ -14,6 +14,7 @@ import type { Scenario as MockScenario } from "~/server/mocks/types";
 export const ModuleTypeSchema = z.enum([
   "trigger.schedule",
   "trigger.manual",
+  "trigger.webhook",
   "trigger.watch.sheets_new_rows",
   "trigger.watch.bitrix_new_lead",
   "fb.account_insights",

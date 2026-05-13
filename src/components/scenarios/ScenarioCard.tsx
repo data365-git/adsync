@@ -89,20 +89,20 @@ export function ScenarioCard({
 
   return (
     <>
-      <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
+      <div className="bg-card flex flex-col gap-4 rounded-xl border p-6">
         {/* Header: name + badge + kebab */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-col gap-1">
             <Link
               href={`/scenarios/${scenario.id}`}
-              className="text-foreground truncate font-medium hover:underline focus-visible:underline focus-visible:outline-none"
+              className="text-foreground truncate text-base hover:underline focus-visible:underline focus-visible:outline-none"
             >
               {scenario.name}
             </Link>
             <div className="flex items-center gap-2">
               <ScenarioKindBadge kind={scenario.kind} />
               {runCount !== undefined && (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-muted-foreground text-sm">
                   {runCount === 0
                     ? "No runs"
                     : `${runCount} run${runCount === 1 ? "" : "s"}`}
@@ -167,7 +167,7 @@ export function ScenarioCard({
 
         {/* Last run */}
         <div className="flex items-start gap-2">
-          <span className="text-muted-foreground shrink-0 pt-0.5 text-xs">
+          <span className="text-muted-foreground shrink-0 pt-0.5 text-sm">
             Last run:
           </span>
           <LastRunCell
@@ -185,7 +185,7 @@ export function ScenarioCard({
               initialEnabled={scenario.enabled}
               name={scenario.name}
             />
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground text-sm">
               {scenario.enabled ? "Enabled" : "Disabled"}
             </span>
           </div>
@@ -195,7 +195,7 @@ export function ScenarioCard({
             disabled={runNowMutation.isPending}
             onClick={() => runNowMutation.mutate({ id: scenario.id })}
             aria-label={`Run now: ${scenario.name}`}
-            className="border-border bg-background hover:bg-muted focus-visible:ring-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+            className="border-border bg-background hover:bg-muted focus-visible:ring-ring inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border px-4 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
           >
             {isRunning ? (
               <Loader2

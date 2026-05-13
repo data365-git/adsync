@@ -92,7 +92,7 @@ export function ScenarioRow({
     <>
       <TableRow
         tabIndex={0}
-        className="focus-visible:ring-ring hover:bg-muted/50 h-14 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+        className="focus-visible:ring-ring hover:bg-muted/50 h-18 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             window.location.href = `/scenarios/${scenario.id}`;
@@ -104,13 +104,13 @@ export function ScenarioRow({
           <div className="flex flex-col gap-0.5">
             <Link
               href={`/scenarios/${scenario.id}`}
-              className="text-foreground font-medium hover:underline focus-visible:underline focus-visible:outline-none"
+              className="text-foreground text-base hover:underline focus-visible:underline focus-visible:outline-none"
               tabIndex={-1}
             >
               {scenario.name}
             </Link>
             {runCount !== undefined && (
-              <span className="text-muted-foreground text-xs">
+              <span className="text-muted-foreground text-sm">
                 {runCount === 0
                   ? "No runs"
                   : `${runCount} run${runCount === 1 ? "" : "s"}`}

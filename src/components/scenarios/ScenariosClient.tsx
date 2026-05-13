@@ -114,7 +114,7 @@ export function ScenariosClient() {
             </TableHeader>
             <TableBody>
               {[1, 2, 3, 4].map((i) => (
-                <TableRow key={i} className="h-14">
+                <TableRow key={i} className="h-18">
                   <td className="p-2">
                     <div className="flex flex-col gap-1">
                       <div className="bg-muted h-4 w-44 rounded motion-safe:animate-pulse motion-reduce:opacity-70" />
@@ -142,11 +142,11 @@ export function ScenariosClient() {
           </Table>
         </div>
         {/* Mobile skeleton */}
-        <div className="flex flex-col gap-3 md:hidden">
+        <div className="flex flex-col gap-4 md:hidden">
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="flex h-[180px] flex-col gap-3 rounded-xl border p-4 motion-safe:animate-pulse motion-reduce:opacity-70"
+              className="flex h-[220px] flex-col gap-4 rounded-xl border p-6 motion-safe:animate-pulse motion-reduce:opacity-70"
             >
               <div className="flex items-start justify-between">
                 <div className="flex flex-1 flex-col gap-1">
@@ -270,7 +270,7 @@ export function ScenariosClient() {
       </div>
 
       {/* Mobile card list */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div className="flex flex-col gap-4 md:hidden">
         {filteredScenarios.map((scenario) => (
           <ScenarioCard
             key={scenario.id}

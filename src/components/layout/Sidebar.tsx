@@ -33,7 +33,7 @@ export function Sidebar() {
   return (
     <aside
       aria-label="Primary navigation"
-      className="bg-sidebar text-sidebar-foreground border-sidebar-border hidden h-screen w-60 shrink-0 flex-col border-r md:flex"
+      className="bg-sidebar text-sidebar-foreground border-sidebar-border sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r md:flex"
     >
       <Link
         href="/connections"
@@ -42,7 +42,7 @@ export function Sidebar() {
         <LayoutDashboard className="h-5 w-5" aria-hidden />
         <span>Automation</span>
       </Link>
-      <nav className="flex-1 px-3">
+      <nav className="flex-1 overflow-y-auto px-3">
         <ul className="space-y-1">
           {NAV.map((item) => {
             const active =

@@ -8,7 +8,7 @@ import { ThemeProvider } from "~/components/providers/ThemeProvider";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
-  title: "Automation Dashboard",
+  title: "adsync",
   description:
     "Personal dashboard for orchestrating Facebook Ads → Google Sheets syncs.",
   icons: [{ rel: "icon", url: "/favicon.ico" }],

@@ -12,6 +12,9 @@ import {
 } from "lucide-react";
 
 import { cn } from "~/lib/utils";
+import { ThemeToggle } from "~/components/providers/ThemeProvider";
+import { UserMenu } from "~/components/layout/UserMenu";
+import type { User } from "~/server/mocks/types";
 
 type NavItem = {
   href: string;
@@ -27,7 +30,7 @@ const NAV: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({ user }: { user: User }) {
   const pathname = usePathname();
 
   return (
@@ -37,10 +40,10 @@ export function Sidebar() {
     >
       <Link
         href="/connections"
-        className="flex h-16 items-center gap-2 px-6 font-semibold tracking-tight"
+        className="flex h-16 items-center gap-2 px-6 text-base tracking-tight"
       >
         <LayoutDashboard className="h-5 w-5" aria-hidden />
-        <span>Automation</span>
+        <span>adsync</span>
       </Link>
       <nav className="flex-1 overflow-y-auto px-3">
         <ul className="space-y-1">
@@ -54,7 +57,7 @@ export function Sidebar() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors",
+                    "flex h-11 items-center gap-3 rounded-md px-3 text-base transition-colors",
                     "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
                     active
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -69,8 +72,12 @@ export function Sidebar() {
           })}
         </ul>
       </nav>
-      <div className="text-muted-foreground px-6 py-4 text-xs">
-        Phase 1 · Mock data
+      <div className="border-sidebar-border flex items-center justify-between gap-2 border-t px-3 py-3">
+        <UserMenu user={user} />
+        <div className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
+          {user.email}
+        </div>
+        <ThemeToggle />
       </div>
     </aside>
   );

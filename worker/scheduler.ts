@@ -12,6 +12,8 @@
 import { db } from "~/server/db";
 import { nextFireAt } from "~/lib/cron-builder";
 import { executeRun } from "~/server/core/executor";
+import { pollAll } from "~/server/sheets/poller";
+import { drainSyncJobs, retryFailedJobs } from "~/server/sync/orchestrator";
 
 type ScheduledScenario = {
   id: string;
@@ -62,29 +64,55 @@ async function loadScheduledScenarios(): Promise<ScheduledScenario[]> {
 }
 
 /**
- * One tick: fire all due scenarios.
+ * One tick: run all scheduled work in order.
+ * Each section is independently guarded — a failure in one does not skip the others.
  */
 export async function tick(): Promise<void> {
   const now = new Date();
-  let scenarios: ScheduledScenario[];
 
+  // ── 1. Fire due automation scenarios ─────────────────────────────────────
   try {
-    scenarios = await loadScheduledScenarios();
+    const scenarios = await loadScheduledScenarios();
+    for (const scenario of scenarios) {
+      // nextFireAt signature: (expr: string, _timezone: string, from: Date): Date | null
+      const from = scenario.lastRunAt ?? new Date(0);
+      const next = nextFireAt(scenario.cronExpression, scenario.timezone, from);
+
+      if (!next || next > now) continue;
+
+      console.log(`[worker] Firing scenario ${scenario.id} (${scenario.name})`);
+      executeRun(scenario.id, "SCHEDULED", scenario.userId).catch((err: unknown) => {
+        console.error(`[worker] executeRun failed for scenario ${scenario.id}:`, err);
+      });
+    }
   } catch (err) {
-    console.error("[worker] Failed to load scheduled scenarios:", err);
-    return;
+    console.error("[worker] Scenario scheduler error:", err);
   }
 
-  for (const scenario of scenarios) {
-    // nextFireAt signature: (expr: string, _timezone: string, from: Date): Date | null
-    const from = scenario.lastRunAt ?? new Date(0);
-    const next = nextFireAt(scenario.cronExpression, scenario.timezone, from);
+  // ── 2. Poll Google Sheets → upsert Postgres → enqueue SyncJobs ───────────
+  try {
+    await pollAll();
+  } catch (err) {
+    console.error("[worker] Sheets poll error:", err);
+  }
 
-    if (!next || next > now) continue;
+  // ── 3. Drain pending SyncJobs → push to Bitrix24 ─────────────────────────
+  try {
+    const { processed, failed } = await drainSyncJobs();
+    if (processed > 0 || failed > 0) {
+      console.log(`[worker] SyncJob drain: processed=${processed} failed=${failed}`);
+    }
+  } catch (err) {
+    console.error("[worker] SyncJob drain error:", err);
+  }
 
-    console.log(`[worker] Firing scenario ${scenario.id} (${scenario.name})`);
-    executeRun(scenario.id, "SCHEDULED", scenario.userId).catch((err: unknown) => {
-      console.error(`[worker] executeRun failed for scenario ${scenario.id}:`, err);
-    });
+  // ── 4. Re-queue failed jobs that are past their backoff window ────────────
+  try {
+    const retried = await retryFailedJobs();
+    if (retried > 0) {
+      console.log(`[worker] Retried ${retried} failed SyncJobs`);
+    }
+  } catch (err) {
+    console.error("[worker] SyncJob retry error:", err);
   }
 }

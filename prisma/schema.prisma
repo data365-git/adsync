@@ -211,3 +211,98 @@ model AppSetting {
   key   String @id
   value String
 }
+
+// ─── Bitrix24 Sync models ─────────────────────────────────────────────────────
+
+model Lead {
+  id           String    @id @default(cuid())
+  sourceRowId  String    @unique
+  bitrixId     String?   @unique
+  name         String?
+  phone        String?
+  email        String?
+  status       String?
+  source       String?
+  raw          Json
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([bitrixId])
+  @@index([phone])
+  @@index([email])
+}
+
+model Deal {
+  id           String    @id @default(cuid())
+  sourceRowId  String    @unique
+  bitrixId     String?   @unique
+  title        String?
+  contactId    String?
+  stageId      String?
+  amount       String?
+  currency     String?
+  raw          Json
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([bitrixId])
+}
+
+model Contact {
+  id           String    @id @default(cuid())
+  sourceRowId  String    @unique
+  bitrixId     String?   @unique
+  name         String?
+  phone        String?
+  email        String?
+  source       String?
+  raw          Json
+  lastSyncedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([bitrixId])
+  @@index([phone])
+  @@index([email])
+}
+
+model SyncJob {
+  id          String    @id @default(cuid())
+  entity      String
+  entityId    String
+  operation   String
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  lastError   String?
+  payload     Json
+  scheduledAt DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, scheduledAt])
+}
+
+model SyncLog {
+  id        String   @id @default(cuid())
+  jobId     String
+  entity    String
+  bitrixId  String?
+  direction String
+  success   Boolean
+  request   Json
+  response  Json
+  error     String?
+  duration  Int
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, success])
+}
+
+model BitrixSchemaCache {
+  entity    String   @id
+  schema    Json
+  fetchedAt DateTime @default(now())
+}

@@ -75,6 +75,7 @@ export type ScenarioKind = "QUICK_SETUP" | "CUSTOM";
 export type ModuleType =
   | "trigger.schedule"
   | "trigger.manual"
+  | "trigger.webhook"
   | "trigger.watch.sheets_new_rows"
   | "trigger.watch.bitrix_new_lead"
   // Legacy — superseded by fb.ad_insights in Phase 3. Kept in the union

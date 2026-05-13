@@ -7,6 +7,7 @@ import { runLogsRouter } from "~/server/api/routers/runLogs";
 import { runsRouter } from "~/server/api/routers/runs";
 import { scenariosRouter } from "~/server/api/routers/scenarios";
 import { settingsRouter } from "~/server/api/routers/settings";
+import { syncRouter } from "~/server/api/routers/sync";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
   fb: fbRouter,
   scenarios: scenariosRouter,
   modules: modulesRouter,
+  sync: syncRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { auth } from "~/server/auth";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const protectedPrefixes = [
   "/connections",
@@ -9,20 +10,27 @@ const protectedPrefixes = [
   "/settings",
 ];
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isProtectedPath = protectedPrefixes.some((prefix) =>
+  const isProtected = protectedPrefixes.some((prefix) =>
     pathname.startsWith(prefix),
   );
 
-  if (isProtectedPath && !req.auth) {
+  if (!isProtected) return NextResponse.next();
+
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  if (!token) {
     return NextResponse.redirect(
-      new URL("/login?next=" + encodeURIComponent(pathname), req.url),
+      new URL(`/login?next=${encodeURIComponent(pathname)}`, req.url),
     );
   }
 
-  return undefined;
-});
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon\\.ico).*)"],

@@ -25,6 +25,7 @@ import {
   getAccountInsights,
   getCampaignInsights,
   getAdInsights,
+  listAdAccounts,
 } from "~/integrations/facebook/graph-client";
 
 import {
@@ -138,6 +139,12 @@ const fbAdInsightsHandler: Handler = async (step, ctx, userId) => {
   return { rowCount: rows.length, rows };
 };
 
+const fbListAdAccountsHandler: Handler = async (step, ctx, userId) => {
+  const rows = await listAdAccounts(userId);
+  ctx.setOutput(step.position, rows);
+  return { rowCount: rows.length, rows };
+};
+
 // ── Google Sheets handlers ────────────────────────────────────────────────────
 
 type SheetsCfg = {
@@ -223,7 +230,7 @@ const HANDLERS: Record<string, Handler> = {
   "fb.account_insights": fbAccountInsightsHandler,
   "fb.campaign_insights": fbCampaignInsightsHandler,
   "fb.ad_insights": fbAdInsightsHandler,
-  "fb.list_ad_accounts": mockActionHandler,
+  "fb.list_ad_accounts": fbListAdAccountsHandler,
   "fb.list_ads": notImplementedHandler,
   "fb.get_ad": notImplementedHandler,
 

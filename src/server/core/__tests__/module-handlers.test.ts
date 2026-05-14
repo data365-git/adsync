@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
@@ -46,5 +46,65 @@ describe("HANDLERS routing — deferred modules", () => {
     const fakeCtx = {} as unknown as Parameters<typeof handler>[1];
 
     await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/MODULE_NOT_IMPLEMENTED/);
+  });
+});
+
+describe("fbListAdAccountsHandler", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("returns the user's ad accounts as HandlerResult rows", async () => {
+    const fakeAccounts = [
+      { id: "act_111", name: "Account One" },
+      { id: "act_222", name: "Account Two" },
+    ];
+
+    vi.doMock("~/integrations/facebook/graph-client", () => ({
+      listAdAccounts: vi.fn(async (_userId: string) => fakeAccounts),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("fb.list_ad_accounts");
+
+    const fakeStep = {
+      id: "step_fb_list",
+      moduleType: "fb.list_ad_accounts",
+      config: {},
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+    const calls: Array<[number, unknown]> = [];
+    const fakeCtx = {
+      setOutput: (pos: number, val: unknown) => {
+        calls.push([pos, val]);
+      },
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "user_test");
+
+    expect(result).toEqual({ rowCount: 2, rows: fakeAccounts });
+    expect(calls).toEqual([[1, fakeAccounts]]);
+  });
+
+  it("propagates graph-client errors (e.g. token expired)", async () => {
+    vi.doMock("~/integrations/facebook/graph-client", () => ({
+      listAdAccounts: vi.fn(async () => {
+        throw new Error("FB Graph API error: token expired");
+      }),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("fb.list_ad_accounts");
+
+    const fakeStep = {
+      id: "step_fb_list",
+      moduleType: "fb.list_ad_accounts",
+      config: {},
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const fakeCtx = { setOutput: () => {} } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/token expired/);
   });
 });

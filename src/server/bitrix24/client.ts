@@ -129,3 +129,53 @@ function toQueryString(obj: Record<string, unknown>, prefix = ""): string {
   }
   return parts.join("&");
 }
+
+export type CreateLeadInput = {
+  title: string;
+  name: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  sourceId: string;
+  comments?: string;
+};
+
+export async function createLead(
+  input: CreateLeadInput,
+): Promise<{ leadId: string }> {
+  const fields: Record<string, unknown> = {
+    TITLE: input.title,
+    NAME: input.name,
+    SOURCE_ID: input.sourceId,
+  };
+  if (input.lastName) fields.LAST_NAME = input.lastName;
+  if (input.phone) {
+    fields.PHONE = [{ VALUE: input.phone, VALUE_TYPE: "WORK" }];
+  }
+  if (input.email) {
+    fields.EMAIL = [{ VALUE: input.email, VALUE_TYPE: "WORK" }];
+  }
+  if (input.comments) fields.COMMENTS = input.comments;
+
+  const id = await call<number>("crm.lead.add", { fields });
+  return { leadId: String(id) };
+}
+
+export type UpdateLeadInput = {
+  leadId: string;
+  title?: string;
+  statusId?: string;
+  comments?: string;
+};
+
+export async function updateLead(
+  input: UpdateLeadInput,
+): Promise<{ leadId: string; updated: true }> {
+  const fields: Record<string, unknown> = {};
+  if (input.title) fields.TITLE = input.title;
+  if (input.statusId) fields.STATUS_ID = input.statusId;
+  if (input.comments) fields.COMMENTS = input.comments;
+
+  await call("crm.lead.update", { id: input.leadId, fields });
+  return { leadId: input.leadId, updated: true };
+}

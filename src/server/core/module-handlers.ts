@@ -173,6 +173,23 @@ type SheetsUpdateRowCfg = {
   mappedFields: Record<string, string>;
 };
 
+type BitrixCreateLeadCfg = {
+  title: string;
+  name: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  sourceId: string;
+  comments?: string;
+};
+
+type BitrixUpdateLeadCfg = {
+  leadId: string;
+  title?: string;
+  statusId?: string;
+  comments?: string;
+};
+
 function projectRows(
   rows: unknown[],
   mappedFields?: string[],
@@ -280,6 +297,40 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
   };
 };
 
+const bitrixCreateLeadHandler: Handler = async (step, ctx, _userId) => {
+  const { createLead } = await import("~/server/bitrix24/client");
+  const config = cfg<BitrixCreateLeadCfg>(step);
+  const result = await createLead({
+    title: config.title,
+    name: config.name,
+    lastName: config.lastName,
+    phone: config.phone,
+    email: config.email,
+    sourceId: config.sourceId,
+    comments: config.comments,
+  });
+  const outputRow = {
+    leadId: result.leadId,
+    createdAt: new Date().toISOString(),
+  };
+  ctx.setOutput(step.position, [outputRow]);
+  return { rowCount: 1, rows: [outputRow] };
+};
+
+const bitrixUpdateLeadHandler: Handler = async (step, ctx, _userId) => {
+  const { updateLead } = await import("~/server/bitrix24/client");
+  const config = cfg<BitrixUpdateLeadCfg>(step);
+  const result = await updateLead({
+    leadId: config.leadId,
+    title: config.title,
+    statusId: config.statusId,
+    comments: config.comments,
+  });
+  const outputRow = { leadId: result.leadId, updated: result.updated };
+  ctx.setOutput(step.position, [outputRow]);
+  return { rowCount: 1, rows: [outputRow] };
+};
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 const HANDLERS: Record<string, Handler> = {
@@ -309,8 +360,8 @@ const HANDLERS: Record<string, Handler> = {
   "sheets.watch_new_rows": notImplementedHandler,
 
   // Bitrix24
-  "bitrix.create_lead": mockActionHandler,
-  "bitrix.update_lead": mockActionHandler,
+  "bitrix.create_lead": bitrixCreateLeadHandler,
+  "bitrix.update_lead": bitrixUpdateLeadHandler,
   "bitrix.find_leads": notImplementedHandler,
   "bitrix.create_deal": notImplementedHandler,
   "bitrix.update_deal": notImplementedHandler,

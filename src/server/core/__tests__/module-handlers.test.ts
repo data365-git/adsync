@@ -351,3 +351,171 @@ describe("sheetsUpdateRowHandler", () => {
     await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/No row found/);
   });
 });
+
+describe("bitrixCreateLeadHandler", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("creates a lead and returns the new leadId", async () => {
+    const createLeadSpy = vi.fn(async () => ({ leadId: "4242" }));
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: createLeadSpy,
+      updateLead: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.create_lead");
+
+    const fakeStep = {
+      id: "step_create",
+      moduleType: "bitrix.create_lead",
+      config: {
+        title: "Website inquiry",
+        name: "Alice",
+        lastName: "Smith",
+        phone: "+1-555-1234",
+        email: "alice@example.com",
+        sourceId: "WEB",
+        comments: "from contact form",
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const calls: Array<[number, unknown]> = [];
+    const fakeCtx = {
+      setOutput: (pos: number, val: unknown) => calls.push([pos, val]),
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result.rowCount).toBe(1);
+    expect(result.rows).toEqual([expect.objectContaining({ leadId: "4242" })]);
+    expect(createLeadSpy).toHaveBeenCalledTimes(1);
+    expect(createLeadSpy).toHaveBeenCalledWith({
+      title: "Website inquiry",
+      name: "Alice",
+      lastName: "Smith",
+      phone: "+1-555-1234",
+      email: "alice@example.com",
+      sourceId: "WEB",
+      comments: "from contact form",
+    });
+    expect(calls.length).toBe(1);
+  });
+
+  it("propagates BitrixError from createLead", async () => {
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(async () => {
+        throw new Error("BitrixError: INVALID_INPUT");
+      }),
+      updateLead: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.create_lead");
+
+    const fakeStep = {
+      id: "step_create",
+      moduleType: "bitrix.create_lead",
+      config: {
+        title: "X",
+        name: "Y",
+        sourceId: "BOGUS",
+      },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/INVALID_INPUT/);
+  });
+});
+
+describe("bitrixUpdateLeadHandler", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("updates a lead by id and returns the leadId + updated flag", async () => {
+    const updateLeadSpy = vi.fn(async () => ({ leadId: "4242", updated: true }));
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(),
+      updateLead: updateLeadSpy,
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.update_lead");
+
+    const fakeStep = {
+      id: "step_upd_lead",
+      moduleType: "bitrix.update_lead",
+      config: {
+        leadId: "4242",
+        title: "Updated title",
+        statusId: "IN_PROCESS",
+        comments: "follow-up scheduled",
+      },
+      position: 3,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result.rowCount).toBe(1);
+    expect(result.rows).toEqual([
+      expect.objectContaining({ leadId: "4242", updated: true }),
+    ]);
+    expect(updateLeadSpy).toHaveBeenCalledWith({
+      leadId: "4242",
+      title: "Updated title",
+      statusId: "IN_PROCESS",
+      comments: "follow-up scheduled",
+    });
+  });
+
+  it("propagates BitrixError from updateLead", async () => {
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(),
+      updateLead: vi.fn(async () => {
+        throw new Error("BitrixError: ACCESS_DENIED");
+      }),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.update_lead");
+
+    const fakeStep = {
+      id: "step_upd_lead",
+      moduleType: "bitrix.update_lead",
+      config: { leadId: "4242", title: "X" },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/ACCESS_DENIED/);
+  });
+});

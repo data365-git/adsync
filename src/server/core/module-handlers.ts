@@ -224,25 +224,25 @@ const HANDLERS: Record<string, Handler> = {
   "fb.campaign_insights": fbCampaignInsightsHandler,
   "fb.ad_insights": fbAdInsightsHandler,
   "fb.list_ad_accounts": mockActionHandler,
-  "fb.list_ads": mockActionHandler,
-  "fb.get_ad": mockActionHandler,
+  "fb.list_ads": notImplementedHandler,
+  "fb.get_ad": notImplementedHandler,
 
   // Google Sheets
   "sheets.append": sheetsAppendHandler,
   "sheets.upsert": sheetsUpsertHandler,
   "sheets.find_rows": mockActionHandler,
   "sheets.update_row": mockActionHandler,
-  "sheets.delete_row": mockActionHandler,
-  "sheets.get_row": mockActionHandler,
-  "sheets.create_tab": mockActionHandler,
-  "sheets.watch_new_rows": mockActionHandler,
+  "sheets.delete_row": notImplementedHandler,
+  "sheets.get_row": notImplementedHandler,
+  "sheets.create_tab": notImplementedHandler,
+  "sheets.watch_new_rows": notImplementedHandler,
 
   // Bitrix24
   "bitrix.create_lead": mockActionHandler,
   "bitrix.update_lead": mockActionHandler,
-  "bitrix.find_leads": mockActionHandler,
-  "bitrix.create_deal": mockActionHandler,
-  "bitrix.update_deal": mockActionHandler,
+  "bitrix.find_leads": notImplementedHandler,
+  "bitrix.create_deal": notImplementedHandler,
+  "bitrix.update_deal": notImplementedHandler,
 };
 
 export function getHandler(moduleType: string): Handler {

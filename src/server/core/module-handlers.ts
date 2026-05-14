@@ -243,7 +243,6 @@ const HANDLERS: Record<string, Handler> = {
   "bitrix.find_leads": mockActionHandler,
   "bitrix.create_deal": mockActionHandler,
   "bitrix.update_deal": mockActionHandler,
-  "bitrix.create_smart_process_item": mockActionHandler,
 };
 
 export function getHandler(moduleType: string): Handler {

@@ -24,7 +24,6 @@ import { BitrixUpdateLeadConfig } from "./modules/BitrixUpdateLeadConfig";
 import { BitrixFindLeadsConfig } from "./modules/BitrixFindLeadsConfig";
 import { BitrixCreateDealConfig } from "./modules/BitrixCreateDealConfig";
 import { BitrixUpdateDealConfig } from "./modules/BitrixUpdateDealConfig";
-import { BitrixCreateSmartProcessItemConfig } from "./modules/BitrixCreateSmartProcessItemConfig";
 import { WatchBitrixNewLeadConfig } from "./modules/WatchBitrixNewLeadConfig";
 import { WatchSheetsNewRowsConfig } from "./modules/WatchSheetsNewRowsConfig";
 import { getIntegrationMeta } from "~/lib/integration-icons";
@@ -135,14 +134,6 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   ),
   "bitrix.update_deal": ({ config, onChange, errors }) => (
     <BitrixUpdateDealConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  "bitrix.create_smart_process_item": ({ config, onChange, errors, prevStepModuleType }) => (
-    <BitrixCreateSmartProcessItemConfig
-      config={config}
-      onChange={onChange}
-      errors={errors}
-      prevStepModuleType={prevStepModuleType}
-    />
   ),
 };
 
@@ -388,13 +379,6 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
     case "bitrix.update_deal": {
       const dealId = typeof config.dealId === "string" ? config.dealId : "";
       return dealId ? `Update deal #${dealId}` : "Not configured";
-    }
-
-    case "bitrix.create_smart_process_item": {
-      const title = typeof config.title === "string" ? config.title : "";
-      const entityTypeId = typeof config.entityTypeId === "string" ? config.entityTypeId : "";
-      if (!entityTypeId) return "Not configured";
-      return title ? `Create item: ${title}` : `Entity type ${entityTypeId}`;
     }
 
     default:

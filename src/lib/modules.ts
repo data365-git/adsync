@@ -1103,40 +1103,6 @@ const PHASE_3_MODULES: ModuleDefinition[] = [
     ],
     sampleOutput: [{ dealId: "deal_001", updated: true }],
   },
-  {
-    id: "bitrix.create_smart_process_item",
-    name: "Create Smart Process Item",
-    shortName: "Smart Process Item",
-    description:
-      "Creates an item in a Bitrix24 Smart Process. Smart Processes are Bitrix24's flexible custom CRM entity primitive.",
-    group: "bitrix24",
-    outputsArray: false,
-    configSchema: [
-      {
-        key: "entityTypeId",
-        label: "Entity type ID",
-        type: "text",
-        required: true,
-        help: "The dynamic entity type ID for your Smart Process. Find it in CRM → Smart Processes settings.",
-      },
-      {
-        key: "title",
-        label: "Title",
-        type: "text",
-        required: true,
-        help: "Title for the new item",
-      },
-      { key: "stageId", label: "Stage ID", type: "text", required: false },
-      {
-        key: "fields",
-        label: "Additional fields",
-        type: "fieldMapping",
-        required: false,
-        help: "Map extra custom fields. Keys are Bitrix24 field API names.",
-      },
-    ],
-    sampleOutput: [{ itemId: "spi_001", createdAt: "2025-05-11T08:00:00Z" }],
-  },
 ];
 
 MODULES.push(...PHASE_3_MODULES);

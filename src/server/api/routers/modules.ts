@@ -36,7 +36,6 @@ const ModuleTypeSchema = z.enum([
   "bitrix.find_leads",
   "bitrix.create_deal",
   "bitrix.update_deal",
-  "bitrix.create_smart_process_item",
 ]);
 
 /**

@@ -98,8 +98,7 @@ export type ModuleType =
   | "bitrix.update_lead"
   | "bitrix.find_leads"
   | "bitrix.create_deal"
-  | "bitrix.update_deal"
-  | "bitrix.create_smart_process_item";
+  | "bitrix.update_deal";
 
 export type ScenarioStep = {
   id: string;

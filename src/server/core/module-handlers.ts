@@ -86,6 +86,14 @@ const mockActionHandler: Handler = async (_step, _ctx, _userId) => {
   return { rowCount: 1 };
 };
 
+/**
+ * Replacement for mockActionHandler for module types that exist in the catalog
+ * but have not been implemented yet. Throws loudly so runs FAIL — never silent green.
+ */
+export const notImplementedHandler: Handler = async (step, _ctx, _userId) => {
+  throw new Error(`MODULE_NOT_IMPLEMENTED: ${step.moduleType}`);
+};
+
 // ── Facebook handlers ─────────────────────────────────────────────────────────
 
 type FbInsightsCfg = {

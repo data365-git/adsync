@@ -14,11 +14,83 @@
 import { db } from "~/server/db";
 import { RunContext } from "./run-context";
 import { getHandler } from "./module-handlers";
+import type { HandlerResult } from "./module-handlers";
+import type { ScenarioStep } from "@prisma/client";
+import type { InputJsonValue } from "@prisma/client/runtime/library";
+
+type ExecuteRunOptions = {
+  rerunOf?: string;
+  rerunFromPosition?: number;
+};
+
+function toInputJsonValue(value: unknown): InputJsonValue {
+  const parsed: unknown = JSON.parse(JSON.stringify(value));
+  return parsed as InputJsonValue;
+}
+
+function getMetaRecord(meta: unknown): Record<string, unknown> {
+  return typeof meta === "object" && meta !== null
+    ? (meta as Record<string, unknown>)
+    : {};
+}
+
+function getMetaPosition(meta: Record<string, unknown>): number | undefined {
+  return typeof meta.position === "number" ? meta.position : undefined;
+}
+
+function getMetaSampleRows(meta: Record<string, unknown>): unknown[] {
+  return Array.isArray(meta.sampleRows) ? meta.sampleRows : [];
+}
+
+export function buildRerunSeedOutputs(
+  logs: Array<{ meta: unknown }>,
+  rerunFromPosition: number,
+): Array<[number, unknown[]]> {
+  const outputs = new Map<number, unknown[]>();
+
+  for (const log of logs) {
+    const meta = getMetaRecord(log.meta);
+    const position = getMetaPosition(meta);
+    if (position === undefined || position >= rerunFromPosition) continue;
+
+    const sampleRows = getMetaSampleRows(meta);
+    if (sampleRows.length > 0) {
+      outputs.set(position, sampleRows);
+    }
+  }
+
+  return Array.from(outputs.entries()).sort(([left], [right]) => left - right);
+}
+
+export function buildStepCompleteLogMeta(
+  step: Pick<ScenarioStep, "id" | "position">,
+  result: HandlerResult,
+  durationMs: number,
+) {
+  const sampleRows = (result.rows ?? [])
+    .slice(0, 3)
+    .map((row) => toInputJsonValue(row));
+  const firstRow = sampleRows[0];
+  const outputSchema =
+    typeof firstRow === "object" && firstRow !== null
+      ? Object.keys(firstRow)
+      : [];
+
+  return {
+    stepId: step.id,
+    position: step.position,
+    durationMs,
+    rowCount: result.rowCount,
+    sampleRows,
+    outputSchema,
+  };
+}
 
 export async function executeRun(
   scenarioId: string,
   trigger: "MANUAL" | "SCHEDULED",
   userId: string,
+  options: ExecuteRunOptions = {},
 ): Promise<string> {
   // ── 1. Load scenario + steps ───────────────────────────────────────────────
   const scenario = await db.scenario.findUnique({
@@ -60,9 +132,29 @@ export async function executeRun(
   let adRowsWritten = 0;
   let sheetsUrl: string | undefined;
 
+  if (options.rerunOf && options.rerunFromPosition !== undefined) {
+    const sourceLogs = await db.runLog.findMany({
+      where: { runId: options.rerunOf },
+      orderBy: { ts: "asc" },
+    });
+    for (const [position, rows] of buildRerunSeedOutputs(
+      sourceLogs,
+      options.rerunFromPosition,
+    )) {
+      ctx.setOutput(position, rows);
+    }
+  }
+
   try {
     // ── 3. Execute steps ────────────────────────────────────────────────────
     for (const step of scenario.steps) {
+      if (
+        options.rerunFromPosition !== undefined &&
+        step.position < options.rerunFromPosition
+      ) {
+        continue;
+      }
+
       const stepStart = Date.now();
 
       await db.runLog.create({
@@ -101,7 +193,7 @@ export async function executeRun(
           runId: run.id,
           level: "INFO",
           message: `Completed step ${step.position}: ${step.moduleType}`,
-          meta: { stepId: step.id, position: step.position, durationMs, rowCount: result.rowCount },
+          meta: buildStepCompleteLogMeta(step, result, durationMs),
         },
       });
     }

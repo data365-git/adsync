@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "~/server/db";
 import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
 import type { Run as MockRun } from "~/server/mocks/types";
+import { executeRun } from "~/server/core/executor";
 
 // ── Normalizer ────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,14 @@ export type RunsListResult = {
   pageSize: number;
   totalPages: number;
 };
+
+function getPositionFromMeta(meta: unknown): number | undefined {
+  if (typeof meta !== "object" || meta === null || !("position" in meta)) {
+    return undefined;
+  }
+  const position = (meta as Record<string, unknown>).position;
+  return typeof position === "number" ? position : undefined;
+}
 
 // ── Router ────────────────────────────────────────────────────────────────────
 
@@ -109,5 +118,73 @@ export const runsRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.id} not found` });
       }
       return normalizeRun(run);
+    }),
+
+  getDetail: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const run = await db.run.findUnique({
+        where: { id: input.id },
+        include: {
+          scenario: { include: { steps: { orderBy: { position: "asc" } } } },
+          logs: { orderBy: { ts: "asc" } },
+        },
+      });
+
+      if (run?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Run not found" });
+      }
+
+      const stepsByPosition: Record<
+        number,
+        (typeof run.scenario.steps)[number]
+      > = {};
+      for (const step of run.scenario.steps) {
+        stepsByPosition[step.position] = step;
+      }
+
+      const logsByPosition: Record<number, typeof run.logs> = {};
+      for (const log of run.logs) {
+        const position = getPositionFromMeta(log.meta);
+        if (position !== undefined) {
+          (logsByPosition[position] ??= []).push(log);
+        }
+      }
+
+      return {
+        run,
+        scenario: run.scenario,
+        logsByPosition,
+        stepsByPosition,
+      };
+    }),
+
+  rerunFromStep: authedProcedure
+    .input(z.object({ runId: z.string(), position: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const source = await db.run.findUnique({
+        where: { id: input.runId },
+        include: { scenario: { include: { steps: true } } },
+      });
+
+      if (source?.userId !== userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Run not found" });
+      }
+
+      if (input.position > source.scenario.steps.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "position out of range",
+        });
+      }
+
+      const runId = await executeRun(source.scenarioId, "MANUAL", userId, {
+        rerunOf: source.id,
+        rerunFromPosition: input.position,
+      });
+
+      return { runId };
     }),
 });

@@ -6,11 +6,7 @@ import { AlertTriangle, ChevronLeft } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
-import { RunDetailHeader } from "~/components/runs/detail/RunDetailHeader";
-import { RunMetadataGrid } from "~/components/runs/detail/RunMetadataGrid";
-import { RunLogTimeline } from "~/components/runs/detail/RunLogTimeline";
-import { RunErrorPanel } from "~/components/runs/detail/RunErrorPanel";
-import { RunSheetsLink } from "~/components/runs/detail/RunSheetsLink";
+import { RunDetailView } from "~/components/runs/RunDetailView";
 import RunDetailLoading from "./loading";
 
 interface RunDetailPageProps {
@@ -19,28 +15,15 @@ interface RunDetailPageProps {
 
 export default function RunDetailPage({ params }: RunDetailPageProps) {
   const { id } = use(params);
+  const detailQuery = api.runs.getDetail.useQuery({ id });
 
-  const runQuery = api.runs.getById.useQuery({ id });
-  const logsQuery = api.runLogs.byRunId.useQuery({ runId: id });
-
-  const isLoading = runQuery.isLoading || logsQuery.isLoading;
-  const hasError = runQuery.isError || logsQuery.isError;
-  const run = runQuery.data;
-  const logs = logsQuery.data ?? [];
-
-  if (isLoading) {
+  if (detailQuery.isLoading) {
     return <RunDetailLoading />;
   }
 
-  if (hasError || !run) {
-    const errorMessage =
-      runQuery.error?.message ??
-      logsQuery.error?.message ??
-      "Run not found.";
-
+  if (detailQuery.isError || !detailQuery.data) {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
-        {/* Breadcrumb preserved even in error state */}
         <nav aria-label="Breadcrumb">
           <Button
             variant="ghost"
@@ -55,7 +38,7 @@ export default function RunDetailPage({ params }: RunDetailPageProps) {
 
         <div
           role="alert"
-          className="flex flex-col items-center gap-4 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center"
+          className="flex flex-col items-center gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-6 py-12 text-center"
         >
           <AlertTriangle
             className="size-10 text-destructive"
@@ -65,13 +48,14 @@ export default function RunDetailPage({ params }: RunDetailPageProps) {
             <p className="text-base font-semibold text-foreground">
               Failed to load run
             </p>
-            <p className="text-sm text-muted-foreground">{errorMessage}</p>
+            <p className="text-sm text-muted-foreground">
+              {detailQuery.error?.message ?? "Run not found."}
+            </p>
           </div>
           <Button
             variant="outline"
             onClick={() => {
-              void runQuery.refetch();
-              void logsQuery.refetch();
+              void detailQuery.refetch();
             }}
           >
             Retry
@@ -81,26 +65,5 @@ export default function RunDetailPage({ params }: RunDetailPageProps) {
     );
   }
 
-  const isFailed = run.status === "failed";
-
-  return (
-    <div className="mx-auto max-w-4xl space-y-8">
-      {/* Header: breadcrumb + title + badges */}
-      <RunDetailHeader run={run} />
-
-      {/* Metadata grid: started / finished / duration / rows written */}
-      <RunMetadataGrid run={run} />
-
-      {/* "View in Google Sheets" — reward for a successful run */}
-      {run.sheetsUrl !== null && <RunSheetsLink sheetsUrl={run.sheetsUrl} />}
-
-      {/* Error panel — shown only for failed runs, above the log timeline */}
-      {isFailed && run.errorMessage !== null && (
-        <RunErrorPanel errorMessage={run.errorMessage} />
-      )}
-
-      {/* Log timeline */}
-      <RunLogTimeline logs={logs} />
-    </div>
-  );
+  return <RunDetailView data={detailQuery.data} />;
 }

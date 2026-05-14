@@ -78,6 +78,26 @@
   --color-status-success: var(--status-success);
   --color-status-failed: var(--status-failed);
   --color-status-warning: var(--status-warning);
+
+  /* motion */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+
+  /* type-ramp semantic aliases */
+  --text-display: 2.25rem;   /* 36px */
+  --text-h1: 1.5rem;         /* 24px */
+  --text-h2: 1.25rem;        /* 20px */
+  --text-body: 0.9375rem;    /* 15px */
+  --text-caption: 0.8125rem; /* 13px */
+  --text-display--line-height: 1.15;
+  --text-h1--line-height: 1.25;
+  --text-h2--line-height: 1.3;
+  --text-body--line-height: 1.5;
+  --text-caption--line-height: 1.45;
 }
 
 :root {
@@ -181,5 +201,14 @@
   }
   html {
     @apply font-sans scroll-smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

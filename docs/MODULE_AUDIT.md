@@ -45,3 +45,28 @@ Decision legend:
 ## How to use this doc
 
 Fill in the **User decision** column for every row, then signal Task 3 to proceed. Plan 1 enacts the decisions verbatim in Tasks 4–8.
+
+---
+
+## Resolved (locked 2026-05-14)
+
+**CUT (removed from catalog in commit `343282a`):**
+- `bitrix.create_smart_process_item`
+
+**DEFER (routed to `notImplementedHandler` in commit `a0580c9`):**
+- `fb.list_ads`
+- `fb.get_ad`
+- `sheets.delete_row`
+- `sheets.get_row`
+- `sheets.create_tab`
+- `sheets.watch_new_rows`
+- `bitrix.find_leads`
+- `bitrix.create_deal`
+- `bitrix.update_deal`
+
+**KEEP-IMPL (real handler still required — implemented in subsequent plans):**
+- Plan 2 (Facebook): `fb.list_ad_accounts`
+- Plan 3 (Sheets): `sheets.find_rows`, `sheets.update_row`
+- Plan 4 (Bitrix24): `bitrix.create_lead`, `bitrix.update_lead`
+
+Until those plans land, the KEEP-IMPL types still route to `mockActionHandler` in `src/server/core/module-handlers.ts`. They are the only remaining mocks in the codebase.

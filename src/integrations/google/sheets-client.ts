@@ -95,6 +95,56 @@ export async function upsertRows(
   return merged.length;
 }
 
+/**
+ * Find rows in a sheet tab where the value in `searchColumn` matches `searchValue`.
+ * Returns row-objects shaped { row, ...namedFields } where `row` is the 1-indexed
+ * sheet row number and each named field comes from the header row.
+ *
+ * Reads the entire tab. For sheets > ~5,000 rows this gets slow — defer to v2.
+ */
+export async function findRows(
+  userId: string,
+  spreadsheetId: string,
+  tabName: string,
+  searchColumn: string,
+  searchValue: string,
+): Promise<Array<Record<string, unknown>>> {
+  const client = await getAuthedClient(userId);
+  const sheets = google.sheets({ version: "v4", auth: client });
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: tabName,
+  });
+
+  const values = (res.data.values ?? []) as string[][];
+  if (values.length === 0) {
+    return [];
+  }
+
+  // values.length === 0 is guarded above, so values[0] is always defined here
+  const headers = values[0]!;
+  const dataRows = values.slice(1);
+  const colIndex = headers.indexOf(searchColumn);
+  if (colIndex === -1) {
+    throw new Error(
+      `Column "${searchColumn}" not found in tab "${tabName}" of spreadsheet ${spreadsheetId}`,
+    );
+  }
+
+  const matches: Array<Record<string, unknown>> = [];
+  dataRows.forEach((row, idx) => {
+    if ((row[colIndex] ?? "") === searchValue) {
+      const obj: Record<string, unknown> = { row: idx + 2 };
+      headers.forEach((header, hIdx) => {
+        obj[header] = row[hIdx] ?? "";
+      });
+      matches.push(obj);
+    }
+  });
+  return matches;
+}
+
 async function ensureTabExists(
   sheets: ReturnType<typeof google.sheets>,
   spreadsheetId: string,

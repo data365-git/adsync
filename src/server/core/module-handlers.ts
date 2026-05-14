@@ -30,6 +30,7 @@ import {
 
 import {
   appendRows,
+  findRows,
   upsertRows,
 } from "~/integrations/google/sheets-client";
 // ─────────────────────────────────────────────────────────────────────────────
@@ -157,6 +158,13 @@ type SheetsUpsertCfg = SheetsCfg & {
   keyFields: string[];
 };
 
+type SheetsFindRowsCfg = {
+  spreadsheetId: string;
+  tabName: string;
+  searchColumn: string;
+  searchValue: string;
+};
+
 function projectRows(
   rows: unknown[],
   mappedFields?: string[],
@@ -216,6 +224,23 @@ const sheetsUpsertHandler: Handler = async (step, ctx, userId) => {
   };
 };
 
+const sheetsFindRowsHandler: Handler = async (step, ctx, userId) => {
+  const config = cfg<SheetsFindRowsCfg>(step);
+  const rows = await findRows(
+    userId,
+    config.spreadsheetId,
+    config.tabName,
+    config.searchColumn,
+    config.searchValue,
+  );
+  ctx.setOutput(step.position, rows);
+  return {
+    rowCount: rows.length,
+    rows,
+    sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+  };
+};
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 const HANDLERS: Record<string, Handler> = {
@@ -237,7 +262,7 @@ const HANDLERS: Record<string, Handler> = {
   // Google Sheets
   "sheets.append": sheetsAppendHandler,
   "sheets.upsert": sheetsUpsertHandler,
-  "sheets.find_rows": mockActionHandler,
+  "sheets.find_rows": sheetsFindRowsHandler,
   "sheets.update_row": mockActionHandler,
   "sheets.delete_row": notImplementedHandler,
   "sheets.get_row": notImplementedHandler,

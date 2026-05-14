@@ -108,3 +108,119 @@ describe("fbListAdAccountsHandler", () => {
     await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/token expired/);
   });
 });
+
+describe("sheetsFindRowsHandler", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("returns matched rows from the sheet via findRows()", async () => {
+    const fakeMatches = [
+      { row: 2, email: "a@example.com", name: "Alice" },
+      { row: 7, email: "a@example.com", name: "Alice P" },
+    ];
+
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(async () => fakeMatches),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.find_rows");
+
+    const fakeStep = {
+      id: "step_find",
+      moduleType: "sheets.find_rows",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        searchColumn: "email",
+        searchValue: "a@example.com",
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const calls: Array<[number, unknown]> = [];
+    const fakeCtx = {
+      setOutput: (pos: number, val: unknown) => calls.push([pos, val]),
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result).toEqual({
+      rowCount: 2,
+      rows: fakeMatches,
+      sheetsUrl: "https://docs.google.com/spreadsheets/d/sheet_abc",
+    });
+    expect(calls).toEqual([[2, fakeMatches]]);
+  });
+
+  it("returns empty result when findRows returns nothing", async () => {
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(async () => []),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.find_rows");
+
+    const fakeStep = {
+      id: "step_find",
+      moduleType: "sheets.find_rows",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        searchColumn: "email",
+        searchValue: "missing@example.com",
+      },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(0);
+    expect(result.rows).toEqual([]);
+    expect(result.sheetsUrl).toBe("https://docs.google.com/spreadsheets/d/sheet_abc");
+  });
+
+  it("propagates sheets-client errors", async () => {
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(async () => {
+        throw new Error("Google Sheets API error: 403");
+      }),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.find_rows");
+
+    const fakeStep = {
+      id: "step_find",
+      moduleType: "sheets.find_rows",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        searchColumn: "email",
+        searchValue: "a@example.com",
+      },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/Google Sheets API error/);
+  });
+});

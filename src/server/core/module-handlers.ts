@@ -78,19 +78,8 @@ const triggerWatchHandler: Handler = async (_step, _ctx, _userId) => {
   return { rowCount: 0 };
 };
 
-// ── Phase 3 mock action handlers ─────────────────────────────────────────────
-// Real implementations land in Phase 2/4. For now they succeed with a small
-// row count so runs visibly complete instead of erroring out with
-// "No handler registered". They DON'T touch the external services.
-
-const mockActionHandler: Handler = async (_step, _ctx, _userId) => {
-  // Mock: pretend one record was created/updated. The Phase 4 implementation
-  // will swap this for the real Bitrix24/Sheets call.
-  return { rowCount: 1 };
-};
-
 /**
- * Replacement for mockActionHandler for module types that exist in the catalog
+ * Handler for module types that exist in the catalog
  * but have not been implemented yet. Throws loudly so runs FAIL — never silent green.
  */
 export const notImplementedHandler: Handler = async (step, _ctx, _userId) => {

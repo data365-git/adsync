@@ -224,3 +224,130 @@ describe("sheetsFindRowsHandler", () => {
     await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/Google Sheets API error/);
   });
 });
+
+describe("sheetsUpdateRowHandler", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("updates the identified row using the first projected upstream row", async () => {
+    const updateRowSpy = vi.fn(async () => ({
+      row: 3,
+      updatedFields: ["status", "updatedAt"],
+    }));
+
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      updateRow: updateRowSpy,
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.update_row");
+
+    const fakeStep = {
+      id: "step_upd",
+      moduleType: "sheets.update_row",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        rowIdentifier: "id=42",
+        mappedFields: { status: "{{upstream.status}}", updatedAt: "{{upstream.ts}}" },
+      },
+      position: 3,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const upstreamRow = { status: "active", ts: "2026-05-14T10:00:00Z" };
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [upstreamRow],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result.rowCount).toBe(1);
+    expect(result.rows).toEqual([
+      { row: 3, status: "updated", updatedFields: ["status", "updatedAt"] },
+    ]);
+    expect(result.sheetsUrl).toBe("https://docs.google.com/spreadsheets/d/sheet_abc");
+    expect(updateRowSpy).toHaveBeenCalledTimes(1);
+    expect(updateRowSpy).toHaveBeenCalledWith(
+      "u",
+      "sheet_abc",
+      "Leads",
+      "id=42",
+      expect.any(Object),
+    );
+  });
+
+  it("returns rowCount=0 when there are no upstream rows to project", async () => {
+    const updateRowSpy = vi.fn();
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      updateRow: updateRowSpy,
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.update_row");
+
+    const fakeStep = {
+      id: "step_upd",
+      moduleType: "sheets.update_row",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        rowIdentifier: "3",
+        mappedFields: { status: "{{upstream.status}}" },
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(0);
+    expect(updateRowSpy).not.toHaveBeenCalled();
+  });
+
+  it("propagates sheets-client errors", async () => {
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      updateRow: vi.fn(async () => {
+        throw new Error('No row found where id = "42"');
+      }),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.update_row");
+
+    const fakeStep = {
+      id: "step_upd",
+      moduleType: "sheets.update_row",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        rowIdentifier: "id=42",
+        mappedFields: { status: "{{upstream.status}}" },
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [{ status: "x" }],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/No row found/);
+  });
+});

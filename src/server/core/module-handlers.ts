@@ -31,6 +31,7 @@ import {
 import {
   appendRows,
   findRows,
+  updateRow,
   upsertRows,
 } from "~/integrations/google/sheets-client";
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,6 +166,13 @@ type SheetsFindRowsCfg = {
   searchValue: string;
 };
 
+type SheetsUpdateRowCfg = {
+  spreadsheetId: string;
+  tabName: string;
+  rowIdentifier: string;
+  mappedFields: Record<string, string>;
+};
+
 function projectRows(
   rows: unknown[],
   mappedFields?: string[],
@@ -241,6 +249,37 @@ const sheetsFindRowsHandler: Handler = async (step, ctx, userId) => {
   };
 };
 
+const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
+  const config = cfg<SheetsUpdateRowCfg>(step);
+  const upstreamRows = ctx.getUpstreamRows(step.position);
+  if (upstreamRows.length === 0) {
+    return {
+      rowCount: 0,
+      rows: [],
+      sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+    };
+  }
+
+  const projected = projectRows(upstreamRows, Object.keys(config.mappedFields));
+  const firstRow = projected[0] ?? {};
+
+  const { row, updatedFields } = await updateRow(
+    userId,
+    config.spreadsheetId,
+    config.tabName,
+    config.rowIdentifier,
+    firstRow,
+  );
+
+  const outputRow = { row, status: "updated" as const, updatedFields };
+  ctx.setOutput(step.position, [outputRow]);
+  return {
+    rowCount: 1,
+    rows: [outputRow],
+    sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+  };
+};
+
 // ── Registry ──────────────────────────────────────────────────────────────────
 
 const HANDLERS: Record<string, Handler> = {
@@ -263,7 +302,7 @@ const HANDLERS: Record<string, Handler> = {
   "sheets.append": sheetsAppendHandler,
   "sheets.upsert": sheetsUpsertHandler,
   "sheets.find_rows": sheetsFindRowsHandler,
-  "sheets.update_row": mockActionHandler,
+  "sheets.update_row": sheetsUpdateRowHandler,
   "sheets.delete_row": notImplementedHandler,
   "sheets.get_row": notImplementedHandler,
   "sheets.create_tab": notImplementedHandler,

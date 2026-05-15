@@ -4,7 +4,6 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircleIcon, RotateCcwIcon } from "lucide-react";
 import { api } from "~/trpc/react";
-import { MOCK_RUNS } from "~/server/mocks/data";
 import { Button } from "~/components/ui/button";
 import { ScenarioDetailSkeleton } from "./ScenarioDetailSkeleton";
 import type { Scenario } from "~/server/mocks/types";
@@ -24,10 +23,11 @@ export function ScenarioDetailClient({ id }: ScenarioDetailClientProps) {
     refetch,
   } = api.scenarios.getById.useQuery({ id });
 
-  // Filter runs for this scenario on the client (runsRouter.list doesn't filter by scenarioId)
+  // Fetch real runs for this scenario from the DB
+  const runsQuery = api.runs.list.useQuery({ scenarioIds: [id], page: 1, pageSize: 50 });
   const scenarioRuns = React.useMemo(
-    () => MOCK_RUNS.filter((r) => r.scenarioId === id),
-    [id],
+    () => runsQuery.data?.runs ?? [],
+    [runsQuery.data],
   );
 
   // Loading state — render the skeleton in-component so we cover the gap

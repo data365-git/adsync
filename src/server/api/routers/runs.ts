@@ -8,9 +8,29 @@ import { executeRun } from "~/server/core/executor";
 
 // ── Normalizer ────────────────────────────────────────────────────────────────
 
-type DbRun = Awaited<ReturnType<typeof db.run.findUniqueOrThrow>>;
+// The shape returned by the enriched list/getById queries.
+// `scenario` is always present (FK) but typed nullable to survive the cast.
+type DbRunWithLabels = {
+  id: string;
+  userId: string;
+  scenarioId: string;
+  trigger: "MANUAL" | "SCHEDULED";
+  status: "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED";
+  startedAt: Date;
+  finishedAt: Date | null;
+  campaignRowsWritten: number;
+  adRowsWritten: number;
+  durationMs: number | null;
+  errorMessage: string | null;
+  sheetsUrl: string | null;
+  scenario: {
+    name: string;
+    kind: "QUICK_SETUP" | "CUSTOM";
+    adAccount: { label: string; fbAccountId: string } | null;
+  } | null;
+};
 
-function normalizeRun(r: DbRun): MockRun {
+function normalizeRun(r: DbRunWithLabels): MockRun {
   return {
     id: r.id,
     userId: r.userId,
@@ -26,6 +46,10 @@ function normalizeRun(r: DbRun): MockRun {
     durationMs: r.durationMs,
     errorMessage: r.errorMessage,
     sheetsUrl: r.sheetsUrl,
+    scenarioName: r.scenario?.name ?? null,
+    scenarioKind: r.scenario?.kind ?? null,
+    adAccountLabel: r.scenario?.adAccount?.label ?? null,
+    adAccountFbId: r.scenario?.adAccount?.fbAccountId ?? null,
   };
 }
 
@@ -95,6 +119,15 @@ export const runsRouter = createTRPCRouter({
           orderBy: { startedAt: "desc" },
           skip: (opts.page - 1) * opts.pageSize,
           take: opts.pageSize,
+          include: {
+            scenario: {
+              select: {
+                name: true,
+                kind: true,
+                adAccount: { select: { label: true, fbAccountId: true } },
+              },
+            },
+          },
         }),
       ]);
 
@@ -113,7 +146,18 @@ export const runsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      const run = await db.run.findUnique({ where: { id: input.id } });
+      const run = await db.run.findUnique({
+        where: { id: input.id },
+        include: {
+          scenario: {
+            select: {
+              name: true,
+              kind: true,
+              adAccount: { select: { label: true, fbAccountId: true } },
+            },
+          },
+        },
+      });
       if (run?.userId !== userId) {
         throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.id} not found` });
       }

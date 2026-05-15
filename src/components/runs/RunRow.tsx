@@ -13,7 +13,6 @@ import { TableCell, TableRow } from "~/components/ui/table";
 import { RunStatusBadge } from "~/components/runs/RunStatusBadge";
 import { formatDuration } from "~/lib/utils";
 import type { Run } from "~/server/mocks/types";
-import { MOCK_AD_ACCOUNTS, MOCK_SCENARIOS } from "~/server/mocks/data";
 
 const TRIGGER_LABEL: Record<Run["trigger"], string> = {
   manual: "Manual",
@@ -43,11 +42,9 @@ interface RunRowProps {
 }
 
 export function RunRow({ run }: RunRowProps) {
-  const account = MOCK_AD_ACCOUNTS.find((a) => a.id === run.adAccountId);
-  const accountLabel = account?.label ?? run.adAccountId;
-  const scenario = MOCK_SCENARIOS.find((s) => s.id === run.scenarioId);
-  const scenarioName = scenario?.name ?? run.scenarioId;
-  const isQuickSetup = scenario?.kind === "QUICK_SETUP";
+  const accountLabel = run.adAccountLabel ?? run.adAccountFbId ?? run.adAccountId;
+  const scenarioName = run.scenarioName ?? run.scenarioId;
+  const isQuickSetup = run.scenarioKind === "QUICK_SETUP";
 
   const relativeTime = formatDistanceToNow(run.startedAt, { addSuffix: true });
   const absoluteTime = format(run.startedAt, "MMM d, yyyy 'at' h:mm:ss a");

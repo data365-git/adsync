@@ -8,8 +8,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+import { Skeleton } from "~/components/ui/skeleton";
 import type { RunStatus } from "~/server/mocks/types";
-import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
+import { api } from "~/trpc/react";
 
 const STATUS_OPTIONS: { value: RunStatus; label: string }[] = [
   { value: "queued", label: "Queued" },
@@ -33,6 +34,9 @@ export function RunsFilters({
   onStatusesChange,
   onClearAll,
 }: RunsFiltersProps) {
+  const { data: adAccounts, isLoading: accountsLoading } =
+    api.adAccounts.list.useQuery();
+
   const hasActiveFilters = accountIds.length > 0 || statuses.length > 0;
 
   function toggleAccount(id: string) {
@@ -78,11 +82,16 @@ export function RunsFilters({
           align="start"
           aria-label="Account filter options"
         >
-          {MOCK_AD_ACCOUNTS.length === 0 ? (
-            <p className="px-2 py-1.5 text-xs text-muted-foreground">No accounts</p>
+          {accountsLoading ? (
+            <div className="flex flex-col gap-1.5 px-2 py-1.5">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-3/4" />
+            </div>
+          ) : !adAccounts || adAccounts.length === 0 ? (
+            <p className="px-2 py-1.5 text-xs text-muted-foreground">No ad accounts connected</p>
           ) : (
             <ul role="list" className="flex flex-col gap-0.5">
-              {MOCK_AD_ACCOUNTS.map((account) => (
+              {adAccounts.map((account) => (
                 <li key={account.id}>
                   <label className="flex min-h-[2.25rem] cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
                     <Checkbox

@@ -5,16 +5,14 @@ import { ChevronRight } from "lucide-react";
 
 import { RunStatusBadge } from "~/components/runs/RunStatusBadge";
 import type { Run } from "~/server/mocks/types";
-import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
 
 interface RunDetailHeaderProps {
   run: Run;
 }
 
 export function RunDetailHeader({ run }: RunDetailHeaderProps) {
-  const account = MOCK_AD_ACCOUNTS.find((a) => a.id === run.adAccountId);
-  const accountName = account?.label ?? run.adAccountId;
-  const shortId = run.id.replace("run_", "#");
+  const accountName = run.adAccountLabel ?? run.adAccountFbId ?? run.adAccountId;
+  const shortId = run.id.slice(0, 8);
 
   return (
     <div className="space-y-4">

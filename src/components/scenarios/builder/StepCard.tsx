@@ -29,7 +29,6 @@ import { WatchSheetsNewRowsConfig } from "./modules/WatchSheetsNewRowsConfig";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import { getModule } from "~/lib/modules";
 import { humanizeCronShort } from "~/lib/cron-builder";
-import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
 import type { ModuleType, ScenarioStep } from "~/server/mocks/types";
 import { IteratorBadge } from "./IteratorBadge";
 import { moduleProducesArray, moduleSampleOutputLength } from "./stepUtils";
@@ -239,8 +238,7 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
 
       if (!fbAccountId && dateWindow === null && metricsCount === 0) return "Not configured";
 
-      const account = MOCK_AD_ACCOUNTS.find((a) => a.fbAccountId === fbAccountId);
-      const accountName = account?.label ?? (fbAccountId || "No account");
+      const accountName = fbAccountId || "No account";
       const windowStr = dateWindow !== null ? `last ${dateWindow} days` : "no window";
       const metricsStr = `${metricsCount} metric${metricsCount !== 1 ? "s" : ""}`;
 

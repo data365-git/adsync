@@ -457,11 +457,14 @@ function buildRuns(): Run[] {
     const campaignLevel = i % 2 === 0;
     const adLevel = i % 3 !== 0;
     const accountId = accountIds[i % accountIds.length] ?? accountIds[0]!;
+    const scenarioId = scenarioIdForRun(i);
+    const matchedScenario = MOCK_SCENARIOS.find((s) => s.id === scenarioId);
+    const matchedAccount = MOCK_AD_ACCOUNTS.find((a) => a.id === accountId);
     runs.push({
       id: `run_${String(i + 1).padStart(3, "0")}`,
       userId: MOCK_USER.id,
       adAccountId: accountId,
-      scenarioId: scenarioIdForRun(i),
+      scenarioId,
       trigger,
       status,
       startedAt,
@@ -478,6 +481,10 @@ function buildRuns(): Run[] {
         status === "success"
           ? "https://docs.google.com/spreadsheets/d/1qZ7vK3xN9pL2mR8tY5uH1aB6cD4eF0gJsK7wM2nP8oV"
           : null,
+      scenarioName: matchedScenario?.name ?? null,
+      scenarioKind: matchedScenario?.kind ?? null,
+      adAccountLabel: matchedAccount?.label ?? null,
+      adAccountFbId: matchedAccount?.fbAccountId ?? null,
     });
   }
   return runs;

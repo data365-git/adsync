@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { cn, formatDuration } from "~/lib/utils";
 import type { Run } from "~/server/mocks/types";
-import { MOCK_SCENARIOS } from "~/server/mocks/data";
 
 interface MetadataItemProps {
   label: string;
@@ -52,9 +51,8 @@ interface RunMetadataGridProps {
 }
 
 function ScenarioCellValue({ run }: { run: Run }) {
-  const scenario = MOCK_SCENARIOS.find((s) => s.id === run.scenarioId);
-  const name = scenario?.name ?? run.scenarioId;
-  const isQuickSetup = scenario?.kind === "QUICK_SETUP";
+  const name = run.scenarioName ?? run.scenarioId;
+  const isQuickSetup = run.scenarioKind === "QUICK_SETUP";
   return (
     <div className="flex items-center gap-1.5">
       <Link

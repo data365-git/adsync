@@ -55,6 +55,12 @@ export type Run = {
   durationMs: number | null;
   errorMessage: string | null;
   sheetsUrl: string | null;
+  /** Enriched by the runs router — null when scenario not found */
+  scenarioName: string | null;
+  scenarioKind: "QUICK_SETUP" | "CUSTOM" | null;
+  /** Enriched by the runs router — null when no ad account linked */
+  adAccountLabel: string | null;
+  adAccountFbId: string | null;
 };
 
 export type RunLog = {

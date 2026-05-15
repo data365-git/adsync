@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { MetricsMultiSelect } from "~/components/ad-accounts/form/MetricsMultiSelect";
-import { MOCK_AD_ACCOUNTS } from "~/server/mocks/data";
+import { api } from "~/trpc/react";
 
 interface FbCampaignInsightsConfigProps {
   config: Record<string, unknown>;
@@ -29,6 +29,9 @@ export function FbCampaignInsightsConfig({
   const metrics = Array.isArray(config.metrics) ? (config.metrics as string[]) : [];
   const campaignFilter = typeof config.campaignFilter === "string" ? config.campaignFilter : "";
 
+  const { data: adAccounts, isLoading: accountsLoading } =
+    api.adAccounts.list.useQuery();
+
   return (
     <div className="space-y-4">
       {/* Ad account */}
@@ -42,19 +45,29 @@ export function FbCampaignInsightsConfig({
         </p>
         <Select
           value={fbAccountId}
+          disabled={accountsLoading}
           onValueChange={(val) => {
             if (val !== null) onChange({ ...config, fbAccountId: val });
           }}
         >
           <SelectTrigger id="fb-camp-account" className="w-full" aria-invalid={!!errors?.fbAccountId}>
-            <SelectValue placeholder="Select ad account" />
+            <SelectValue placeholder={accountsLoading ? "Loading accounts…" : "Select ad account"} />
           </SelectTrigger>
           <SelectContent>
-            {MOCK_AD_ACCOUNTS.map((acc) => (
-              <SelectItem key={acc.fbAccountId} value={acc.fbAccountId}>
-                {acc.label}
-              </SelectItem>
-            ))}
+            {!accountsLoading && (!adAccounts || adAccounts.length === 0) ? (
+              <div className="px-2 py-3 text-xs text-muted-foreground">
+                No connected ad accounts.{" "}
+                <a href="/connections" className="underline hover:text-foreground">
+                  Connect one on the Connections page.
+                </a>
+              </div>
+            ) : (
+              adAccounts?.map((acc) => (
+                <SelectItem key={acc.fbAccountId} value={acc.fbAccountId}>
+                  {acc.label}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         {errors?.fbAccountId && (

@@ -20,7 +20,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed:mock": "tsx prisma/seed-mock.ts",
     "db:studio": "prisma studio",
-    "worker": "tsx worker/index.ts",
+    "worker": "tsx --conditions react-server worker/index.ts",
     "test": "vitest run",
     "smoke:run": "tsx --conditions react-server scripts/smoke-run.ts"
   },
@@ -79,5 +79,12 @@
   "ct3aMetadata": {
     "initVersion": "7.40.0"
   },
-  "packageManager": "pnpm@9.15.9"
+  "packageManager": "pnpm@9.15.9",
+  "pnpm": {
+    "supportedArchitectures": {
+      "os": ["current", "linux"],
+      "cpu": ["current", "x64", "arm64"],
+      "libc": ["current", "glibc", "musl"]
+    }
+  }
 }

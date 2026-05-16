@@ -62,11 +62,11 @@ export async function exchangeCode(code: string, userId: string): Promise<void> 
     );
   }
 
-  // Step 3: get FB user info for externalId + email
+  // Step 3: get FB user info for externalId + email + name
   const meRes = await fetch(
-    `https://graph.facebook.com/${FB_VERSION}/me?fields=id,email&access_token=${longData.access_token}`,
+    `https://graph.facebook.com/${FB_VERSION}/me?fields=id,email,name&access_token=${longData.access_token}`,
   );
-  const me = (await meRes.json()) as { id?: string; email?: string };
+  const me = (await meRes.json()) as { id?: string; email?: string; name?: string };
 
   const expiresAt = longData.expires_in
     ? new Date(Date.now() + longData.expires_in * 1000)

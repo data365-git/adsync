@@ -3,15 +3,22 @@
 import * as React from "react";
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
-import { FieldMappingPicker } from "./FieldMappingPicker";
-import { getModule } from "~/lib/modules";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Checkbox } from "~/components/ui/checkbox";
+import { api } from "~/trpc/react";
 import type { ModuleType } from "~/server/mocks/types";
 
 interface SheetsAppendConfigProps {
   config: Record<string, unknown>;
   onChange: (config: Record<string, unknown>) => void;
   errors?: Record<string, string>;
-  /** Module type of the previous step, for getting available fields */
+  /** Accepted for API compatibility with StepCard — not used; columns come from the live Sheets API */
   prevStepModuleType?: ModuleType;
 }
 
@@ -19,41 +26,143 @@ export function SheetsAppendConfig({
   config,
   onChange,
   errors,
-  prevStepModuleType,
+  prevStepModuleType: _prevStepModuleType,
 }: SheetsAppendConfigProps) {
   const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
   const tabName = typeof config.tabName === "string" ? config.tabName : "";
   const mappedFields = Array.isArray(config.mappedFields) ? (config.mappedFields as string[]) : [];
 
-  // Get available output fields from previous step's module — derive from
-  // the first sample row (sampleOutput is an array of rows in Phase 1.6).
-  const availableFields = React.useMemo(() => {
-    if (!prevStepModuleType) return [];
-    const mod = getModule(prevStepModuleType);
-    if (!mod || mod.sampleOutput.length === 0) return [];
-    return Object.keys(mod.sampleOutput[0] ?? {});
-  }, [prevStepModuleType]);
+  // mappedFieldValues: { [columnName]: valueSource string }
+  const mappedFieldValues = (
+    config.mappedFieldValues !== null &&
+    typeof config.mappedFieldValues === "object" &&
+    !Array.isArray(config.mappedFieldValues)
+      ? config.mappedFieldValues
+      : {}
+  ) as Record<string, string>;
+
+  // ── Spreadsheets ──────────────────────────────────────────────
+  const {
+    data: spreadsheets,
+    isLoading: spreadsheetsLoading,
+    isError: spreadsheetsError,
+    refetch: refetchSpreadsheets,
+  } = api.connections.listSpreadsheets.useQuery(undefined, { staleTime: 60_000 });
+
+  // ── Tabs (dependent on spreadsheetId) ─────────────────────────
+  const {
+    data: tabs,
+    isLoading: tabsLoading,
+    isError: tabsError,
+    refetch: refetchTabs,
+  } = api.connections.listSheetTabs.useQuery(
+    { spreadsheetId },
+    { enabled: spreadsheetId.length > 0, staleTime: 60_000 },
+  );
+
+  // ── Columns (dependent on spreadsheetId + tabName) ────────────
+  const {
+    data: columns,
+    isLoading: columnsLoading,
+    isError: columnsError,
+    refetch: refetchColumns,
+  } = api.connections.listSheetColumns.useQuery(
+    { spreadsheetId, tabName },
+    { enabled: spreadsheetId.length > 0 && tabName.length > 0, staleTime: 60_000 },
+  );
+
+  function handleSpreadsheetChange(newId: string) {
+    // Cascade reset: clear tab, columns, mappedFields, mappedFieldValues
+    onChange({ ...config, spreadsheetId: newId, tabName: "", mappedFields: [], mappedFieldValues: {} });
+  }
+
+  function handleTabChange(newTab: string) {
+    // Cascade reset: clear mappedFields and mappedFieldValues
+    onChange({ ...config, tabName: newTab, mappedFields: [], mappedFieldValues: {} });
+  }
+
+  function handleColumnToggle(col: string) {
+    const next = mappedFields.includes(col)
+      ? mappedFields.filter((f) => f !== col)
+      : [...mappedFields, col];
+
+    // Remove value source for deselected columns
+    const nextValues = { ...mappedFieldValues };
+    if (!next.includes(col)) delete nextValues[col];
+
+    onChange({ ...config, mappedFields: next, mappedFieldValues: nextValues });
+  }
+
+  function handleValueSourceChange(col: string, val: string) {
+    onChange({
+      ...config,
+      mappedFieldValues: { ...mappedFieldValues, [col]: val },
+    });
+  }
 
   return (
     <div className="space-y-4">
-      {/* Spreadsheet ID */}
+      {/* ── Spreadsheet picker ─────────────────────────────── */}
       <div className="space-y-1.5">
-        <Label htmlFor="sheets-append-id">
-          Spreadsheet ID
+        <Label htmlFor="sheets-append-spreadsheet">
+          Spreadsheet
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          The ID from your Google Sheet&apos;s URL: docs.google.com/spreadsheets/d/[THIS-PART]/edit
-        </p>
-        <Input
-          id="sheets-append-id"
-          type="text"
-          placeholder="1qZ7vK3xN9pL2mR8tY5uH1aB6cD4eF0gJsK7wM2nP8oV"
-          value={spreadsheetId}
-          onChange={(e) => onChange({ ...config, spreadsheetId: e.target.value })}
-          aria-required="true"
-          aria-invalid={!!errors?.spreadsheetId}
-        />
+        {spreadsheetsError ? (
+          <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            <span aria-hidden="true">&#x26A0;</span>
+            Could not load spreadsheets —{" "}
+            <button
+              type="button"
+              className="underline hover:text-destructive/80"
+              onClick={() => void refetchSpreadsheets()}
+            >
+              Retry
+            </button>{" "}
+            /{" "}
+            <a href="/connections" className="underline hover:text-destructive/80">
+              Reconnect
+            </a>
+          </div>
+        ) : (
+          <Select
+            value={spreadsheetId}
+            disabled={spreadsheetsLoading}
+            onValueChange={(val) => {
+              if (val !== null) handleSpreadsheetChange(val);
+            }}
+          >
+            <SelectTrigger
+              id="sheets-append-spreadsheet"
+              className="w-full"
+              aria-invalid={!!errors?.spreadsheetId}
+            >
+              <SelectValue
+                placeholder={
+                  spreadsheetsLoading ? "Loading spreadsheets…" : "Select a spreadsheet"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {!spreadsheetsLoading && (!spreadsheets || spreadsheets.length === 0) ? (
+                <div className="px-2 py-3 text-xs text-muted-foreground">
+                  No spreadsheets visible from this account — share one with the connected Google
+                  account or{" "}
+                  <a href="/connections" className="underline hover:text-foreground">
+                    click Reconnect
+                  </a>
+                  .
+                </div>
+              ) : (
+                spreadsheets?.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        )}
         {errors?.spreadsheetId && (
           <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
             <span aria-hidden="true">&#x26A0;</span>
@@ -62,48 +171,139 @@ export function SheetsAppendConfig({
         )}
       </div>
 
-      {/* Tab name */}
-      <div className="space-y-1.5">
-        <Label htmlFor="sheets-append-tab">
-          Tab name
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          The exact name of the sheet tab to write to (case-sensitive). It must already exist.
-        </p>
-        <Input
-          id="sheets-append-tab"
-          type="text"
-          placeholder="Sheet1"
-          value={tabName}
-          onChange={(e) => onChange({ ...config, tabName: e.target.value })}
-          aria-required="true"
-          aria-invalid={!!errors?.tabName}
-        />
-        {errors?.tabName && (
-          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
-            <span aria-hidden="true">&#x26A0;</span>
-            {errors.tabName}
-          </p>
-        )}
-      </div>
+      {/* ── Tab picker (shown once spreadsheet is selected) ──── */}
+      {spreadsheetId && (
+        <div className="space-y-1.5">
+          <Label htmlFor="sheets-append-tab">
+            Tab
+            <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+          </Label>
+          {tabsError ? (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              <span aria-hidden="true">&#x26A0;</span>
+              Could not load tabs —{" "}
+              <button
+                type="button"
+                className="underline hover:text-destructive/80"
+                onClick={() => void refetchTabs()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <Select
+              value={tabName}
+              disabled={tabsLoading || !tabs}
+              onValueChange={(val) => {
+                if (val !== null) handleTabChange(val);
+              }}
+            >
+              <SelectTrigger
+                id="sheets-append-tab"
+                className="w-full"
+                aria-invalid={!!errors?.tabName}
+              >
+                <SelectValue placeholder={tabsLoading ? "Loading tabs…" : "Select a tab"} />
+              </SelectTrigger>
+              <SelectContent>
+                {!tabsLoading && (!tabs || tabs.length === 0) ? (
+                  <div className="px-2 py-3 text-xs text-muted-foreground">
+                    No tabs found in this spreadsheet.
+                  </div>
+                ) : (
+                  tabs?.map((t) => (
+                    <SelectItem key={t.sheetId} value={t.title}>
+                      {t.title}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          )}
+          {errors?.tabName && (
+            <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+              <span aria-hidden="true">&#x26A0;</span>
+              {errors.tabName}
+            </p>
+          )}
+        </div>
+      )}
 
-      {/* Field mapping */}
-      <div className="space-y-1.5">
-        <Label>
-          Fields to write
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Choose which fields from the previous step to write as columns. The column header in Sheets will match the field name.
-        </p>
-        <FieldMappingPicker
-          availableFields={availableFields}
-          value={mappedFields}
-          onChange={(fields) => onChange({ ...config, mappedFields: fields })}
-          error={errors?.mappedFields}
-        />
-      </div>
+      {/* ── Column / field mapping (shown once tab is selected) ─ */}
+      {spreadsheetId && tabName && (
+        <div className="space-y-1.5">
+          <Label>
+            Fields to write
+            <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+          </Label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Pick which columns to write. Enter a value or a placeholder like{" "}
+            <code className="text-xs bg-muted px-1 rounded">{"{{step_1.field}}"}</code> for each.
+          </p>
+          {columnsError ? (
+            <div className="flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+              <span aria-hidden="true">&#x26A0;</span>
+              Could not load columns —{" "}
+              <button
+                type="button"
+                className="underline hover:text-destructive/80"
+                onClick={() => void refetchColumns()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : columnsLoading ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-9 w-full animate-pulse rounded-md bg-muted" />
+              ))}
+            </div>
+          ) : !columns || columns.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              No header row found in this tab. Add column headers to the first row in Sheets and
+              retry.
+            </p>
+          ) : (
+            <div className="space-y-2 rounded-lg border border-border bg-card p-2">
+              {columns.map((col) => {
+                const checked = mappedFields.includes(col);
+                return (
+                  <div key={col} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`append-col-${col}`}
+                      checked={checked}
+                      onCheckedChange={() => handleColumnToggle(col)}
+                    />
+                    <label
+                      htmlFor={`append-col-${col}`}
+                      className="w-28 shrink-0 cursor-pointer truncate text-sm font-mono"
+                      title={col}
+                    >
+                      {col}
+                    </label>
+                    {checked && (
+                      <Input
+                        type="text"
+                        placeholder={`{{step_1.${col}}}`}
+                        value={mappedFieldValues[col] ?? ""}
+                        onChange={(e) => handleValueSourceChange(col, e.target.value)}
+                        className="h-7 text-xs"
+                        aria-label={`Value source for ${col}`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {errors?.mappedFields && (
+            <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
+              <span aria-hidden="true">&#x26A0;</span>
+              {errors.mappedFields}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

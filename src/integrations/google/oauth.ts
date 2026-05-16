@@ -11,6 +11,7 @@ const SCOPES = [
   "email",
   "profile",
   "https://www.googleapis.com/auth/spreadsheets",
+  "https://www.googleapis.com/auth/drive.metadata.readonly",
 ];
 
 export function getOAuthClient() {

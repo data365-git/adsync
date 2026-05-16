@@ -6,6 +6,7 @@ import { format } from "date-fns";
 
 import type { OAuthConnection } from "~/server/mocks/types";
 import { BitrixIcon } from "~/lib/integration-icons";
+import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -19,6 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover";
+import { ResourceList } from "~/components/connections/ResourceList";
 
 export interface BitrixConnectionCardProps {
   connection: OAuthConnection | null;
@@ -66,6 +68,33 @@ function statusLabel(status: ConnectionStatus): string {
   if (status === "expired") return "Expired";
   return "Disconnected";
 }
+
+// ─── BitrixResourcePanel ─────────────────────────────────────────────────────
+// Fetches Bitrix24 pipelines and renders them inside the card.
+
+interface BitrixResourcePanelProps {
+  onReconnect: () => void;
+}
+
+function BitrixResourcePanel({ onReconnect }: BitrixResourcePanelProps) {
+  const query = api.connections.bitrixPipelines.useQuery(undefined, { retry: 1 });
+  const data = query.data;
+
+  return (
+    <ResourceList
+      isLoading={query.isLoading}
+      isError={query.isError}
+      identifier={data?.identifier ?? null}
+      items={data?.items ?? []}
+      truncated={data?.truncated ?? false}
+      totalCount={(data as { totalCount?: number } | undefined)?.totalCount}
+      emptyMessage="No CRM pipelines found — check your webhook URL."
+      onRetry={onReconnect}
+    />
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function BitrixConnectionCard({
   connection,
@@ -159,6 +188,9 @@ export function BitrixConnectionCard({
               </p>
             )}
           </div>
+
+          {/* Pipeline list — shown only when connected */}
+          {isConnected && <BitrixResourcePanel onReconnect={onConnect} />}
         </CardContent>
 
         {/* ── Footer ── */}

@@ -19,6 +19,7 @@ import { ConnectionStatus } from "~/components/connections/ConnectionStatus";
 import { DisconnectDialog } from "~/components/connections/DisconnectDialog";
 import { TokenExpiryWarning } from "~/components/connections/TokenExpiryWarning";
 import { BitrixConnectionCard } from "~/components/connections/cards";
+import { ResourceList } from "~/components/connections/ResourceList";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -32,6 +33,47 @@ const PROVIDER_LABEL: Record<OAuthConnection["provider"], string> = {
   facebook: "Facebook Ads",
   bitrix: "Bitrix24 CRM",
 };
+
+// ─── ConnectedResourcePanel ──────────────────────────────────────────────────
+// Fetches the resource list for the connected provider and renders it.
+// Isolated so the parent card doesn't need to know which query to call.
+
+interface ConnectedResourcePanelProps {
+  provider: "google" | "facebook";
+  onReconnect: () => void;
+}
+
+function ConnectedResourcePanel({ provider, onReconnect }: ConnectedResourcePanelProps) {
+  const googleQuery = api.connections.googleSheetsResources.useQuery(undefined, {
+    enabled: provider === "google",
+    retry: 1,
+  });
+  const fbQuery = api.connections.facebookAdAccounts.useQuery(undefined, {
+    enabled: provider === "facebook",
+    retry: 1,
+  });
+
+  const query = provider === "google" ? googleQuery : fbQuery;
+  const data = query.data;
+
+  const emptyMessage =
+    provider === "google"
+      ? "No spreadsheets visible — share at least one with this account."
+      : "No ad accounts visible for this user.";
+
+  return (
+    <ResourceList
+      isLoading={query.isLoading}
+      isError={query.isError}
+      identifier={data?.identifier ?? null}
+      items={data?.items ?? []}
+      truncated={data?.truncated ?? false}
+      totalCount={(data as { totalCount?: number } | undefined)?.totalCount}
+      emptyMessage={emptyMessage}
+      onRetry={onReconnect}
+    />
+  );
+}
 
 interface ProviderIconProps {
   provider: OAuthConnection["provider"];
@@ -245,6 +287,16 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
               </p>
             )}
           </div>
+
+          {/* Resource list — shown only when connected.
+              provider is narrowed to "google" | "facebook" here because the
+              "bitrix" branch returns early above (React hook rules honoured). */}
+          {effectiveStatus === "connected" && (
+            <ConnectedResourcePanel
+              provider={connection.provider as "google" | "facebook"}
+              onReconnect={handleReconnect}
+            />
+          )}
 
           {/* Amber expiry warning — inside card, below status row */}
           {showExpiryWarning && connection.expiresAt && (

@@ -293,7 +293,7 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
               "bitrix" branch returns early above (React hook rules honoured). */}
           {effectiveStatus === "connected" && (
             <ConnectedResourcePanel
-              provider={connection.provider as "google" | "facebook"}
+              provider={connection.provider}
               onReconnect={handleReconnect}
             />
           )}

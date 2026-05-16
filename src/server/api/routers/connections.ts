@@ -119,7 +119,7 @@ export const connectionsRouter = createTRPCRouter({
     const conn = await db.oAuthConnection.findUnique({
       where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
     });
-    if (!conn || conn.status !== ConnectionStatus.CONNECTED) {
+    if (conn?.status !== ConnectionStatus.CONNECTED) {
       return { identifier: null, items: [], truncated: false };
     }
 
@@ -158,7 +158,7 @@ export const connectionsRouter = createTRPCRouter({
     const conn = await db.oAuthConnection.findUnique({
       where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
     });
-    if (!conn || conn.status !== ConnectionStatus.CONNECTED) {
+    if (conn?.status !== ConnectionStatus.CONNECTED) {
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
     }
 
@@ -188,7 +188,7 @@ export const connectionsRouter = createTRPCRouter({
       const conn = await db.oAuthConnection.findUnique({
         where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
       });
-      if (!conn || conn.status !== ConnectionStatus.CONNECTED) {
+      if (conn?.status !== ConnectionStatus.CONNECTED) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
       }
 
@@ -218,7 +218,7 @@ export const connectionsRouter = createTRPCRouter({
       const conn = await db.oAuthConnection.findUnique({
         where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
       });
-      if (!conn || conn.status !== ConnectionStatus.CONNECTED) {
+      if (conn?.status !== ConnectionStatus.CONNECTED) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
       }
 
@@ -279,7 +279,7 @@ export const connectionsRouter = createTRPCRouter({
     const conn = await db.oAuthConnection.findUnique({
       where: { userId_provider: { userId: ctx.userId, provider: Provider.FACEBOOK } },
     });
-    if (!conn || conn.status !== ConnectionStatus.CONNECTED) {
+    if (conn?.status !== ConnectionStatus.CONNECTED) {
       return { identifier: null, items: [], truncated: false };
     }
 

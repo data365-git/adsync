@@ -62,6 +62,10 @@ docs/lighthouse/**/*.json
 # accumulate fast and are useless to anyone else.
 docs/errros/
 docs/errors/
+DEPLOY_BUGS/
+docs/*.png
+# Local probe/scratch scripts. scripts/verify-resources.ts is committed and stays.
+scripts/probe-*.ts
 
 # Codex / external-agent handoff prompts — single-session scratch, not docs.
 docs/codex-audit-fix-prompts.md

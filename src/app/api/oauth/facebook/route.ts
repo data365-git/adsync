@@ -7,7 +7,9 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.redirect("/login");
+  if (!session?.user?.id) {
+    return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL));
+  }
 
   const state = `${session.user.id}:${randomBytes(16).toString("hex")}`;
   const url = getAuthorizationUrl(state);

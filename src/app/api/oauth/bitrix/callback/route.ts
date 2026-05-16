@@ -12,7 +12,9 @@ export const runtime = "nodejs";
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    return NextResponse.redirect(
+      new URL("/login", process.env.NEXTAUTH_URL ?? req.url),
+    );
   }
 
   const { searchParams } = new URL(req.url);
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
 
   if (!code?.startsWith("mock-bitrix-")) {
     return NextResponse.redirect(
-      new URL("/connections?error=bitrix_invalid_code", req.url),
+      new URL("/connections?error=bitrix_invalid_code", process.env.NEXTAUTH_URL ?? req.url),
     );
   }
 
@@ -55,12 +57,12 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.redirect(
-      new URL("/connections?success=bitrix", req.url),
+      new URL("/connections?success=bitrix", process.env.NEXTAUTH_URL ?? req.url),
     );
   } catch (err) {
     console.error("[bitrix/callback] upsert failed:", err);
     return NextResponse.redirect(
-      new URL("/connections?error=bitrix_upsert_failed", req.url),
+      new URL("/connections?error=bitrix_upsert_failed", process.env.NEXTAUTH_URL ?? req.url),
     );
   }
 }

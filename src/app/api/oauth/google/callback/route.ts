@@ -6,7 +6,9 @@ export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) return NextResponse.redirect("/login");
+  if (!session?.user?.id) {
+    return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL));
+  }
 
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
@@ -14,12 +16,12 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      new URL("/connections?error=google_denied", req.url),
+      new URL("/connections?error=google_denied", process.env.NEXTAUTH_URL ?? req.url),
     );
   }
   if (!code || !state) {
     return NextResponse.redirect(
-      new URL("/connections?error=google_invalid", req.url),
+      new URL("/connections?error=google_invalid", process.env.NEXTAUTH_URL ?? req.url),
     );
   }
 
@@ -27,19 +29,19 @@ export async function GET(req: NextRequest) {
   const [stateUserId] = state.split(":");
   if (stateUserId !== session.user.id) {
     return NextResponse.redirect(
-      new URL("/connections?error=google_state_mismatch", req.url),
+      new URL("/connections?error=google_state_mismatch", process.env.NEXTAUTH_URL ?? req.url),
     );
   }
 
   try {
     await exchangeCode(code, session.user.id);
     return NextResponse.redirect(
-      new URL("/connections?success=google", req.url),
+      new URL("/connections?success=google", process.env.NEXTAUTH_URL ?? req.url),
     );
   } catch (err) {
     console.error("[Google OAuth callback error]", err);
     return NextResponse.redirect(
-      new URL("/connections?error=google_exchange_failed", req.url),
+      new URL("/connections?error=google_exchange_failed", process.env.NEXTAUTH_URL ?? req.url),
     );
   }
 }

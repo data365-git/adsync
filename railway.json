@@ -2,7 +2,7 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "pnpm install --no-frozen-lockfile --prod=false && echo '=== @tailwindcss dir ===' && ls -la /app/node_modules/@tailwindcss/ && echo '=== oxide loader head ===' && head -120 /app/node_modules/@tailwindcss/oxide/index.js && pnpm prisma generate && pnpm build"
+    "buildCommand": "pnpm install --no-frozen-lockfile --prod=false && pnpm prisma generate && pnpm build"
   },
   "deploy": {
     "startCommand": "pnpm prisma migrate deploy && pnpm start",

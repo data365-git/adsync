@@ -18,9 +18,17 @@ export default async function middleware(req: NextRequest) {
 
   if (!isProtected) return NextResponse.next();
 
+  const isSecure = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+  const cookieName = isSecure
+    ? "__Secure-authjs.session-token"
+    : "authjs.session-token";
+
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
+    cookieName,
+    salt: cookieName,
+    secureCookie: isSecure,
   });
 
   if (!token) {

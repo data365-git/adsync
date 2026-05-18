@@ -31,6 +31,7 @@ import {
 import {
   appendRows,
   findRows,
+  readTabRows,
   updateRow,
   upsertRows,
 } from "~/integrations/google/sheets-client";
@@ -72,10 +73,30 @@ const triggerWebhookHandler: Handler = async (_step, _ctx, _userId) => {
 };
 
 const triggerWatchHandler: Handler = async (_step, _ctx, _userId) => {
-  // Both trigger.watch.sheets_new_rows and trigger.watch.bitrix_new_lead
-  // share this handler — the watch infrastructure (polling, dedup) lives
-  // outside the executor; runs that reach here have already been triggered.
+  // Bitrix watch trigger: real polling lives outside the executor; on manual
+  // test runs there's no pre-buffered row, so we just pass through.
   return { rowCount: 0 };
+};
+
+type SheetsWatchCfg = {
+  spreadsheetId: string;
+  tabName: string;
+  watchColumn?: string;
+};
+
+// On manual / test runs the worker poller hasn't pre-buffered a row, so we
+// read the configured tab live and emit the most recent data row downstream.
+// Semantics match outputsArray:false in the module catalog (one row per fire).
+const triggerWatchSheetsNewRowsHandler: Handler = async (step, ctx, userId) => {
+  const config = cfg<SheetsWatchCfg>(step);
+  const rows = await readTabRows(userId, config.spreadsheetId, config.tabName);
+  if (rows.length === 0) {
+    ctx.setOutput(step.position, []);
+    return { rowCount: 0, rows: [] };
+  }
+  const latest = rows[rows.length - 1]!;
+  ctx.setOutput(step.position, [latest]);
+  return { rowCount: 1, rows: [latest] };
 };
 
 /**
@@ -287,7 +308,7 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
 };
 
 const bitrixCreateLeadHandler: Handler = async (step, ctx, _userId) => {
-  const { createLead } = await import("~/server/bitrix24/client");
+  const { createLead, getLeadUrl } = await import("~/server/bitrix24/client");
   const config = cfg<BitrixCreateLeadCfg>(step);
   const result = await createLead({
     title: config.title,
@@ -300,6 +321,7 @@ const bitrixCreateLeadHandler: Handler = async (step, ctx, _userId) => {
   });
   const outputRow = {
     leadId: result.leadId,
+    leadUrl: getLeadUrl(result.leadId),
     createdAt: new Date().toISOString(),
   };
   ctx.setOutput(step.position, [outputRow]);
@@ -327,7 +349,7 @@ const HANDLERS: Record<string, Handler> = {
   "trigger.schedule": triggerScheduleHandler,
   "trigger.manual": triggerManualHandler,
   "trigger.webhook": triggerWebhookHandler,
-  "trigger.watch.sheets_new_rows": triggerWatchHandler,
+  "trigger.watch.sheets_new_rows": triggerWatchSheetsNewRowsHandler,
   "trigger.watch.bitrix_new_lead": triggerWatchHandler,
 
   // Facebook

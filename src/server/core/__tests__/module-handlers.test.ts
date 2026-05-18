@@ -124,6 +124,7 @@ describe("sheetsFindRowsHandler", () => {
       appendRows: vi.fn(),
       upsertRows: vi.fn(),
       findRows: vi.fn(async () => fakeMatches),
+      readTabRows: vi.fn(),
     }));
 
     const mod = await import("../module-handlers");
@@ -162,6 +163,7 @@ describe("sheetsFindRowsHandler", () => {
       appendRows: vi.fn(),
       upsertRows: vi.fn(),
       findRows: vi.fn(async () => []),
+      readTabRows: vi.fn(),
     }));
 
     const mod = await import("../module-handlers");
@@ -198,6 +200,7 @@ describe("sheetsFindRowsHandler", () => {
       findRows: vi.fn(async () => {
         throw new Error("Google Sheets API error: 403");
       }),
+      readTabRows: vi.fn(),
     }));
 
     const mod = await import("../module-handlers");
@@ -240,6 +243,7 @@ describe("sheetsUpdateRowHandler", () => {
       appendRows: vi.fn(),
       upsertRows: vi.fn(),
       findRows: vi.fn(),
+      readTabRows: vi.fn(),
       updateRow: updateRowSpy,
     }));
 
@@ -288,6 +292,7 @@ describe("sheetsUpdateRowHandler", () => {
       appendRows: vi.fn(),
       upsertRows: vi.fn(),
       findRows: vi.fn(),
+      readTabRows: vi.fn(),
       updateRow: updateRowSpy,
     }));
 
@@ -322,6 +327,7 @@ describe("sheetsUpdateRowHandler", () => {
       appendRows: vi.fn(),
       upsertRows: vi.fn(),
       findRows: vi.fn(),
+      readTabRows: vi.fn(),
       updateRow: vi.fn(async () => {
         throw new Error('No row found where id = "42"');
       }),
@@ -363,6 +369,7 @@ describe("bitrixCreateLeadHandler", () => {
       call: vi.fn(),
       batch: vi.fn(),
       createLead: createLeadSpy,
+      getLeadUrl: vi.fn(() => "https://example.bitrix24.com/crm/lead/details/4242/"),
       updateLead: vi.fn(),
     }));
 
@@ -393,7 +400,12 @@ describe("bitrixCreateLeadHandler", () => {
     const result = await handler(fakeStep, fakeCtx, "u");
 
     expect(result.rowCount).toBe(1);
-    expect(result.rows).toEqual([expect.objectContaining({ leadId: "4242" })]);
+    expect(result.rows).toEqual([
+      expect.objectContaining({
+        leadId: "4242",
+        leadUrl: "https://example.bitrix24.com/crm/lead/details/4242/",
+      }),
+    ]);
     expect(createLeadSpy).toHaveBeenCalledTimes(1);
     expect(createLeadSpy).toHaveBeenCalledWith({
       title: "Website inquiry",
@@ -414,6 +426,7 @@ describe("bitrixCreateLeadHandler", () => {
       createLead: vi.fn(async () => {
         throw new Error("BitrixError: INVALID_INPUT");
       }),
+      getLeadUrl: vi.fn(),
       updateLead: vi.fn(),
     }));
 
@@ -452,6 +465,7 @@ describe("bitrixUpdateLeadHandler", () => {
       call: vi.fn(),
       batch: vi.fn(),
       createLead: vi.fn(),
+      getLeadUrl: vi.fn(),
       updateLead: updateLeadSpy,
     }));
 
@@ -495,6 +509,7 @@ describe("bitrixUpdateLeadHandler", () => {
       call: vi.fn(),
       batch: vi.fn(),
       createLead: vi.fn(),
+      getLeadUrl: vi.fn(),
       updateLead: vi.fn(async () => {
         throw new Error("BitrixError: ACCESS_DENIED");
       }),

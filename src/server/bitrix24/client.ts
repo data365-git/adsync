@@ -51,6 +51,21 @@ function getWebhookBase(): string {
 }
 
 /**
+ * Build a deep link to a Bitrix24 lead detail page from the configured webhook URL.
+ * Returns null if BITRIX24_WEBHOOK_URL isn't set or doesn't parse — callers can
+ * still surface the leadId without the link.
+ */
+export function getLeadUrl(leadId: string): string | null {
+  const raw = process.env.BITRIX24_WEBHOOK_URL;
+  if (!raw) return null;
+  try {
+    return `${new URL(raw).origin}/crm/lead/details/${leadId}/`;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Call a single Bitrix24 REST method and return the typed result.
  * Throws BitrixError on API-level errors; retries on 503/network failures.
  */

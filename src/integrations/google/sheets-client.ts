@@ -145,6 +145,39 @@ export async function findRows(
   return matches;
 }
 
+/**
+ * Reads every data row from a tab and returns them keyed by the header row.
+ * Each returned object includes a `row` field (1-indexed sheet row number).
+ * Returns [] if the sheet is empty or has only a header row.
+ */
+export async function readTabRows(
+  userId: string,
+  spreadsheetId: string,
+  tabName: string,
+): Promise<Array<Record<string, unknown>>> {
+  const client = await getAuthedClient(userId);
+  const sheets = google.sheets({ version: "v4", auth: client });
+
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: tabName,
+  });
+
+  const values = (res.data.values ?? []) as string[][];
+  if (values.length < 2) return [];
+
+  const headers = values[0]!.map((h) => h.trim()).filter((h) => h.length > 0);
+  const dataRows = values.slice(1);
+
+  return dataRows.map((row, idx) => {
+    const obj: Record<string, unknown> = { row: idx + 2 };
+    headers.forEach((header, hIdx) => {
+      obj[header] = row[hIdx] ?? "";
+    });
+    return obj;
+  });
+}
+
 export type RowIdentifier =
   | { kind: "row"; row: number }
   | { kind: "key"; column: string; value: string };

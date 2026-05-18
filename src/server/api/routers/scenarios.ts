@@ -4,8 +4,16 @@ import type { Prisma } from "@prisma/client";
 
 import { db } from "~/server/db";
 import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
-import { executeRun } from "~/server/core/executor";
+import {
+  buildStepCompleteLogMeta,
+  buildStepStartLogMeta,
+  executeRun,
+  resolveStepConfig,
+} from "~/server/core/executor";
+import { RunContext } from "~/server/core/run-context";
+import { getHandler } from "~/server/core/module-handlers";
 import type { Scenario as MockScenario } from "~/server/mocks/types";
+import type { ScenarioStep } from "@prisma/client";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
@@ -102,6 +110,26 @@ function validateFieldMappings(
 /** Cast config to Prisma's InputJsonValue. One boundary cast is acceptable. */
 function toJsonInput(config: Record<string, unknown>): Prisma.InputJsonValue {
   return config as Prisma.InputJsonValue;
+}
+
+function toScenarioStepWithConfig(
+  step: ScenarioStep,
+  config: unknown,
+): ScenarioStep {
+  return {
+    ...step,
+    config: JSON.parse(JSON.stringify(config)) as ScenarioStep["config"],
+  };
+}
+
+function firstUrl(rows: unknown[]): string | null {
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    for (const value of Object.values(row as Record<string, unknown>)) {
+      if (typeof value === "string" && /^https?:\/\//i.test(value)) return value;
+    }
+  }
+  return null;
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -301,6 +329,89 @@ export const scenariosRouter = createTRPCRouter({
       }
 
       return stepResults;
+    }),
+
+  testRunStep: authedProcedure
+    .input(z.object({ scenarioId: z.string(), stepId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const scenario = await db.scenario.findUnique({
+        where: { id: input.scenarioId },
+        include: { steps: { orderBy: { position: "asc" } } },
+      });
+      if (scenario?.userId !== ctx.userId) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.scenarioId} not found`,
+        });
+      }
+
+      const target = scenario.steps.find((step) => step.id === input.stepId);
+      if (!target) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Step not found" });
+      }
+
+      const runContext = new RunContext();
+      let lastStartMeta: ReturnType<typeof buildStepStartLogMeta> | null = null;
+
+      for (const step of scenario.steps.filter((s) => s.position <= target.position)) {
+        const stepStart = Date.now();
+        const upstreamRows = runContext.getUpstreamRows(step.position);
+        const upstreamRow0 =
+          typeof upstreamRows[0] === "object" && upstreamRows[0] !== null
+            ? (upstreamRows[0] as Record<string, unknown>)
+            : {};
+        const resolvedStep = toScenarioStepWithConfig(
+          step,
+          resolveStepConfig(step.config, upstreamRow0),
+        );
+        const startMeta = buildStepStartLogMeta(resolvedStep, upstreamRows);
+
+        try {
+          const result = await getHandler(step.moduleType)(
+            resolvedStep,
+            runContext,
+            ctx.userId,
+          );
+          const durationMs = Date.now() - stepStart;
+          const completeMeta = buildStepCompleteLogMeta(step, result, durationMs);
+          runContext.setMeta(step.position, {
+            durationMs,
+            rowCount: result.rowCount,
+            sheetsUrl: result.sheetsUrl,
+          });
+
+          if (step.id === target.id) {
+            const outputSampleRows = completeMeta.sampleRows;
+            return {
+              inputConfig: startMeta.inputConfig,
+              inputSampleRows: startMeta.inputSampleRows,
+              outputSampleRows,
+              rowCount: completeMeta.rowCount,
+              durationMs,
+              leadUrl: firstUrl(outputSampleRows),
+            };
+          }
+        } catch (error) {
+          if (step.id !== target.id) throw error;
+          const message = error instanceof Error ? error.message : String(error);
+          return {
+            inputConfig: startMeta.inputConfig,
+            inputSampleRows: startMeta.inputSampleRows,
+            outputSampleRows: [],
+            rowCount: 0,
+            durationMs: Date.now() - stepStart,
+            error: message,
+            leadUrl: null,
+          };
+        }
+
+        lastStartMeta = startMeta;
+      }
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: lastStartMeta ? "Step did not return a result" : "No steps executed",
+      });
     }),
 
   delete: authedProcedure

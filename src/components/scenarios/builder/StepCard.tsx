@@ -43,6 +43,7 @@ interface ModuleConfigProps {
   onChange: (config: Record<string, unknown>) => void;
   errors?: Record<string, string>;
   prevStepModuleType?: ModuleType;
+  prevStepOutputColumns?: string[];
 }
 
 // ─── MODULE_CONFIG_MAP ────────────────────────────────────────────────────────
@@ -119,8 +120,13 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   "sheets.create_tab": ({ config, onChange, errors }) => (
     <SheetsCreateTabConfig config={config} onChange={onChange} errors={errors} />
   ),
-  "bitrix.create_lead": ({ config, onChange, errors }) => (
-    <BitrixCreateLeadConfig config={config} onChange={onChange} errors={errors} />
+  "bitrix.create_lead": ({ config, onChange, errors, prevStepOutputColumns }) => (
+    <BitrixCreateLeadConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepOutputColumns={prevStepOutputColumns}
+    />
   ),
   "bitrix.update_lead": ({ config, onChange, errors }) => (
     <BitrixUpdateLeadConfig config={config} onChange={onChange} errors={errors} />

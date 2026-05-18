@@ -16,6 +16,7 @@ import {
 } from "./StepCard";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import { getModule } from "~/lib/modules";
+import { api } from "~/trpc/react";
 import type { ModuleType } from "~/server/mocks/types";
 
 // ─── Sample tab (lifted out of ModuleConfigShell so the modal can reuse it) ─
@@ -110,6 +111,7 @@ interface StepConfigModalProps {
   step: DraftStep | null;
   /** Module type of the step immediately upstream — used by FieldMappingPicker etc. */
   prevStepModuleType?: ModuleType;
+  steps?: DraftStep[];
   /** Update handler — same shape as inline config. */
   onConfigChange: (config: Record<string, unknown>) => void;
   /** Forwarded down to renderers so they can show required-field error states. */
@@ -121,6 +123,7 @@ export function StepConfigModal({
   onOpenChange,
   step,
   prevStepModuleType,
+  steps = [],
   onConfigChange,
   showErrors,
 }: StepConfigModalProps) {
@@ -131,6 +134,59 @@ export function StepConfigModal({
   React.useEffect(() => {
     if (open) setActiveTab("configure");
   }, [open]);
+
+  const upstreamInfo = React.useMemo(() => {
+    if (!step) {
+      return { spreadsheetId: "", tabName: "", fallbackColumns: [] as string[] };
+    }
+    const currentIndex = steps.findIndex((candidate) => candidate.id === step.id);
+    const previousSteps = currentIndex > 0 ? steps.slice(0, currentIndex).reverse() : [];
+    const sheetsStep = previousSteps.find((candidate) => {
+      const readsSheet =
+        candidate.moduleType === "trigger.watch.sheets_new_rows" ||
+        candidate.moduleType === "sheets.find_rows" ||
+        candidate.moduleType === "sheets.get_row";
+      return (
+        readsSheet &&
+        typeof candidate.config.spreadsheetId === "string" &&
+        candidate.config.spreadsheetId.length > 0 &&
+        typeof candidate.config.tabName === "string" &&
+        candidate.config.tabName.length > 0
+      );
+    });
+
+    if (sheetsStep) {
+      return {
+        spreadsheetId: sheetsStep.config.spreadsheetId as string,
+        tabName: sheetsStep.config.tabName as string,
+        fallbackColumns: [] as string[],
+      };
+    }
+
+    const sampleStep = previousSteps.find(
+      (candidate) => getModule(candidate.moduleType)?.sampleOutput[0],
+    );
+    const sample = sampleStep
+      ? getModule(sampleStep.moduleType)?.sampleOutput[0]
+      : undefined;
+    return {
+      spreadsheetId: "",
+      tabName: "",
+      fallbackColumns: sample ? Object.keys(sample) : [],
+    };
+  }, [step, steps]);
+  const { data: liveColumns } = api.connections.listSheetColumns.useQuery(
+    {
+      spreadsheetId: upstreamInfo.spreadsheetId,
+      tabName: upstreamInfo.tabName,
+    },
+    {
+      enabled:
+        upstreamInfo.spreadsheetId.length > 0 && upstreamInfo.tabName.length > 0,
+      staleTime: 60_000,
+    },
+  );
+  const prevStepOutputColumns = liveColumns ?? upstreamInfo.fallbackColumns;
 
   if (!step) return null;
 
@@ -212,6 +268,7 @@ export function StepConfigModal({
                 onChange: onConfigChange,
                 errors: showErrors ? errors : undefined,
                 prevStepModuleType,
+                prevStepOutputColumns,
               })
             ) : (
               <p className="text-muted-foreground py-6 text-center text-sm">

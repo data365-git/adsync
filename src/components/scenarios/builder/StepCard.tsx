@@ -532,6 +532,7 @@ export function StepCard({
         iconColor={iconColor}
         moduleName={mod?.name ?? step.moduleType}
         moduleDescription={mod?.description ?? ""}
+        moduleSubtitle={mod?.shortName ?? mod?.group}
         iteratorBadge={
           showIteratorBadge ? (
             <IteratorBadge

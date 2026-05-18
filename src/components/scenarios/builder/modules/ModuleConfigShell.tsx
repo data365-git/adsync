@@ -39,6 +39,7 @@ interface ModuleConfigShellProps {
   iconColor?: string;
   moduleName?: string;
   moduleDescription?: string;
+  moduleSubtitle?: string;
   iteratorBadge?: React.ReactNode;
 }
 
@@ -60,11 +61,13 @@ export function ModuleConfigShell({
   iconColor = "text-foreground/70",
   moduleName,
   moduleDescription,
+  moduleSubtitle,
   iteratorBadge,
 }: ModuleConfigShellProps) {
   const mod = getModule(moduleType);
   const displayName = moduleName ?? mod?.name ?? moduleType;
   const displayDescription = moduleDescription ?? mod?.description ?? "";
+  const displaySubtitle = moduleSubtitle ?? mod?.shortName ?? mod?.group ?? "";
 
   return (
     <div
@@ -114,6 +117,11 @@ export function ModuleConfigShell({
             </p>
             {iteratorBadge}
           </div>
+          {displaySubtitle ? (
+            <p className="text-muted-foreground truncate text-xs">
+              {displaySubtitle}
+            </p>
+          ) : null}
           {(summary ?? displayDescription) && (
             <p className="text-muted-foreground truncate text-sm">
               {summary ?? displayDescription}

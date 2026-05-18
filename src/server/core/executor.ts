@@ -86,6 +86,18 @@ export function buildStepCompleteLogMeta(
   };
 }
 
+export function buildStepStartLogMeta(
+  step: Pick<ScenarioStep, "id" | "position" | "config">,
+  upstreamRows: unknown[],
+) {
+  return {
+    stepId: step.id,
+    position: step.position,
+    inputConfig: toInputJsonValue(step.config),
+    inputSampleRows: upstreamRows.slice(0, 3).map((row) => toInputJsonValue(row)),
+  };
+}
+
 export async function executeRun(
   scenarioId: string,
   trigger: "MANUAL" | "SCHEDULED",
@@ -156,13 +168,14 @@ export async function executeRun(
       }
 
       const stepStart = Date.now();
+      const upstreamRows = ctx.getUpstreamRows(step.position);
 
       await db.runLog.create({
         data: {
           runId: run.id,
           level: "INFO",
           message: `Starting step ${step.position}: ${step.moduleType}`,
-          meta: { stepId: step.id, position: step.position },
+          meta: buildStepStartLogMeta(step, upstreamRows),
         },
       });
 

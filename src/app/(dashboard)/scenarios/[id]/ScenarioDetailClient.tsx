@@ -132,9 +132,9 @@ function defaultConfigFor(moduleType: ModuleType): Record<string, unknown> {
     case "fb.ad_insights":
       return { fbAccountId: "", dateWindowDays: 7, metrics: [] };
     case "sheets.append":
-      return { spreadsheetId: "", tabName: "", mappedFields: [] };
+      return { spreadsheetId: "", tabName: "", mappedFields: {} };
     case "sheets.upsert":
-      return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: [] };
+      return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: {} };
     default:
       // Phase 3 module config defaults are populated by their individual
       // config form components in Stage 1'.

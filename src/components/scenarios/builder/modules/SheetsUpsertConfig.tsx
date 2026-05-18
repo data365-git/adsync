@@ -41,6 +41,10 @@ export function SheetsUpsertConfig({
       : {}
   ) as Record<string, string>;
 
+  const { data: resources } = api.connections.googleSheetsResources.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+
   // ── Spreadsheets ──────────────────────────────────────────────
   const {
     data: spreadsheets,
@@ -172,6 +176,9 @@ export function SheetsUpsertConfig({
             </SelectContent>
           </Select>
         )}
+        {resources?.identifier ? (
+          <p className="text-xs text-muted-foreground">{resources.identifier}</p>
+        ) : null}
         {errors?.spreadsheetId && (
           <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
             <span aria-hidden="true">&#x26A0;</span>

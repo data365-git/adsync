@@ -15,6 +15,7 @@ type FieldType =
   | "string[]"
   | "cron"
   | "text"
+  | "sheets-picker"
   | "select"
   | "textarea"
   | "fieldMapping";
@@ -436,15 +437,15 @@ const PHASE_3_MODULES: ModuleDefinition[] = [
     configSchema: [
       {
         key: "spreadsheetId",
-        label: "Spreadsheet ID",
-        type: "text",
+        label: "Spreadsheet",
+        type: "sheets-picker",
         required: true,
       },
-      { key: "tabName", label: "Tab name", type: "text", required: true },
+      { key: "tabName", label: "Tab", type: "sheets-picker", required: true },
       {
         key: "watchColumn",
         label: "Watch column",
-        type: "text",
+        type: "sheets-picker",
         required: true,
       },
     ],

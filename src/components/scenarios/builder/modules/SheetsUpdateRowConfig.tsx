@@ -6,6 +6,7 @@ import { Input } from "~/components/ui/input";
 import { FieldMappingPicker } from "./FieldMappingPicker";
 import { getModule } from "~/lib/modules";
 import type { ModuleType } from "~/server/mocks/types";
+import { SheetsLocationPicker } from "./SheetsLocationPicker";
 
 interface SheetsUpdateRowConfigProps {
   config: Record<string, unknown>;
@@ -34,57 +35,27 @@ export function SheetsUpdateRowConfig({
 
   return (
     <div className="space-y-4">
-      {/* Spreadsheet ID */}
-      <div className="space-y-1.5">
-        <Label htmlFor="sheets-update-id">
-          Spreadsheet ID
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          The ID from your Google Sheets URL
-        </p>
-        <Input
-          id="sheets-update-id"
-          type="text"
-          placeholder="1qZ7vK3xN9pL2mR8tY5uH1aB6cD4eF0gJsK7wM2nP8oV"
-          value={spreadsheetId}
-          onChange={(e) => onChange({ ...config, spreadsheetId: e.target.value })}
-          aria-required="true"
-          aria-invalid={!!errors?.spreadsheetId}
-        />
-        {errors?.spreadsheetId && (
-          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
-            <span aria-hidden="true">&#x26A0;</span>
-            {errors.spreadsheetId}
-          </p>
-        )}
-      </div>
-
-      {/* Tab name */}
-      <div className="space-y-1.5">
-        <Label htmlFor="sheets-update-tab">
-          Tab name
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Name of the sheet tab
-        </p>
-        <Input
-          id="sheets-update-tab"
-          type="text"
-          placeholder="Sheet1"
-          value={tabName}
-          onChange={(e) => onChange({ ...config, tabName: e.target.value })}
-          aria-required="true"
-          aria-invalid={!!errors?.tabName}
-        />
-        {errors?.tabName && (
-          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
-            <span aria-hidden="true">&#x26A0;</span>
-            {errors.tabName}
-          </p>
-        )}
-      </div>
+      <SheetsLocationPicker
+        spreadsheetId={spreadsheetId}
+        tabName={tabName}
+        spreadsheetError={errors?.spreadsheetId}
+        tabError={errors?.tabName}
+        ids={{
+          spreadsheet: "sheets-update-id",
+          tab: "sheets-update-tab",
+        }}
+        onSpreadsheetChange={(nextSpreadsheetId) =>
+          onChange({
+            ...config,
+            spreadsheetId: nextSpreadsheetId,
+            tabName: "",
+            mappedFields: [],
+          })
+        }
+        onTabChange={(nextTabName) =>
+          onChange({ ...config, tabName: nextTabName, mappedFields: [] })
+        }
+      />
 
       {/* Row identifier */}
       <div className="space-y-1.5">

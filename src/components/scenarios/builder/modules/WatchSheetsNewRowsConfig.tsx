@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Label } from "~/components/ui/label";
-import { Input } from "~/components/ui/input";
 import { getModule } from "~/lib/modules";
+import { SheetsLocationPicker } from "./SheetsLocationPicker";
 
 interface WatchSheetsNewRowsConfigProps {
   config: Record<string, unknown>;
@@ -60,100 +59,42 @@ export function WatchSheetsNewRowsConfig({
   onChange,
   errors,
 }: WatchSheetsNewRowsConfigProps) {
-  function set(key: string, value: string) {
-    onChange({ ...config, [key]: value });
-  }
+  const spreadsheetId = field(config, "spreadsheetId");
+  const tabName = field(config, "tabName");
+  const watchColumn = field(config, "watchColumn");
 
   return (
     <div className="space-y-4">
-      {/* Polling info banner */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 text-sm text-blue-800 dark:text-blue-200">
-        Polling interval: every 5 minutes. Real polling is wired in Phase 4.
-      </div>
-
-      {/* spreadsheetId */}
-      <div className="space-y-1.5">
-        <Label htmlFor="ws-spreadsheetId">
-          Spreadsheet ID <span aria-hidden="true" className="text-destructive">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          The ID from your Google Sheets URL (between /d/ and /edit)
-        </p>
-        <Input
-          id="ws-spreadsheetId"
-          value={field(config, "spreadsheetId")}
-          onChange={(e) => set("spreadsheetId", e.target.value)}
-          placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-          aria-describedby={errors?.spreadsheetId ? "ws-spreadsheetId-err" : undefined}
-          aria-invalid={!!errors?.spreadsheetId}
-        />
-        {errors?.spreadsheetId && (
-          <p
-            id="ws-spreadsheetId-err"
-            role="alert"
-            className="flex items-center gap-1.5 text-xs text-destructive"
-          >
-            <span aria-hidden="true">&#x26A0;</span>
-            {errors.spreadsheetId}
-          </p>
-        )}
-      </div>
-
-      {/* tabName */}
-      <div className="space-y-1.5">
-        <Label htmlFor="ws-tabName">
-          Tab name <span aria-hidden="true" className="text-destructive">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          Name of the sheet tab to watch for new rows
-        </p>
-        <Input
-          id="ws-tabName"
-          value={field(config, "tabName")}
-          onChange={(e) => set("tabName", e.target.value)}
-          placeholder="Sheet1"
-          aria-describedby={errors?.tabName ? "ws-tabName-err" : undefined}
-          aria-invalid={!!errors?.tabName}
-        />
-        {errors?.tabName && (
-          <p
-            id="ws-tabName-err"
-            role="alert"
-            className="flex items-center gap-1.5 text-xs text-destructive"
-          >
-            <span aria-hidden="true">&#x26A0;</span>
-            {errors.tabName}
-          </p>
-        )}
-      </div>
-
-      {/* watchColumn */}
-      <div className="space-y-1.5">
-        <Label htmlFor="ws-watchColumn">
-          Watch column <span aria-hidden="true" className="text-destructive">*</span>
-        </Label>
-        <p className="text-xs text-muted-foreground">
-          Column header used to detect new rows (e.g. &quot;id&quot;). Values must be unique per row.
-        </p>
-        <Input
-          id="ws-watchColumn"
-          value={field(config, "watchColumn")}
-          onChange={(e) => set("watchColumn", e.target.value)}
-          placeholder="id"
-          aria-describedby={errors?.watchColumn ? "ws-watchColumn-err" : undefined}
-          aria-invalid={!!errors?.watchColumn}
-        />
-        {errors?.watchColumn && (
-          <p
-            id="ws-watchColumn-err"
-            role="alert"
-            className="flex items-center gap-1.5 text-xs text-destructive"
-          >
-            <span aria-hidden="true">&#x26A0;</span>
-            {errors.watchColumn}
-          </p>
-        )}
-      </div>
+      <SheetsLocationPicker
+        spreadsheetId={spreadsheetId}
+        tabName={tabName}
+        columnName={watchColumn}
+        spreadsheetError={errors?.spreadsheetId}
+        tabError={errors?.tabName}
+        columnError={errors?.watchColumn}
+        columnLabel="Watch column"
+        columnHelp="Column header used to detect new rows. Values should be unique per row."
+        columnPlaceholder="Select a watch column"
+        ids={{
+          spreadsheet: "ws-spreadsheetId",
+          tab: "ws-tabName",
+          column: "ws-watchColumn",
+        }}
+        onSpreadsheetChange={(nextSpreadsheetId) =>
+          onChange({
+            ...config,
+            spreadsheetId: nextSpreadsheetId,
+            tabName: "",
+            watchColumn: "",
+          })
+        }
+        onTabChange={(nextTabName) =>
+          onChange({ ...config, tabName: nextTabName, watchColumn: "" })
+        }
+        onColumnChange={(nextColumn) =>
+          onChange({ ...config, watchColumn: nextColumn })
+        }
+      />
 
       <SampleOutput />
     </div>

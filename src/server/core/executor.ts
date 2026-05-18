@@ -14,6 +14,7 @@
 import { db } from "~/server/db";
 import { RunContext } from "./run-context";
 import { getHandler } from "./module-handlers";
+import { interpolate } from "./template";
 import type { HandlerResult } from "./module-handlers";
 import type { ScenarioStep } from "@prisma/client";
 import type { InputJsonValue } from "@prisma/client/runtime/library";
@@ -40,6 +41,41 @@ function getMetaPosition(meta: Record<string, unknown>): number | undefined {
 
 function getMetaSampleRows(meta: Record<string, unknown>): unknown[] {
   return Array.isArray(meta.sampleRows) ? meta.sampleRows : [];
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  );
+}
+
+export function resolveStepConfig(
+  config: unknown,
+  upstreamRow: Record<string, unknown>,
+): unknown {
+  if (!isPlainObject(config)) return config;
+
+  const resolved: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(config)) {
+    if (typeof value === "string") {
+      resolved[key] = interpolate(value, upstreamRow);
+    } else if (isPlainObject(value)) {
+      resolved[key] = Object.fromEntries(
+        Object.entries(value).map(([childKey, childValue]) => [
+          childKey,
+          typeof childValue === "string"
+            ? interpolate(childValue, upstreamRow)
+            : childValue,
+        ]),
+      );
+    } else {
+      resolved[key] = value;
+    }
+  }
+  return resolved;
 }
 
 export function buildRerunSeedOutputs(
@@ -169,18 +205,27 @@ export async function executeRun(
 
       const stepStart = Date.now();
       const upstreamRows = ctx.getUpstreamRows(step.position);
+      const upstreamRow0 =
+        typeof upstreamRows[0] === "object" && upstreamRows[0] !== null
+          ? (upstreamRows[0] as Record<string, unknown>)
+          : {};
+      const resolvedConfig = resolveStepConfig(step.config, upstreamRow0);
+      const resolvedStep: ScenarioStep = {
+        ...step,
+        config: toInputJsonValue(resolvedConfig) as ScenarioStep["config"],
+      };
 
       await db.runLog.create({
         data: {
           runId: run.id,
           level: "INFO",
           message: `Starting step ${step.position}: ${step.moduleType}`,
-          meta: buildStepStartLogMeta(step, upstreamRows),
+          meta: buildStepStartLogMeta(resolvedStep, upstreamRows),
         },
       });
 
       const handler = getHandler(step.moduleType);
-      const result = await handler(step, ctx, userId);
+      const result = await handler(resolvedStep, ctx, userId);
 
       const durationMs = Date.now() - stepStart;
       ctx.setMeta(step.position, {

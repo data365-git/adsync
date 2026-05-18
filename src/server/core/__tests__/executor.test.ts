@@ -1,7 +1,11 @@
 import type { ScenarioStep } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { buildRerunSeedOutputs, buildStepCompleteLogMeta } from "../executor";
+import {
+  buildRerunSeedOutputs,
+  buildStepCompleteLogMeta,
+  resolveStepConfig,
+} from "../executor";
 
 function makeStep(): ScenarioStep {
   return {
@@ -50,5 +54,24 @@ describe("buildRerunSeedOutputs", () => {
       [1, [{ a: 1 }]],
       [2, [{ b: 2 }]],
     ]);
+  });
+});
+
+describe("resolveStepConfig", () => {
+  it("interpolates top-level and one-level nested string fields", () => {
+    expect(
+      resolveStepConfig(
+        {
+          title: "Lead from {{Name}}",
+          nested: { comments: "Row {{row}}", count: 1 },
+          mappedFields: ["{{Name}}"],
+        },
+        { Name: "Alice", row: 2 },
+      ),
+    ).toEqual({
+      title: "Lead from Alice",
+      nested: { comments: "Row 2", count: 1 },
+      mappedFields: ["{{Name}}"],
+    });
   });
 });

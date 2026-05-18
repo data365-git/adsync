@@ -193,7 +193,9 @@ export function StepConfigModal({
   const { Icon, tileBg, iconColor } = getIntegrationMeta(step.moduleType);
   const mod = getModule(step.moduleType);
   const displayName = mod?.name ?? step.moduleType;
-  const displayDescription = mod?.description ?? "";
+  const displayDescription = mod
+    ? `${mod.group} - ${mod.shortName}`
+    : step.moduleType;
   const renderer = MODULE_CONFIG_MAP[step.moduleType];
   const errors = showErrors
     ? validateStepConfig(step.moduleType, step.config)

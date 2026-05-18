@@ -100,13 +100,16 @@ export function ModuleConfigShell({
         {/* Brand icon tile */}
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
             tileBg,
           )}
         >
           {BrandIcon ? (
             <BrandIcon className={cn("h-4 w-4", iconColor)} />
           ) : null}
+          <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full border border-background bg-foreground text-[10px] font-medium text-background">
+            {position}
+          </span>
         </div>
 
         {/* Name + summary/description (stacked) */}

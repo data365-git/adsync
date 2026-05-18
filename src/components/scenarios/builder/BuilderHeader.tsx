@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   SaveIcon,
   PlayIcon,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Switch } from "~/components/ui/switch";
+import { cn } from "~/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -73,6 +75,7 @@ export function BuilderHeader({
   onTest,
   onBack,
   scenarioId,
+  scenarioRuns,
 }: BuilderHeaderProps) {
   const router = useRouter();
   const [isEditingName, setIsEditingName] = React.useState(false);
@@ -81,6 +84,7 @@ export function BuilderHeader({
   const [isRunningNow, setIsRunningNow] = React.useState(false);
 
   const runNowMutation = api.scenarios.runNow.useMutation();
+  const lastRun = scenarioRuns?.[0];
 
   React.useEffect(() => {
     if (!isEditingName) setEditValue(name);
@@ -120,6 +124,7 @@ export function BuilderHeader({
   }
 
   const saveDisabled = isSaving || !!missingFieldsTooltip;
+  const runOnceDisabled = scenarioId ? isRunningNow : isTesting;
 
   return (
     <header
@@ -190,24 +195,28 @@ export function BuilderHeader({
           type="button"
           variant="outline"
           size="sm"
-          onClick={onTest}
-          disabled={isTesting}
-          aria-label="Run test"
+          onClick={() => {
+            if (scenarioId) void handleRunNow();
+            else onTest();
+          }}
+          disabled={runOnceDisabled}
+          aria-label="Run once"
+          className="min-w-28 justify-center"
         >
-          {isTesting ? (
+          {runOnceDisabled ? (
             <>
               <RotateCcwIcon className="animate-spin" />
               Testing…
             </>
           ) : (
             <>
-              <PlayIcon />
-              Test
+              {scenarioId ? <ZapIcon /> : <PlayIcon />}
+              Run once
             </>
           )}
         </Button>
 
-        {scenarioId && (
+        {false && (
           <Button
             type="button"
             variant="outline"
@@ -229,6 +238,8 @@ export function BuilderHeader({
             )}
           </Button>
         )}
+
+        {lastRun ? <LastRunChip run={lastRun} /> : null}
 
         <TooltipProvider>
           <Tooltip>
@@ -275,6 +286,38 @@ export function BuilderHeader({
 }
 
 // ─── SaveStatus ───────────────────────────────────────────────────────────────
+
+function LastRunChip({ run }: { run: Run }) {
+  const [nowMs, setNowMs] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    setNowMs(Date.now());
+    const id = setInterval(() => setNowMs(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const status = run.status.toLowerCase();
+  const startedAt = new Date(run.startedAt);
+  const age = nowMs === null ? "" : formatSavedAgo(startedAt, nowMs);
+  const statusClass =
+    status === "success"
+      ? "border-status-success/30 text-green-700 dark:text-green-300"
+      : status === "failed"
+        ? "border-status-failed/30 text-red-700 dark:text-red-300"
+        : "border-border text-muted-foreground";
+
+  return (
+    <Link
+      href={`/runs/${run.id}`}
+      className={cn(
+        "hidden h-9 items-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium hover:bg-muted sm:inline-flex",
+        statusClass,
+      )}
+    >
+      Last run: {status}
+      {age ? <span className="text-muted-foreground">{age}</span> : null}
+    </Link>
+  );
+}
 
 function formatSavedAgo(savedAt: Date, nowMs: number): string {
   const diffSec = Math.max(0, Math.floor((nowMs - savedAt.getTime()) / 1000));

@@ -8,7 +8,7 @@ export function StepConnector({ className }: StepConnectorProps) {
   return (
     <div
       aria-hidden="true"
-      className={`mx-auto h-5 w-px bg-border ${className ?? ""}`}
+      className={`mx-auto h-5 w-px border-l border-dotted border-border ${className ?? ""}`}
     />
   );
 }

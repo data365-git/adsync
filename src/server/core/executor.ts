@@ -58,22 +58,17 @@ export function resolveStepConfig(
 ): unknown {
   if (!isPlainObject(config)) return config;
 
+  // Only interpolate top-level string fields. Nested objects (e.g.
+  // `mappedFields: Record<string, string>` on the sheets handlers) are passed
+  // through untouched — the handler is responsible for interpolating them.
+  // Recursing here caused a double-interpolation bug: an upstream-missing
+  // token resolved to "" at the executor pass, and the handler's empty-expr
+  // backwards-compat branch then incorrectly copied the upstream column value.
   const resolved: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(config)) {
-    if (typeof value === "string") {
-      resolved[key] = interpolate(value, upstreamRow);
-    } else if (isPlainObject(value)) {
-      resolved[key] = Object.fromEntries(
-        Object.entries(value).map(([childKey, childValue]) => [
-          childKey,
-          typeof childValue === "string"
-            ? interpolate(childValue, upstreamRow)
-            : childValue,
-        ]),
-      );
-    } else {
-      resolved[key] = value;
-    }
+    resolved[key] = typeof value === "string"
+      ? interpolate(value, upstreamRow)
+      : value;
   }
   return resolved;
 }

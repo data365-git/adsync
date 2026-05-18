@@ -58,7 +58,7 @@ describe("buildRerunSeedOutputs", () => {
 });
 
 describe("resolveStepConfig", () => {
-  it("interpolates top-level and one-level nested string fields", () => {
+  it("interpolates top-level string fields and leaves nested objects raw", () => {
     expect(
       resolveStepConfig(
         {
@@ -70,8 +70,20 @@ describe("resolveStepConfig", () => {
       ),
     ).toEqual({
       title: "Lead from Alice",
-      nested: { comments: "Row 2", count: 1 },
+      // Nested object passed through untouched — handlers (e.g. sheets
+      // buildRowFromMapping) own interpolation for their nested config
+      // shapes. See module-handlers.ts buildRowFromMapping().
+      nested: { comments: "Row {{row}}", count: 1 },
       mappedFields: ["{{Name}}"],
     });
+  });
+
+  it("does not double-interpolate empty-resolved tokens (regression)", () => {
+    // When a token resolves to empty via the top-level pass, the handler's
+    // own buildRowFromMapping (or equivalent) decides what to do — the
+    // executor must not re-interpret empty as 'copy upstream column'.
+    expect(
+      resolveStepConfig({ phone: "{{missing}}" }, { name: "Alice" }),
+    ).toEqual({ phone: "" });
   });
 });

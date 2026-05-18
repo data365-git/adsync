@@ -36,6 +36,8 @@ export function FieldMapper({
 }: FieldMapperProps) {
   const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const tokens = pickTokens(value);
+  const fieldId = React.useId();
+  const inputName = `mapper-${fieldId}`;
 
   function insertToken(column: string) {
     const token = `{{${column}}}`;
@@ -60,7 +62,7 @@ export function FieldMapper({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium" htmlFor={`mapper-${label}`}>
+      <label className="text-sm font-medium" htmlFor={inputName}>
         {label}
         {required ? (
           <span className="ml-1 text-destructive" aria-hidden="true">
@@ -84,7 +86,10 @@ export function FieldMapper({
         {multiline ? (
           <textarea
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-            id={`mapper-${label}`}
+            id={inputName}
+            name={inputName}
+            autoComplete="off"
+            spellCheck={false}
             rows={3}
             value={value}
             placeholder={placeholder}
@@ -95,7 +100,10 @@ export function FieldMapper({
         ) : (
           <Input
             ref={inputRef as React.RefObject<HTMLInputElement>}
-            id={`mapper-${label}`}
+            id={inputName}
+            name={inputName}
+            autoComplete="off"
+            spellCheck={false}
             value={value}
             placeholder={placeholder}
             onChange={(event) => onChange(event.target.value)}

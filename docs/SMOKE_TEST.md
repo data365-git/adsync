@@ -43,8 +43,10 @@ After running, verify:
 
 1. **Run page** - `http://localhost:3000/runs/<runId>` shows 5 green step cards. Each step card has separate **Input** and **Output** panels. Step 3 reports 1 matching row. Step 4 reports 1 row updated. Step 5 reports 1 lead created with a real Bitrix lead ID and a clickable Bitrix lead URL when the webhook URL can be parsed.
 2. **Run page data flow** - Step 5's **Input** panel shows the resolved Bitrix config that was sent to the handler, and **Rows in** shows the upstream Sheets row that drove the lead creation. **Output** shows the created lead row.
-3. **Google Sheet** - row 2 of the Leads tab now has `status: processed`. The `id`, `name`, and `email` columns are unchanged.
-4. **Bitrix24** - a new lead exists titled "Smoke test - Alice" with email `alice@example.com`, source `Other`, and the auto-created comment.
+3. **Scenario page step test** - On `/scenarios/<scenarioId>`, open the Bitrix step config and confirm the values panel shows upstream fields with sample values. Click a value to insert `{{field}}`, then use **Test this step**. The **Last test** tab should show Input and Output without leaving the modal. Bitrix step tests create real CRM records.
+4. **Scenario page Run once drawer** - Click **Run once** from the builder header. A bottom run-results drawer opens on the same page with every step's Input and Output panels. **Open full run** still links to `/runs/<runId>`, and the **Last run** chip remains the historical link.
+5. **Google Sheet** - row 2 of the Leads tab now has `status: processed`. The `id`, `name`, and `email` columns are unchanged.
+6. **Bitrix24** - a new lead exists titled "Smoke test - Alice" with email `alice@example.com`, source `Other`, and the auto-created comment.
 
 ### What Failure Looks Like
 

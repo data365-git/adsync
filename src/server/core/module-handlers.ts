@@ -18,6 +18,7 @@
 
 import type { ScenarioStep } from "@prisma/client";
 import type { RunContext } from "./run-context";
+import { interpolate } from "./template";
 
 // ── Integration imports ───────────────────────────────────────────────────────
 // Stubs live in this worktree; real implementations merged from Agents B and C.
@@ -162,7 +163,12 @@ const fbListAdAccountsHandler: Handler = async (step, ctx, userId) => {
 type SheetsCfg = {
   spreadsheetId: string;
   tabName: string;
-  mappedFields?: string[];
+  /**
+   * column → value expression; empty string = copy upstream row's column value.
+   * Legacy configs may store a plain string[] — normalized at handler entry via
+   * normalizeMappedFields().
+   */
+  mappedFields?: Record<string, string> | string[];
 };
 
 type SheetsUpsertCfg = SheetsCfg & {
@@ -180,8 +186,60 @@ type SheetsUpdateRowCfg = {
   spreadsheetId: string;
   tabName: string;
   rowIdentifier: string;
-  mappedFields: Record<string, string>;
+  /**
+   * column → value expression; empty string = copy upstream row's column value.
+   * Legacy configs may store a plain string[] — normalized at handler entry via
+   * normalizeMappedFields().
+   */
+  mappedFields: Record<string, string> | string[];
 };
+
+/**
+ * Coerce a legacy `mappedFields` value that was saved as a plain string array
+ * (e.g. `["name", "email"]`) into the new Record shape (`{ name: "", email: "" }`).
+ * Configs saved after this release already use the Record shape and pass through
+ * unchanged. The coercion is idempotent so it is safe to call on every handler
+ * entry.
+ */
+function normalizeMappedFields(
+  raw: Record<string, string> | string[] | undefined,
+): Record<string, string> {
+  if (!raw) return {};
+  if (Array.isArray(raw)) {
+    const result: Record<string, string> = {};
+    for (const field of raw) {
+      result[field] = "";
+    }
+    return result;
+  }
+  return raw;
+}
+
+/**
+ * Build a single output row from an upstream row and a column→value-expression
+ * mapping.
+ *
+ * For each (columnKey, valueExpr) pair:
+ * - If valueExpr is non-empty, it is interpolated against the upstream row
+ *   using `interpolate()` — supports `{{token}}` style placeholders and literal
+ *   strings.
+ * - If valueExpr is empty, the upstream row's own value for that column is used
+ *   as-is (backwards-compat: zero-config sheet copies still work).
+ */
+export function buildRowFromMapping(
+  upstreamRow: Record<string, unknown>,
+  mappedFields: Record<string, string>,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const [col, expr] of Object.entries(mappedFields)) {
+    if (expr !== "") {
+      result[col] = interpolate(expr, upstreamRow);
+    } else {
+      result[col] = upstreamRow[col];
+    }
+  }
+  return result;
+}
 
 type BitrixCreateLeadCfg = {
   title: string;
@@ -200,27 +258,9 @@ type BitrixUpdateLeadCfg = {
   comments?: string;
 };
 
-function projectRows(
-  rows: unknown[],
-  mappedFields?: string[],
-): Record<string, unknown>[] {
-  const objectRows: Record<string, unknown>[] = rows.flatMap((row) =>
-    typeof row === "object" && row !== null
-      ? [row as Record<string, unknown>]
-      : [],
-  );
-  if (!mappedFields || mappedFields.length === 0) return objectRows;
-  return objectRows.map((row) => {
-    const projected: Record<string, unknown> = {};
-    for (const field of mappedFields) {
-      projected[field] = row[field];
-    }
-    return projected;
-  });
-}
-
 const sheetsAppendHandler: Handler = async (step, ctx, userId) => {
   const config = cfg<SheetsCfg>(step);
+  const mapping = normalizeMappedFields(config.mappedFields);
   const upstreamRows = ctx.getUpstreamRows(step.position);
   if (upstreamRows.length === 0) {
     return {
@@ -228,7 +268,11 @@ const sheetsAppendHandler: Handler = async (step, ctx, userId) => {
       sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
     };
   }
-  const rows = projectRows(upstreamRows, config.mappedFields);
+  const rows = upstreamRows.flatMap((row) =>
+    typeof row === "object" && row !== null
+      ? [buildRowFromMapping(row as Record<string, unknown>, mapping)]
+      : [],
+  );
   await appendRows(userId, config.spreadsheetId, config.tabName, rows);
   return {
     rowCount: rows.length,
@@ -238,6 +282,7 @@ const sheetsAppendHandler: Handler = async (step, ctx, userId) => {
 
 const sheetsUpsertHandler: Handler = async (step, ctx, userId) => {
   const config = cfg<SheetsUpsertCfg>(step);
+  const mapping = normalizeMappedFields(config.mappedFields);
   const upstreamRows = ctx.getUpstreamRows(step.position);
   if (upstreamRows.length === 0) {
     return {
@@ -245,7 +290,11 @@ const sheetsUpsertHandler: Handler = async (step, ctx, userId) => {
       sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
     };
   }
-  const rows = projectRows(upstreamRows, config.mappedFields);
+  const rows = upstreamRows.flatMap((row) =>
+    typeof row === "object" && row !== null
+      ? [buildRowFromMapping(row as Record<string, unknown>, mapping)]
+      : [],
+  );
   await upsertRows(
     userId,
     config.spreadsheetId,
@@ -278,6 +327,7 @@ const sheetsFindRowsHandler: Handler = async (step, ctx, userId) => {
 
 const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
   const config = cfg<SheetsUpdateRowCfg>(step);
+  const mapping = normalizeMappedFields(config.mappedFields);
   const upstreamRows = ctx.getUpstreamRows(step.position);
   if (upstreamRows.length === 0) {
     return {
@@ -287,15 +337,18 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
     };
   }
 
-  const projected = projectRows(upstreamRows, Object.keys(config.mappedFields));
-  const firstRow = projected[0] ?? {};
+  const firstUpstream =
+    typeof upstreamRows[0] === "object" && upstreamRows[0] !== null
+      ? (upstreamRows[0] as Record<string, unknown>)
+      : {};
+  const builtRow = buildRowFromMapping(firstUpstream, mapping);
 
   const { row, updatedFields } = await updateRow(
     userId,
     config.spreadsheetId,
     config.tabName,
     config.rowIdentifier,
-    firstRow,
+    builtRow,
   );
 
   const outputRow = { row, status: "updated" as const, updatedFields };

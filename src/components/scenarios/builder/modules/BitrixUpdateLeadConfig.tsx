@@ -17,6 +17,7 @@ interface BitrixUpdateLeadConfigProps {
   onChange: (config: Record<string, unknown>) => void;
   errors?: Record<string, string>;
   prevStepOutputColumns?: string[];
+  panelVisible?: boolean;
 }
 
 export function BitrixUpdateLeadConfig({
@@ -24,6 +25,7 @@ export function BitrixUpdateLeadConfig({
   onChange,
   errors,
   prevStepOutputColumns = [],
+  panelVisible,
 }: BitrixUpdateLeadConfigProps) {
   const leadId = typeof config.leadId === "string" ? config.leadId : "";
   const title = typeof config.title === "string" ? config.title : "";
@@ -37,6 +39,7 @@ export function BitrixUpdateLeadConfig({
         value={leadId}
         onChange={(value) => onChange({ ...config, leadId: value })}
         upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
         placeholder="4242"
         required
         error={errors?.leadId}
@@ -47,6 +50,7 @@ export function BitrixUpdateLeadConfig({
         value={title}
         onChange={(value) => onChange({ ...config, title: value })}
         upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
         placeholder="Updated lead title"
       />
 
@@ -76,6 +80,7 @@ export function BitrixUpdateLeadConfig({
         value={comments}
         onChange={(value) => onChange({ ...config, comments: value })}
         upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
         placeholder="Additional notes..."
         multiline
       />

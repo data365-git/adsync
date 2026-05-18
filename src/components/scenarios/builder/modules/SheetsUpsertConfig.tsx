@@ -22,6 +22,19 @@ interface SheetsUpsertConfigProps {
   prevStepModuleType?: ModuleType;
 }
 
+/** Coerce legacy string[] config into Record<string, string>. */
+function toMappedFieldsRecord(raw: unknown): Record<string, string> {
+  if (Array.isArray(raw)) {
+    const result: Record<string, string> = {};
+    for (const f of raw as string[]) result[f] = "";
+    return result;
+  }
+  if (raw !== null && typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, string>;
+  }
+  return {};
+}
+
 export function SheetsUpsertConfig({
   config,
   onChange,
@@ -31,15 +44,9 @@ export function SheetsUpsertConfig({
   const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
   const tabName = typeof config.tabName === "string" ? config.tabName : "";
   const keyFields = Array.isArray(config.keyFields) ? (config.keyFields as string[]) : [];
-  const mappedFields = Array.isArray(config.mappedFields) ? (config.mappedFields as string[]) : [];
-
-  const mappedFieldValues = (
-    config.mappedFieldValues !== null &&
-    typeof config.mappedFieldValues === "object" &&
-    !Array.isArray(config.mappedFieldValues)
-      ? config.mappedFieldValues
-      : {}
-  ) as Record<string, string>;
+  // Unified shape: mappedFields is Record<column, valueExpr>
+  const mappedFields = toMappedFieldsRecord(config.mappedFields);
+  const pickedColumns = Object.keys(mappedFields);
 
   const { data: resources } = api.connections.googleSheetsResources.useQuery(undefined, {
     staleTime: 60_000,
@@ -81,13 +88,12 @@ export function SheetsUpsertConfig({
       spreadsheetId: newId,
       tabName: "",
       keyFields: [],
-      mappedFields: [],
-      mappedFieldValues: {},
+      mappedFields: {},
     });
   }
 
   function handleTabChange(newTab: string) {
-    onChange({ ...config, tabName: newTab, keyFields: [], mappedFields: [], mappedFieldValues: {} });
+    onChange({ ...config, tabName: newTab, keyFields: [], mappedFields: {} });
   }
 
   function handleKeyFieldToggle(col: string) {
@@ -98,19 +104,17 @@ export function SheetsUpsertConfig({
   }
 
   function handleMappedFieldToggle(col: string) {
-    const next = mappedFields.includes(col)
-      ? mappedFields.filter((f) => f !== col)
-      : [...mappedFields, col];
-    const nextValues = { ...mappedFieldValues };
-    if (!next.includes(col)) delete nextValues[col];
-    onChange({ ...config, mappedFields: next, mappedFieldValues: nextValues });
+    const next = { ...mappedFields };
+    if (col in next) {
+      delete next[col];
+    } else {
+      next[col] = "";
+    }
+    onChange({ ...config, mappedFields: next });
   }
 
-  function handleValueSourceChange(col: string, val: string) {
-    onChange({
-      ...config,
-      mappedFieldValues: { ...mappedFieldValues, [col]: val },
-    });
+  function handleValueExprChange(col: string, val: string) {
+    onChange({ ...config, mappedFields: { ...mappedFields, [col]: val } });
   }
 
   return (
@@ -324,7 +328,7 @@ export function SheetsUpsertConfig({
             {!columnsError && !columnsLoading && columns && columns.length > 0 && (
               <div className="space-y-2 rounded-lg border border-border bg-card p-2">
                 {columns.map((col) => {
-                  const checked = mappedFields.includes(col);
+                  const checked = pickedColumns.includes(col);
                   return (
                     <div key={col} className="flex items-center gap-2">
                       <Checkbox
@@ -343,10 +347,10 @@ export function SheetsUpsertConfig({
                         <Input
                           type="text"
                           placeholder={`{{step_1.${col}}}`}
-                          value={mappedFieldValues[col] ?? ""}
-                          onChange={(e) => handleValueSourceChange(col, e.target.value)}
+                          value={mappedFields[col] ?? ""}
+                          onChange={(e) => handleValueExprChange(col, e.target.value)}
                           className="h-7 text-xs"
-                          aria-label={`Value source for ${col}`}
+                          aria-label={`Value expression for ${col}`}
                         />
                       )}
                     </div>

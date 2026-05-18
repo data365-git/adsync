@@ -236,14 +236,14 @@ export function StepConfigModal({
   }
   const upstreamCatalog = buildUpstreamCatalog(steps, step.position, sheetSample);
   const valuesPanel = (
-    <UpstreamValuesPanel catalog={upstreamCatalog} className="max-h-[60vh]" />
+    <UpstreamValuesPanel catalog={upstreamCatalog} className="h-full" />
   );
 
   return (
     <UpstreamValuesProvider>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[min(96vw,1120px)] max-w-none p-0 sm:max-w-none"
+        className="w-[min(92vw,1200px)] max-w-none p-0 sm:max-w-none"
         showCloseButton
         aria-label={`Configure step ${step.position}`}
       >
@@ -331,21 +331,23 @@ export function StepConfigModal({
         </div>
 
         {/* Body — scrolls when the form is long so the footer stays visible */}
-        <div className="px-6 py-5">
+        <div>
           {activeTab === "lastTest" ? (
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
               <LastTestTab result={lastTest} />
             </div>
           ) : activeTab === "values" && !isTriggerStep ? (
-            <div className="max-h-[60vh] overflow-y-auto">{valuesPanel}</div>
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+              <UpstreamValuesPanel catalog={upstreamCatalog} className="h-full" />
+            </div>
           ) : (
             <div
               className={cn(
-                "grid gap-5",
-                !isTriggerStep && "lg:grid-cols-[minmax(0,7fr)_minmax(260px,3fr)]",
+                "grid gap-0",
+                !isTriggerStep && "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]",
               )}
             >
-              <div className="max-h-[60vh] overflow-y-auto">
+              <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
           {activeTab === "configure" ? (
             renderer ? (
               renderer({
@@ -354,6 +356,7 @@ export function StepConfigModal({
                 errors: showErrors ? errors : undefined,
                 prevStepModuleType,
                 prevStepOutputColumns,
+                panelVisible: !isTriggerStep && upstreamCatalog.length > 0,
               })
             ) : (
               <p className="text-muted-foreground py-6 text-center text-sm">
@@ -365,7 +368,16 @@ export function StepConfigModal({
           )}
               </div>
               {!isTriggerStep ? (
-                <div className="hidden border-l border-border pl-5 lg:block">
+                <div
+                  className={cn(
+                    "hidden lg:flex lg:flex-col",
+                    "border-l border-border",
+                    "bg-muted/40 dark:bg-muted/20",
+                    "rounded-br-lg",
+                    "px-4 py-3",
+                    "max-h-[60vh] overflow-hidden",
+                  )}
+                >
                   {valuesPanel}
                 </div>
               ) : null}

@@ -358,6 +358,176 @@ describe("sheetsUpdateRowHandler", () => {
   });
 });
 
+// ── New contract tests for sheets write modules ───────────────────────────────
+
+describe("buildRowFromMapping", () => {
+  it("interpolates token expressions against the upstream row", async () => {
+    const { buildRowFromMapping } = await import("../module-handlers");
+    const result = buildRowFromMapping(
+      { name: "Alice", email: "alice@example.com" },
+      { name: "Hello {{name}}", email: "{{email}}" },
+    );
+    expect(result).toEqual({ name: "Hello Alice", email: "alice@example.com" });
+  });
+
+  it("falls back to upstream row value when valueExpr is empty (backwards compat)", async () => {
+    const { buildRowFromMapping } = await import("../module-handlers");
+    const result = buildRowFromMapping(
+      { name: "Bob", score: 42 },
+      { name: "", score: "" },
+    );
+    expect(result).toEqual({ name: "Bob", score: 42 });
+  });
+
+  it("uses literal string when no tokens present", async () => {
+    const { buildRowFromMapping } = await import("../module-handlers");
+    const result = buildRowFromMapping(
+      { name: "Charlie" },
+      { status: "Pending" },
+    );
+    expect(result).toEqual({ status: "Pending" });
+  });
+});
+
+describe("sheetsAppendHandler — new Record contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("applies token interpolation from mappedFields Record", async () => {
+    const appendRowsSpy = vi.fn(async () => undefined);
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: appendRowsSpy,
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      readTabRows: vi.fn(),
+      updateRow: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.append");
+
+    const fakeStep = {
+      id: "step_append",
+      moduleType: "sheets.append",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        mappedFields: { name: "Hello {{name}}", email: "{{email}}" },
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [{ name: "Alice", email: "alice@example.com" }],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(1);
+    expect(appendRowsSpy).toHaveBeenCalledWith(
+      "u",
+      "sheet_abc",
+      "Leads",
+      [{ name: "Hello Alice", email: "alice@example.com" }],
+    );
+  });
+
+  it("coerces legacy string[] mappedFields and copies upstream column values", async () => {
+    const appendRowsSpy = vi.fn(async () => undefined);
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: appendRowsSpy,
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      readTabRows: vi.fn(),
+      updateRow: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.append");
+
+    const fakeStep = {
+      id: "step_append_legacy",
+      moduleType: "sheets.append",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        // Legacy: saved as a plain string array
+        mappedFields: ["name", "email"],
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [{ name: "Bob", email: "bob@example.com", extra: "ignored" }],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(1);
+    expect(appendRowsSpy).toHaveBeenCalledWith(
+      "u",
+      "sheet_abc",
+      "Leads",
+      [{ name: "Bob", email: "bob@example.com" }],
+    );
+  });
+});
+
+describe("sheetsUpdateRowHandler — new Record contract", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("builds the write row with token interpolation from mappedFields Record", async () => {
+    const updateRowSpy = vi.fn(async () => ({
+      row: 5,
+      updatedFields: ["name", "status"],
+    }));
+
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      readTabRows: vi.fn(),
+      updateRow: updateRowSpy,
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.update_row");
+
+    const fakeStep = {
+      id: "step_upd2",
+      moduleType: "sheets.update_row",
+      config: {
+        spreadsheetId: "sheet_abc",
+        tabName: "Leads",
+        rowIdentifier: "id=99",
+        mappedFields: { name: "{{name}}", status: "Active" },
+      },
+      position: 3,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [{ name: "Carol", status: "Pending" }],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(1);
+    expect(updateRowSpy).toHaveBeenCalledWith(
+      "u",
+      "sheet_abc",
+      "Leads",
+      "id=99",
+      { name: "Carol", status: "Active" },
+    );
+  });
+});
+
 describe("bitrixCreateLeadHandler", () => {
   beforeEach(() => {
     vi.resetModules();

@@ -44,6 +44,9 @@ interface ModuleConfigProps {
   errors?: Record<string, string>;
   prevStepModuleType?: ModuleType;
   prevStepOutputColumns?: string[];
+  /** True when the right-rail values panel is visible (lg breakpoint) — lets
+   * FieldMapper suppress its duplicate "+" popover at that size. */
+  panelVisible?: boolean;
 }
 
 // ─── MODULE_CONFIG_MAP ────────────────────────────────────────────────────────
@@ -120,20 +123,22 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   "sheets.create_tab": ({ config, onChange, errors }) => (
     <SheetsCreateTabConfig config={config} onChange={onChange} errors={errors} />
   ),
-  "bitrix.create_lead": ({ config, onChange, errors, prevStepOutputColumns }) => (
+  "bitrix.create_lead": ({ config, onChange, errors, prevStepOutputColumns, panelVisible }) => (
     <BitrixCreateLeadConfig
       config={config}
       onChange={onChange}
       errors={errors}
       prevStepOutputColumns={prevStepOutputColumns}
+      panelVisible={panelVisible}
     />
   ),
-  "bitrix.update_lead": ({ config, onChange, errors, prevStepOutputColumns }) => (
+  "bitrix.update_lead": ({ config, onChange, errors, prevStepOutputColumns, panelVisible }) => (
     <BitrixUpdateLeadConfig
       config={config}
       onChange={onChange}
       errors={errors}
       prevStepOutputColumns={prevStepOutputColumns}
+      panelVisible={panelVisible}
     />
   ),
   "bitrix.find_leads": ({ config, onChange, errors }) => (
@@ -172,6 +177,18 @@ function validateStepConfig(
     case "trigger.manual":
       // No required fields
       break;
+    case "trigger.watch.sheets_new_rows": {
+      if (!config.spreadsheetId || (typeof config.spreadsheetId === "string" && !config.spreadsheetId.trim())) {
+        errors.spreadsheetId = "Select a spreadsheet — the trigger reads new rows from this sheet.";
+      }
+      if (!config.tabName || (typeof config.tabName === "string" && !config.tabName.trim())) {
+        errors.tabName = "Select a tab — the trigger watches new rows in this tab.";
+      }
+      if (!config.watchColumn || (typeof config.watchColumn === "string" && !config.watchColumn.trim())) {
+        errors.watchColumn = "Select a watch column — used to detect new rows uniquely.";
+      }
+      break;
+    }
     case "fb.account_insights":
     case "fb.campaign_insights":
     case "fb.ad_insights": {
@@ -195,7 +212,13 @@ function validateStepConfig(
         errors.tabName = "A tab name is required — the tab must already exist in your spreadsheet.";
       }
       const mf = config.mappedFields;
-      if (!Array.isArray(mf) || mf.length === 0) {
+      const mfKeys =
+        mf !== null && typeof mf === "object" && !Array.isArray(mf)
+          ? Object.keys(mf)
+          : Array.isArray(mf)
+            ? mf
+            : [];
+      if (mfKeys.length === 0) {
         errors.mappedFields = "Select at least one field — otherwise the row would be written with no columns.";
       }
       break;
@@ -212,8 +235,69 @@ function validateStepConfig(
         errors.keyFields = "At least one key field is required.";
       }
       const mf2 = config.mappedFields;
-      if (!Array.isArray(mf2) || mf2.length === 0) {
+      const mf2Keys =
+        mf2 !== null && typeof mf2 === "object" && !Array.isArray(mf2)
+          ? Object.keys(mf2)
+          : Array.isArray(mf2)
+            ? mf2
+            : [];
+      if (mf2Keys.length === 0) {
         errors.mappedFields = "Select at least one field — otherwise the row would be written with no columns.";
+      }
+      break;
+    }
+    case "sheets.find_rows": {
+      if (!config.spreadsheetId || (typeof config.spreadsheetId === "string" && !config.spreadsheetId.trim())) {
+        errors.spreadsheetId = "A spreadsheet ID is required.";
+      }
+      if (!config.tabName || (typeof config.tabName === "string" && !config.tabName.trim())) {
+        errors.tabName = "A tab name is required.";
+      }
+      if (!config.searchColumn || (typeof config.searchColumn === "string" && !config.searchColumn.trim())) {
+        errors.searchColumn = "Pick a column to search by.";
+      }
+      if (typeof config.searchValue !== "string" || config.searchValue.length === 0) {
+        errors.searchValue = "Provide a value to search for (or a token like {{id}}).";
+      }
+      break;
+    }
+    case "bitrix.create_lead": {
+      if (!config.title || (typeof config.title === "string" && !config.title.trim())) {
+        errors.title = "Lead title is required (literal or token).";
+      }
+      if (!config.name || (typeof config.name === "string" && !config.name.trim())) {
+        errors.name = "First name is required.";
+      }
+      if (!config.sourceId || (typeof config.sourceId === "string" && !config.sourceId.trim())) {
+        errors.sourceId = "Pick a source.";
+      }
+      break;
+    }
+    case "bitrix.update_lead": {
+      if (!config.leadId || (typeof config.leadId === "string" && !config.leadId.trim())) {
+        errors.leadId = "Lead ID is required (literal number or token like {{leadId}}).";
+      }
+      break;
+    }
+    case "sheets.update_row": {
+      if (!config.spreadsheetId || (typeof config.spreadsheetId === "string" && !config.spreadsheetId.trim())) {
+        errors.spreadsheetId = "A spreadsheet ID is required.";
+      }
+      if (!config.tabName || (typeof config.tabName === "string" && !config.tabName.trim())) {
+        errors.tabName = "A tab name is required.";
+      }
+      if (!config.rowIdentifier || (typeof config.rowIdentifier === "string" && !config.rowIdentifier.trim())) {
+        errors.rowIdentifier = "A row identifier is required (e.g. \"3\" or \"id=42\").";
+      }
+      const umf = config.mappedFields;
+      const umfKeys =
+        umf !== null && typeof umf === "object" && !Array.isArray(umf)
+          ? Object.keys(umf)
+          : Array.isArray(umf)
+            ? umf
+            : [];
+      if (umfKeys.length === 0) {
+        errors.mappedFields = "Select at least one field to update.";
       }
       break;
     }
@@ -269,8 +353,13 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
     case "sheets.append": {
       const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
       const tabName = typeof config.tabName === "string" ? config.tabName : null;
-      const mappedFields = Array.isArray(config.mappedFields) ? config.mappedFields : [];
-      const fieldCount = mappedFields.length;
+      const mfRaw = config.mappedFields;
+      const fieldCount =
+        mfRaw !== null && typeof mfRaw === "object" && !Array.isArray(mfRaw)
+          ? Object.keys(mfRaw).length
+          : Array.isArray(mfRaw)
+            ? mfRaw.length
+            : 0;
       if (!spreadsheetId && !tabName) return "Not configured";
       return `${spreadsheetId ? "My Tracker" : "—"} / ${tabName ?? "—"} · ${fieldCount} field${fieldCount !== 1 ? "s" : ""}`;
     }
@@ -278,12 +367,17 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
     case "sheets.upsert": {
       const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
       const tabName = typeof config.tabName === "string" ? config.tabName : null;
-      const mappedFields = Array.isArray(config.mappedFields) ? config.mappedFields : [];
+      const mfRaw2 = config.mappedFields;
+      const fieldCount2 =
+        mfRaw2 !== null && typeof mfRaw2 === "object" && !Array.isArray(mfRaw2)
+          ? Object.keys(mfRaw2).length
+          : Array.isArray(mfRaw2)
+            ? mfRaw2.length
+            : 0;
       const keyFields = Array.isArray(config.keyFields) ? (config.keyFields as string[]) : [];
-      const fieldCount = mappedFields.length;
       if (!spreadsheetId && !tabName) return "Not configured";
       const keyStr = keyFields.length > 0 ? keyFields.join("+") : "—";
-      return `${spreadsheetId ? "My Tracker" : "—"} / ${tabName ?? "—"} · ${fieldCount} field${fieldCount !== 1 ? "s" : ""} · key: ${keyStr}`;
+      return `${spreadsheetId ? "My Tracker" : "—"} / ${tabName ?? "—"} · ${fieldCount2} field${fieldCount2 !== 1 ? "s" : ""} · key: ${keyStr}`;
     }
 
     case "trigger.watch.bitrix_new_lead": {

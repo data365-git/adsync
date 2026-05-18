@@ -11,7 +11,6 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
-import { pickTokens } from "~/server/core/template";
 import { useUpstreamValues } from "../UpstreamValuesContext";
 
 type FieldMapperProps = {
@@ -23,6 +22,9 @@ type FieldMapperProps = {
   multiline?: boolean;
   required?: boolean;
   error?: string;
+  /** When true the right-rail values panel is visible at large breakpoints —
+   * hide the "+" popover there (it duplicates the rail). */
+  panelVisible?: boolean;
 };
 
 export function FieldMapper({
@@ -34,13 +36,15 @@ export function FieldMapper({
   multiline,
   required,
   error,
+  panelVisible,
 }: FieldMapperProps) {
   const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
-  const tokens = pickTokens(value);
   const fieldId = React.useId();
   const inputName = `mapper-${fieldId}`;
   const valuesContext = useUpstreamValues();
+  const [isDropTarget, setIsDropTarget] = React.useState(false);
 
+  // ── Shared insert logic — used by both click-to-insert and DnD drop ────────
   const insertText = React.useCallback((token: string) => {
     const el = inputRef.current;
     if (!el) {
@@ -66,8 +70,34 @@ export function FieldMapper({
     insertText(`{{${column}}}`);
   }
 
-  const controlClassName =
-    "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring min-h-11 w-full rounded-lg border bg-transparent px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-2";
+  // ── DnD handlers ───────────────────────────────────────────────────────────
+  function handleDragOver(e: React.DragEvent<HTMLElement>) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setIsDropTarget(true);
+  }
+
+  function handleDragLeave() {
+    setIsDropTarget(false);
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLElement>) {
+    e.preventDefault();
+    setIsDropTarget(false);
+    const text = e.dataTransfer.getData("text/plain");
+    if (!text) return;
+    insertText(text);
+  }
+
+  const dropRingClass = isDropTarget
+    ? "outline outline-2 outline-emerald-500 outline-offset-2"
+    : "";
+
+  const controlClassName = cn(
+    "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring",
+    "min-h-11 w-full rounded-lg border bg-transparent px-3 py-2 text-sm transition-colors outline-none focus-visible:ring-2",
+    dropRingClass,
+  );
 
   return (
     <div className="space-y-1.5">
@@ -79,18 +109,6 @@ export function FieldMapper({
           </span>
         ) : null}
       </label>
-      {tokens.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {tokens.map((token, index) => (
-            <span
-              key={`${token}-${index}`}
-              className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
-            >
-              {token}
-            </span>
-          ))}
-        </div>
-      ) : null}
       <div className="flex gap-2">
         {multiline ? (
           <textarea
@@ -104,6 +122,9 @@ export function FieldMapper({
             placeholder={placeholder}
             onFocus={() => valuesContext?.setFocusedMapper(fieldId)}
             onChange={(event) => onChange(event.target.value)}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             aria-invalid={!!error}
             className={cn(controlClassName, "resize-y")}
           />
@@ -118,13 +139,25 @@ export function FieldMapper({
             placeholder={placeholder}
             onFocus={() => valuesContext?.setFocusedMapper(fieldId)}
             onChange={(event) => onChange(event.target.value)}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             aria-invalid={!!error}
-            className="min-h-11"
+            className={cn("min-h-11", dropRingClass)}
           />
         )}
         {upstreamColumns.length > 0 ? (
           <Popover>
-            <PopoverTrigger render={<Button type="button" variant="outline" size="icon" />}>
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className={cn(panelVisible && "lg:hidden")}
+                />
+              }
+            >
               <Plus className="size-4" aria-hidden="true" />
               <span className="sr-only">Insert upstream column</span>
             </PopoverTrigger>

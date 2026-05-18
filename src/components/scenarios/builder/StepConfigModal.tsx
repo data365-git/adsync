@@ -18,6 +18,9 @@ import { getIntegrationMeta } from "~/lib/integration-icons";
 import { getModule } from "~/lib/modules";
 import { api } from "~/trpc/react";
 import type { ModuleType } from "~/server/mocks/types";
+import { UpstreamValuesPanel } from "./UpstreamValuesPanel";
+import { UpstreamValuesProvider } from "./UpstreamValuesContext";
+import { buildUpstreamCatalog } from "./upstream-catalog";
 
 // ─── Sample tab (lifted out of ModuleConfigShell so the modal can reuse it) ─
 
@@ -127,7 +130,7 @@ export function StepConfigModal({
   onConfigChange,
   showErrors,
 }: StepConfigModalProps) {
-  const [activeTab, setActiveTab] = React.useState<"configure" | "sample">(
+  const [activeTab, setActiveTab] = React.useState<"configure" | "sample" | "values">(
     "configure",
   );
 
@@ -175,10 +178,11 @@ export function StepConfigModal({
       fallbackColumns: sample ? Object.keys(sample) : [],
     };
   }, [step, steps]);
-  const { data: liveColumns } = api.connections.listSheetColumns.useQuery(
+  const { data: sheetSample } = api.connections.listSheetSample.useQuery(
     {
       spreadsheetId: upstreamInfo.spreadsheetId,
       tabName: upstreamInfo.tabName,
+      rowCount: 1,
     },
     {
       enabled:
@@ -186,7 +190,7 @@ export function StepConfigModal({
       staleTime: 60_000,
     },
   );
-  const prevStepOutputColumns = liveColumns ?? upstreamInfo.fallbackColumns;
+  const prevStepOutputColumns = sheetSample?.columns ?? upstreamInfo.fallbackColumns;
 
   if (!step) return null;
 
@@ -200,11 +204,17 @@ export function StepConfigModal({
   const errors = showErrors
     ? validateStepConfig(step.moduleType, step.config)
     : {};
+  const isTriggerStep = step.position === 1;
+  const upstreamCatalog = buildUpstreamCatalog(steps, step.position, sheetSample);
+  const valuesPanel = (
+    <UpstreamValuesPanel catalog={upstreamCatalog} className="max-h-[60vh]" />
+  );
 
   return (
+    <UpstreamValuesProvider>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[min(96vw,820px)] max-w-none p-0 sm:max-w-none"
+        className="w-[min(96vw,1120px)] max-w-none p-0 sm:max-w-none"
         showCloseButton
         aria-label={`Configure step ${step.position}`}
       >
@@ -258,11 +268,37 @@ export function StepConfigModal({
             >
               Sample
             </button>
+            {!isTriggerStep ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "values"}
+                onClick={() => setActiveTab("values")}
+                className={cn(
+                  "focus-visible:ring-ring flex-1 rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none lg:hidden",
+                  activeTab === "values"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Values from previous steps
+              </button>
+            ) : null}
           </div>
         </div>
 
         {/* Body — scrolls when the form is long so the footer stays visible */}
-        <div className="max-h-[60vh] overflow-y-auto px-6 py-5">
+        <div className="px-6 py-5">
+          {activeTab === "values" && !isTriggerStep ? (
+            <div className="max-h-[60vh] overflow-y-auto">{valuesPanel}</div>
+          ) : (
+            <div
+              className={cn(
+                "grid gap-5",
+                !isTriggerStep && "lg:grid-cols-[minmax(0,7fr)_minmax(260px,3fr)]",
+              )}
+            >
+              <div className="max-h-[60vh] overflow-y-auto">
           {activeTab === "configure" ? (
             renderer ? (
               renderer({
@@ -280,6 +316,14 @@ export function StepConfigModal({
           ) : (
             <SampleTab moduleType={step.moduleType} />
           )}
+              </div>
+              {!isTriggerStep ? (
+                <div className="hidden border-l border-border pl-5 lg:block">
+                  {valuesPanel}
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Footer — Done closes the modal. Autosave persists the config in the background. */}
@@ -296,5 +340,6 @@ export function StepConfigModal({
         </div>
       </DialogContent>
     </Dialog>
+    </UpstreamValuesProvider>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "~/components/ui/popover";
 import { cn } from "~/lib/utils";
 import { pickTokens } from "~/server/core/template";
+import { useUpstreamValues } from "../UpstreamValuesContext";
 
 type FieldMapperProps = {
   label: string;
@@ -38,9 +39,9 @@ export function FieldMapper({
   const tokens = pickTokens(value);
   const fieldId = React.useId();
   const inputName = `mapper-${fieldId}`;
+  const valuesContext = useUpstreamValues();
 
-  function insertToken(column: string) {
-    const token = `{{${column}}}`;
+  const insertText = React.useCallback((token: string) => {
     const el = inputRef.current;
     if (!el) {
       onChange(`${value}${token}`);
@@ -55,6 +56,14 @@ export function FieldMapper({
       const cursor = start + token.length;
       el.setSelectionRange(cursor, cursor);
     });
+  }, [onChange, value]);
+
+  React.useEffect(() => {
+    return valuesContext?.registerMapper(fieldId, insertText);
+  }, [fieldId, insertText, valuesContext]);
+
+  function insertToken(column: string) {
+    insertText(`{{${column}}}`);
   }
 
   const controlClassName =
@@ -93,6 +102,7 @@ export function FieldMapper({
             rows={3}
             value={value}
             placeholder={placeholder}
+            onFocus={() => valuesContext?.setFocusedMapper(fieldId)}
             onChange={(event) => onChange(event.target.value)}
             aria-invalid={!!error}
             className={cn(controlClassName, "resize-y")}
@@ -106,6 +116,7 @@ export function FieldMapper({
             spellCheck={false}
             value={value}
             placeholder={placeholder}
+            onFocus={() => valuesContext?.setFocusedMapper(fieldId)}
             onChange={(event) => onChange(event.target.value)}
             aria-invalid={!!error}
             className="min-h-11"
@@ -137,7 +148,7 @@ export function FieldMapper({
       </div>
       {upstreamColumns.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Connect a trigger to enable column mapping.
+          Pick a value from the right rail or configure the trigger to enable mapping.
         </p>
       ) : null}
       {error ? (

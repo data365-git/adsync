@@ -128,8 +128,13 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
       prevStepOutputColumns={prevStepOutputColumns}
     />
   ),
-  "bitrix.update_lead": ({ config, onChange, errors }) => (
-    <BitrixUpdateLeadConfig config={config} onChange={onChange} errors={errors} />
+  "bitrix.update_lead": ({ config, onChange, errors, prevStepOutputColumns }) => (
+    <BitrixUpdateLeadConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepOutputColumns={prevStepOutputColumns}
+    />
   ),
   "bitrix.find_leads": ({ config, onChange, errors }) => (
     <BitrixFindLeadsConfig config={config} onChange={onChange} errors={errors} />

@@ -573,6 +573,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
           if (!o) setExpandedStepId(null);
         }}
         step={steps.find((s) => s.id === expandedStepId) ?? null}
+        scenarioId={scenario.id}
         steps={steps}
         prevStepModuleType={
           (() => {

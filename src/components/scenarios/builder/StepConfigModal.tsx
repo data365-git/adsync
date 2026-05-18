@@ -16,11 +16,13 @@ import {
 } from "./StepCard";
 import { getIntegrationMeta } from "~/lib/integration-icons";
 import { getModule } from "~/lib/modules";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 import type { ModuleType } from "~/server/mocks/types";
 import { UpstreamValuesPanel } from "./UpstreamValuesPanel";
 import { UpstreamValuesProvider } from "./UpstreamValuesContext";
 import { buildUpstreamCatalog } from "./upstream-catalog";
+
+type StepTestResult = RouterOutputs["scenarios"]["testRunStep"];
 
 // ─── Sample tab (lifted out of ModuleConfigShell so the modal can reuse it) ─
 
@@ -112,6 +114,7 @@ interface StepConfigModalProps {
   onOpenChange: (open: boolean) => void;
   /** The step being configured. Null means closed. */
   step: DraftStep | null;
+  scenarioId?: string;
   /** Module type of the step immediately upstream — used by FieldMappingPicker etc. */
   prevStepModuleType?: ModuleType;
   steps?: DraftStep[];
@@ -125,14 +128,22 @@ export function StepConfigModal({
   open,
   onOpenChange,
   step,
+  scenarioId,
   prevStepModuleType,
   steps = [],
   onConfigChange,
   showErrors,
 }: StepConfigModalProps) {
-  const [activeTab, setActiveTab] = React.useState<"configure" | "sample" | "values">(
+  const [activeTab, setActiveTab] = React.useState<"configure" | "sample" | "values" | "lastTest">(
     "configure",
   );
+  const [lastTest, setLastTest] = React.useState<StepTestResult | null>(null);
+  const testStepMutation = api.scenarios.testRunStep.useMutation({
+    onSuccess: (result) => {
+      setLastTest(result);
+      setActiveTab("lastTest");
+    },
+  });
 
   React.useEffect(() => {
     if (open) setActiveTab("configure");
@@ -204,7 +215,25 @@ export function StepConfigModal({
   const errors = showErrors
     ? validateStepConfig(step.moduleType, step.config)
     : {};
+  const validationErrors = validateStepConfig(step.moduleType, step.config);
   const isTriggerStep = step.position === 1;
+  const testDisabled =
+    isTriggerStep ||
+    !scenarioId ||
+    Object.keys(validationErrors).length > 0 ||
+    testStepMutation.isPending;
+  const isBitrixStep = step.moduleType.startsWith("bitrix.");
+  const stepId = step.id;
+  function handleTestStep() {
+    if (!scenarioId || testDisabled) return;
+    if (
+      isBitrixStep &&
+      !window.confirm("Testing this Bitrix step can create or update real CRM records. Continue?")
+    ) {
+      return;
+    }
+    testStepMutation.mutate({ scenarioId, stepId });
+  }
   const upstreamCatalog = buildUpstreamCatalog(steps, step.position, sheetSample);
   const valuesPanel = (
     <UpstreamValuesPanel catalog={upstreamCatalog} className="max-h-[60vh]" />
@@ -284,12 +313,30 @@ export function StepConfigModal({
                 Values from previous steps
               </button>
             ) : null}
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "lastTest"}
+              onClick={() => setActiveTab("lastTest")}
+              className={cn(
+                "focus-visible:ring-ring flex-1 rounded-md px-3 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none",
+                activeTab === "lastTest"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Last test
+            </button>
           </div>
         </div>
 
         {/* Body — scrolls when the form is long so the footer stays visible */}
         <div className="px-6 py-5">
-          {activeTab === "values" && !isTriggerStep ? (
+          {activeTab === "lastTest" ? (
+            <div className="max-h-[60vh] overflow-y-auto">
+              <LastTestTab result={lastTest} />
+            </div>
+          ) : activeTab === "values" && !isTriggerStep ? (
             <div className="max-h-[60vh] overflow-y-auto">{valuesPanel}</div>
           ) : (
             <div
@@ -329,17 +376,121 @@ export function StepConfigModal({
         {/* Footer — Done closes the modal. Autosave persists the config in the background. */}
         <div className="border-border bg-muted/30 flex items-center justify-between gap-3 border-t px-6 py-3 text-xs text-muted-foreground">
           <span>Changes are saved automatically.</span>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => onOpenChange(false)}
-            aria-label="Close configuration"
-          >
-            Done
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={testDisabled}
+              onClick={handleTestStep}
+              title={
+                !scenarioId
+                  ? "Save the scenario before testing a step."
+                  : isTriggerStep
+                    ? "Use Run once to test trigger steps."
+                    : undefined
+              }
+            >
+              {testStepMutation.isPending ? "Testing..." : "Test this step"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              aria-label="Close configuration"
+            >
+              Done
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
     </UpstreamValuesProvider>
+  );
+}
+
+function valueToString(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return value.toString();
+  return JSON.stringify(value);
+}
+
+function KeyValueTable({ record }: { record: Record<string, unknown> }) {
+  return (
+    <table className="w-full text-xs">
+      <tbody>
+        {Object.entries(record).map(([key, value]) => (
+          <tr key={key} className="border-b border-border/70 last:border-0">
+            <th className="w-36 px-2 py-1.5 text-left align-top font-mono font-medium text-muted-foreground">
+              {key}
+            </th>
+            <td className="px-2 py-1.5 font-mono">{valueToString(value)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function RowsTable({ rows }: { rows: unknown[] }) {
+  const objectRows = rows.filter(
+    (row): row is Record<string, unknown> => typeof row === "object" && row !== null,
+  );
+  if (objectRows.length === 0) {
+    return <p className="text-xs text-muted-foreground">(no rows)</p>;
+  }
+  return <KeyValueTable record={objectRows[0] ?? {}} />;
+}
+
+function LastTestTab({ result }: { result: StepTestResult | null }) {
+  if (!result) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        No test has been run for this step in this session.
+      </p>
+    );
+  }
+  const outputRecord =
+    typeof result.outputSampleRows[0] === "object" && result.outputSampleRows[0] !== null
+      ? (result.outputSampleRows[0] as Record<string, unknown>)
+      : {};
+  return (
+    <div className="space-y-4">
+      {result.error ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {result.error}
+        </div>
+      ) : null}
+      <details open className="rounded-lg border border-border bg-muted/30">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium">Input</summary>
+        <div className="space-y-3 px-3 pb-3">
+          <p className="text-xs text-muted-foreground">
+            Duration: {result.durationMs}ms
+          </p>
+          <KeyValueTable record={result.inputConfig as Record<string, unknown>} />
+          <RowsTable rows={result.inputSampleRows} />
+        </div>
+      </details>
+      <details open className="rounded-lg border border-border bg-muted/30">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium">Output</summary>
+        <div className="space-y-3 px-3 pb-3">
+          <p className="text-xs text-muted-foreground">
+            Rows produced: {result.rowCount}
+          </p>
+          {result.leadUrl ? (
+            <a
+              href={result.leadUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex rounded-md border border-border bg-background px-2 py-1 text-xs font-medium hover:bg-muted"
+            >
+              Open lead URL
+            </a>
+          ) : null}
+          <KeyValueTable record={outputRecord} />
+        </div>
+      </details>
+    </div>
   );
 }

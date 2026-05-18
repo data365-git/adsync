@@ -41,9 +41,10 @@ This script seeds the scenario via Prisma if it does not exist, triggers a manua
 
 After running, verify:
 
-1. **Run page** - `http://localhost:3000/runs/<runId>` shows 5 green step cards. Step 3 reports 1 matching row. Step 4 reports 1 row updated. Step 5 reports 1 lead created with a real Bitrix lead ID.
-2. **Google Sheet** - row 2 of the Leads tab now has `status: processed`. The `id`, `name`, and `email` columns are unchanged.
-3. **Bitrix24** - a new lead exists titled "Smoke test - Alice" with email `alice@example.com`, source `Other`, and the auto-created comment.
+1. **Run page** - `http://localhost:3000/runs/<runId>` shows 5 green step cards. Each step card has separate **Input** and **Output** panels. Step 3 reports 1 matching row. Step 4 reports 1 row updated. Step 5 reports 1 lead created with a real Bitrix lead ID and a clickable Bitrix lead URL when the webhook URL can be parsed.
+2. **Run page data flow** - Step 5's **Input** panel shows the resolved Bitrix config that was sent to the handler, and **Rows in** shows the upstream Sheets row that drove the lead creation. **Output** shows the created lead row.
+3. **Google Sheet** - row 2 of the Leads tab now has `status: processed`. The `id`, `name`, and `email` columns are unchanged.
+4. **Bitrix24** - a new lead exists titled "Smoke test - Alice" with email `alice@example.com`, source `Other`, and the auto-created comment.
 
 ### What Failure Looks Like
 
@@ -65,7 +66,7 @@ In the run detail page, click "Re-run from this step" on step 4. This should pro
 - Sample rows in RunLog are truncated to 3. Re-running uses truncated upstream data.
 - Bitrix lead creation is not idempotent. Re-running creates duplicate leads. Future v2 enhancement: dedupe by email or phone.
 - `bitrix.update_lead` is not in this scenario. To test it, manually add a step at position 6 with a known lead ID and `statusId=IN_PROCESS`.
-- Template interpolation is not assumed here. The seeded smoke scenario uses literal values so Phase A can verify real data movement without depending on template expansion.
+- The seeded smoke scenario still uses literal values so Phase A can verify real data movement independently. To manually verify template interpolation, change the Bitrix title to `Smoke test - {{name}}`, rerun, and confirm Step 5's **Input** panel shows `Smoke test - Alice`.
 
 ## When This Stops Being Canonical
 

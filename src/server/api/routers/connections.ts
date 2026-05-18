@@ -235,6 +235,45 @@ export const connectionsRouter = createTRPCRouter({
     }),
 
   /**
+   * Read the header row plus the first data rows from a tab for Make-style
+   * upstream value previews.
+   */
+  listSheetSample: authedProcedure
+    .input(
+      z.object({
+        spreadsheetId: z.string().min(1),
+        tabName: z.string().min(1),
+        rowCount: z.number().int().min(1).max(10).optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const conn = await db.oAuthConnection.findUnique({
+        where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
+      });
+      if (conn?.status !== ConnectionStatus.CONNECTED) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
+      }
+
+      const rowCount = input.rowCount ?? 1;
+      const auth = await getAuthedClient(ctx.userId);
+      const sheets = google.sheets({ version: "v4", auth });
+      const res = await sheets.spreadsheets.values.get({
+        spreadsheetId: input.spreadsheetId,
+        range: `${input.tabName}!A1:ZZ${rowCount + 1}`,
+      });
+
+      const values = (res.data.values ?? []) as string[][];
+      const columns = (values[0] ?? []).map((value) => value.trim()).filter(Boolean);
+      const rows = values.slice(1, rowCount + 1).map((row) =>
+        Object.fromEntries(
+          columns.map((column, index) => [column, row[index] ?? ""]),
+        ),
+      );
+
+      return { columns, rows };
+    }),
+
+  /**
    * List Bitrix24 deal categories (pipelines) from the configured webhook.
    * The lead pipeline is always singular in Bitrix24 — we return it as a fixed entry
    * and append the deal categories from crm.dealcategory.list.

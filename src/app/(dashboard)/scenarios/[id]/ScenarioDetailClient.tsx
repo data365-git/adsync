@@ -104,6 +104,7 @@ import { TestRunPanel } from "~/components/scenarios/builder/TestRunPanel";
 import { UnsavedChangesGuard } from "~/components/scenarios/builder/UnsavedChangesGuard";
 import { RunsTab } from "~/components/scenarios/builder/RunsTab";
 import { SettingsTab } from "~/components/scenarios/builder/SettingsTab";
+import { RunResultsDrawer } from "~/components/scenarios/builder/RunResultsDrawer";
 import { InfoIcon } from "lucide-react";
 import type { Run, ModuleType } from "~/server/mocks/types";
 
@@ -165,6 +166,7 @@ interface ScenarioBuilderWithTabsProps {
 
 function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWithTabsProps) {
   const router = useRouter();
+  const utils = api.useUtils();
   const [tab, setTab] = useQueryState("tab", { defaultValue: "builder" });
 
   const [name, setName] = React.useState(scenario.name);
@@ -188,6 +190,7 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   const [discardDialogOpen, setDiscardDialogOpen] = React.useState(false);
   const [showTestPanel, setShowTestPanel] = React.useState(false);
   const [testResults, setTestResults] = React.useState<TestStepResult[]>([]);
+  const [inlineRunId, setInlineRunId] = React.useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null);
   const [isAutosaving, setIsAutosaving] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -606,6 +609,10 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         steps={steps}
         scenarioId={scenario.id}
         scenarioRuns={scenarioRuns}
+        onRunComplete={(runId) => {
+          setInlineRunId(runId);
+          void utils.runs.list.invalidate();
+        }}
       />
       {/* Spacer to push content below the fixed header */}
       <div style={{ height: BUILDER_HEADER_HEIGHT_PX }} aria-hidden />
@@ -660,6 +667,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
           }}
         />
       )}
+
+      <RunResultsDrawer runId={inlineRunId} onClose={() => setInlineRunId(null)} />
     </>
   );
 }

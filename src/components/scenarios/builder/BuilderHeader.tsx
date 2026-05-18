@@ -19,7 +19,6 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
-import { useRouter } from "next/navigation";
 import type { DraftStep } from "./StepCard";
 import type { Run } from "~/server/mocks/types";
 
@@ -47,6 +46,7 @@ interface BuilderHeaderProps {
   scenarioId?: string;
   /** Run history — kept for API compatibility */
   scenarioRuns?: Run[];
+  onRunComplete?: (runId: string) => void;
 }
 
 /**
@@ -76,8 +76,8 @@ export function BuilderHeader({
   onBack,
   scenarioId,
   scenarioRuns,
+  onRunComplete,
 }: BuilderHeaderProps) {
-  const router = useRouter();
   const [isEditingName, setIsEditingName] = React.useState(false);
   const [editValue, setEditValue] = React.useState(name);
   const nameInputRef = React.useRef<HTMLInputElement>(null);
@@ -96,7 +96,8 @@ export function BuilderHeader({
     try {
       const run = await runNowMutation.mutateAsync({ id: scenarioId });
       await new Promise<void>((resolve) => setTimeout(resolve, 600));
-      router.push(`/runs/${run.id}`);
+      onRunComplete?.(run.id);
+      setIsRunningNow(false);
     } catch {
       setIsRunningNow(false);
     }

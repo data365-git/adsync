@@ -816,47 +816,6 @@ const PHASE_3_MODULES: ModuleDefinition[] = [
     sampleOutput: [{ tabName: "Leads_2025", created: true }],
   },
   {
-    id: "sheets.watch_new_rows",
-    name: "Watch — New Rows",
-    shortName: "Watch New Rows",
-    description:
-      "Triggers whenever a new row is appended to a sheet tab. (Polling — Phase 4 wires real polling.)",
-    group: "googleSheets",
-    outputsArray: false,
-    configSchema: [
-      {
-        key: "spreadsheetId",
-        label: "Spreadsheet ID",
-        type: "text",
-        required: true,
-        help: "The ID from your Google Sheets URL",
-      },
-      {
-        key: "tabName",
-        label: "Tab name",
-        type: "text",
-        required: true,
-        help: "Name of the sheet tab to watch",
-      },
-      {
-        key: "watchColumn",
-        label: "Watch column",
-        type: "text",
-        required: true,
-        help: 'Column header used to detect new rows (e.g. "id"). Values must be unique per row.',
-      },
-    ],
-    sampleOutput: [
-      {
-        row: 14,
-        id: "99",
-        name: "New Contact",
-        email: "new@example.com",
-        createdAt: "2025-05-11T08:00:00Z",
-      },
-    ],
-  },
-  {
     id: "bitrix.create_lead",
     name: "Create Lead",
     shortName: "Create Lead",

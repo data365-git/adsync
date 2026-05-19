@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { InfoIcon, ClockIcon, ZapIcon, WebhookIcon } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
 import { getModule } from "~/lib/modules";
-import { getIntegrationMeta } from "~/lib/integration-icons";
 import type { ModuleType } from "~/server/mocks/types";
 import { BuilderHeader, BUILDER_HEADER_HEIGHT_PX } from "./BuilderHeader";
 import { StepCard, validateStepConfig, type DraftStep } from "./StepCard";
@@ -48,9 +47,19 @@ export function defaultConfigFor(moduleType: ModuleType): Record<string, unknown
     case "fb.ad_insights":
       return { fbAccountId: "", dateWindowDays: 7, metrics: [] };
     case "sheets.append":
-      return { spreadsheetId: "", tabName: "", mappedFields: [] };
+      return { spreadsheetId: "", tabName: "", mappedFields: {} };
     case "sheets.upsert":
-      return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: [] };
+      return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: {} };
+    case "sheets.update_row":
+      return { spreadsheetId: "", tabName: "", rowIdentifier: "", mappedFields: {} };
+    case "sheets.find_rows":
+      return { spreadsheetId: "", tabName: "", searchColumn: "", searchValue: "" };
+    case "trigger.watch.sheets_new_rows":
+      return { spreadsheetId: "", tabName: "", watchColumn: "" };
+    case "bitrix.create_lead":
+      return { title: "", name: "", lastName: "", phone: "", email: "", sourceId: "", comments: "" };
+    case "bitrix.update_lead":
+      return { leadId: "", title: "", statusId: "", comments: "" };
     default:
       // Phase 3 module config defaults are populated by their individual
       // config form components in Stage 1'. Empty object is a safe baseline.
@@ -99,173 +108,37 @@ export function computeMissingTooltip(steps: DraftStep[]): string | null {
   return `${count} required field${count !== 1 ? "s" : ""} missing in step${missingSteps.length !== 1 ? "s" : ""} ${stepList}`;
 }
 
-// ─── TriggerPickerCards ───────────────────────────────────────────────────────
-// Shown when steps.length === 1 and step[0] has no configured moduleType set.
-// We always have trigger.manual as default, so we show the picker to let the
-// user explicitly choose between Schedule and Manual.
+// ─── EmptyStepSlot ───────────────────────────────────────────────────────────
+// Shown when the next step in the chain isn't picked yet.
+// Opens ModuleLibraryModal — the single source of truth for available modules.
 
-interface TriggerPickerProps {
-  onPick: (moduleType: "trigger.schedule" | "trigger.manual" | "trigger.webhook") => void;
+interface EmptyStepSlotProps {
+  kind: "trigger" | "action";
+  onOpenLibrary: () => void;
 }
 
-function TriggerPickerCards({ onPick }: TriggerPickerProps) {
-  const TRIGGER_OPTIONS: Array<{
-    moduleType: "trigger.schedule" | "trigger.manual" | "trigger.webhook";
-    icon: React.ReactNode;
-    title: string;
-    description: string;
-  }> = [
-    {
-      moduleType: "trigger.schedule",
-      icon: <ClockIcon className="size-5" />,
-      title: "Schedule",
-      description: "Run on a recurring schedule.",
-    },
-    {
-      moduleType: "trigger.manual",
-      icon: <ZapIcon className="size-5" />,
-      title: "Manual",
-      description: "Trigger by hand when you click.",
-    },
-    {
-      moduleType: "trigger.webhook",
-      icon: <WebhookIcon className="size-5" />,
-      title: "Webhook",
-      description: "Fire when an HTTP POST hits your URL.",
-    },
-  ];
-
+function EmptyStepSlot({ kind, onOpenLibrary }: EmptyStepSlotProps) {
+  const isTrigger = kind === "trigger";
+  const title = isTrigger ? "Step 1: When this happens..." : "Step 2: Then do this...";
+  const helper = isTrigger
+    ? "Pick a trigger - Schedule, Webhook, Manual run, or watch a Sheet/Bitrix list for new items."
+    : "Pick an action - pull Facebook insights, write to Sheets, or create/update Bitrix records.";
   return (
-    <div className="mt-4 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-5">
-      <p className="mb-3 text-sm font-medium text-foreground">
-        Step 1: When this happens…
-      </p>
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-3">
-        {TRIGGER_OPTIONS.map((opt) => {
-          const meta = getIntegrationMeta(opt.moduleType);
-          return (
-            <button
-              key={opt.moduleType}
-              type="button"
-              onClick={() => onPick(opt.moduleType)}
-              className={cn(
-                "flex flex-col gap-2 rounded-xl border border-border bg-card p-4 text-left transition-all",
-                "hover:border-primary/40 hover:bg-primary/5",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-lg",
-                  meta.tileBg,
-                  meta.iconColor,
-                )}
-                aria-hidden="true"
-              >
-                {opt.icon}
-              </span>
-              <span>
-                <span className="block text-sm font-semibold">{opt.title}</span>
-                <span className="mt-0.5 block text-xs text-muted-foreground">
-                  {opt.description}
-                </span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">
-        Pick a trigger to start your scenario.
-      </p>
-    </div>
-  );
-}
-
-// ─── ActionPickerCards ────────────────────────────────────────────────────────
-// Shown when trigger is set and steps.length === 1 (no action yet added).
-
-const ACTION_GROUPS: Array<{
-  label: string;
-  moduleType: ModuleType;
-  groupIcon: React.ReactNode;
-}[]> = [
-  [
-    { label: "Get Account Insights", moduleType: "fb.account_insights", groupIcon: null },
-    { label: "Get Campaign Insights", moduleType: "fb.campaign_insights", groupIcon: null },
-    { label: "Get Ad Insights", moduleType: "fb.ad_insights", groupIcon: null },
-  ],
-  [
-    { label: "Append Rows", moduleType: "sheets.append", groupIcon: null },
-    { label: "Upsert Rows", moduleType: "sheets.upsert", groupIcon: null },
-  ],
-  [
-    { label: "Create Lead", moduleType: "bitrix.create_lead", groupIcon: null },
-    { label: "Update Lead", moduleType: "bitrix.update_lead", groupIcon: null },
-    { label: "Find Leads", moduleType: "bitrix.find_leads", groupIcon: null },
-    { label: "Create Deal", moduleType: "bitrix.create_deal", groupIcon: null },
-    { label: "Update Deal", moduleType: "bitrix.update_deal", groupIcon: null },
-  ],
-];
-
-const ACTION_GROUP_LABELS = ["Facebook Ads", "Google Sheets", "Bitrix24"];
-
-interface ActionPickerProps {
-  onPick: (moduleType: ModuleType) => void;
-}
-
-function ActionPickerCards({ onPick }: ActionPickerProps) {
-  return (
-    <div className="mt-4 rounded-xl border border-dashed border-border bg-muted/20 px-4 py-5">
-      <p className="mb-3 text-sm font-medium text-foreground">
-        Step 2: Then do this…
-      </p>
-      <div className="space-y-3">
-        {ACTION_GROUPS.map((group, gi) => {
-          // Use the first item's moduleType to get integration meta for the group header
-          const firstItem = group[0];
-          const headerMeta = firstItem ? getIntegrationMeta(firstItem.moduleType) : null;
-          return (
-            <div key={gi} className="rounded-xl border border-border bg-card p-3">
-              {/* Group header */}
-              <div className="mb-2 flex items-center gap-2">
-                {headerMeta && (
-                  <span
-                    className={cn(
-                      "flex size-6 items-center justify-center rounded-md",
-                      headerMeta.tileBg,
-                    )}
-                    aria-hidden="true"
-                  >
-                    <headerMeta.Icon className={cn("size-3.5", headerMeta.iconColor)} />
-                  </span>
-                )}
-                <span className="text-xs font-semibold text-foreground">
-                  {ACTION_GROUP_LABELS[gi]}
-                </span>
-              </div>
-              {/* Module list */}
-              <div className="flex flex-wrap gap-2">
-                {group.map((item) => (
-                  <button
-                    key={item.moduleType}
-                    type="button"
-                    onClick={() => onPick(item.moduleType)}
-                    className={cn(
-                      "rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium",
-                      "hover:border-primary/40 hover:bg-primary/5 hover:text-primary",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      "transition-colors",
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={onOpenLibrary}
+      className={cn(
+        "mt-4 flex w-full flex-col items-start gap-2 rounded-xl border border-dashed border-border bg-muted/20 px-5 py-6 text-left",
+        "transition-colors hover:border-primary/40 hover:bg-primary/5",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      )}
+    >
+      <span className="text-sm font-medium text-foreground">{title}</span>
+      <span className="text-xs text-muted-foreground">{helper}</span>
+      <span className="mt-1 inline-flex items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+        + Choose module
+      </span>
+    </button>
   );
 }
 
@@ -354,39 +227,6 @@ export function ScenarioBuilder({
   // Standard "Add step" is shown when trigger + ≥1 action exist
   const showStandardAdd = triggerChosen && steps.length > 1;
 
-  function handlePickTrigger(moduleType: "trigger.schedule" | "trigger.manual" | "trigger.webhook") {
-    setSteps((prev) =>
-      prev.map((s) =>
-        s.position === 1
-          ? {
-              ...s,
-              moduleType,
-              config: defaultConfigFor(moduleType),
-            }
-          : s,
-      ),
-    );
-    setTriggerChosen(true);
-    // Expand the trigger step so config is immediately visible
-    const triggerId = steps[0]?.id ?? null;
-    setExpandedStepId(triggerId);
-  }
-
-  function handlePickAction(moduleType: ModuleType) {
-    const newStep: DraftStep = {
-      id: newStepId(),
-      position: 2,
-      moduleType,
-      config: defaultConfigFor(moduleType),
-    };
-    setSteps((prev) => [
-      ...prev,
-      { ...newStep, position: prev.length + 1 },
-    ]);
-    // Expand the new action step (single-expand)
-    setExpandedStepId(newStep.id);
-  }
-
   function openModuleLibrary(insertAt: number) {
     setModalMode("insert");
     setModalInsertAt(insertAt);
@@ -400,7 +240,8 @@ export function ScenarioBuilder({
   }
 
   function handleSelectModule(moduleType: ModuleType, insertAt: number) {
-    if (modalMode === "replace-trigger") {
+    if (modalMode === "replace-trigger" || (insertAt === 1 && !triggerChosen)) {
+      const triggerId = steps[0]?.id ?? null;
       setSteps((prev) =>
         prev.map((s) =>
           s.position === 1
@@ -416,6 +257,8 @@ export function ScenarioBuilder({
             : s,
         ),
       );
+      setTriggerChosen(true);
+      setExpandedStepId(triggerId);
       setModalOpen(false);
       setModalMode("insert");
       return;
@@ -619,9 +462,9 @@ export function ScenarioBuilder({
           </div>
         )}
 
-        {/* C.4 — Trigger picker: shown before trigger is chosen */}
+        {/* C.4 — Trigger empty slot: shown before trigger is chosen */}
         {showTriggerPicker && (
-          <TriggerPickerCards onPick={handlePickTrigger} />
+          <EmptyStepSlot kind="trigger" onOpenLibrary={() => openModuleLibrary(1)} />
         )}
 
         <ol
@@ -688,11 +531,11 @@ export function ScenarioBuilder({
             );
           })}
 
-          {/* C.4 — Action picker: shown when trigger chosen but no action yet */}
+          {/* C.4 — Action empty slot: shown when trigger chosen but no action yet */}
           {showActionPicker && (
             <li className="list-none">
               <StepConnector />
-              <ActionPickerCards onPick={handlePickAction} />
+              <EmptyStepSlot kind="action" onOpenLibrary={() => openModuleLibrary(2)} />
             </li>
           )}
 

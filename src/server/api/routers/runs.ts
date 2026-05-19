@@ -81,6 +81,99 @@ function getPositionFromMeta(meta: unknown): number | undefined {
   return typeof position === "number" ? position : undefined;
 }
 
+type RunStepResult = {
+  position: number;
+  moduleType: string;
+  sampleRows: Array<Record<string, unknown>>;
+  outputSchema: string[];
+  rowCount: number;
+  durationMs: number | null;
+  status: "success" | "failed" | "running" | "skipped";
+};
+
+type StepForResult = {
+  position: number;
+  moduleType: string;
+};
+
+type LogForResult = {
+  message: string;
+  meta: unknown;
+};
+
+function getMetaRecord(meta: unknown): Record<string, unknown> {
+  return typeof meta === "object" && meta !== null
+    ? (meta as Record<string, unknown>)
+    : {};
+}
+
+function getRecordRows(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (row): row is Record<string, unknown> =>
+      typeof row === "object" && row !== null && !Array.isArray(row),
+  );
+}
+
+function getOutputSchema(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((column): column is string => typeof column === "string")
+    : [];
+}
+
+function buildRunStepResults(
+  steps: StepForResult[],
+  logsByPosition: Record<number, LogForResult[]>,
+  failedPosition: number | undefined,
+): RunStepResult[] {
+  return steps.map((step) => {
+    const logs = logsByPosition[step.position] ?? [];
+    const completedLog = logs.find((log) =>
+      log.message.startsWith("Completed step"),
+    );
+    const meta = getMetaRecord(completedLog?.meta);
+    const sampleRows = getRecordRows(meta.sampleRows);
+    const explicitOutputSchema = getOutputSchema(meta.outputSchema);
+    const outputSchema =
+      explicitOutputSchema.length > 0
+        ? explicitOutputSchema
+        : Object.keys(sampleRows[0] ?? {});
+    const rowCount =
+      typeof meta.rowCount === "number" ? meta.rowCount : sampleRows.length;
+    const durationMs =
+      typeof meta.durationMs === "number" ? meta.durationMs : null;
+    const status =
+      failedPosition === step.position
+        ? "failed"
+        : completedLog
+          ? "success"
+          : logs.some((log) => log.message.startsWith("Starting step"))
+            ? "running"
+            : "skipped";
+
+    return {
+      position: step.position,
+      moduleType: step.moduleType,
+      sampleRows,
+      outputSchema,
+      rowCount,
+      durationMs,
+      status,
+    };
+  });
+}
+
+function getFailedPosition(
+  runStatus: "QUEUED" | "RUNNING" | "SUCCESS" | "FAILED",
+  logs: LogForResult[],
+): number | undefined {
+  if (runStatus !== "FAILED") return undefined;
+  const positions = logs
+    .map((log) => getPositionFromMeta(log.meta))
+    .filter((position): position is number => position !== undefined);
+  return positions.length > 0 ? Math.max(...positions) : undefined;
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export const runsRouter = createTRPCRouter({
@@ -151,17 +244,35 @@ export const runsRouter = createTRPCRouter({
         include: {
           scenario: {
             select: {
+              steps: { orderBy: { position: "asc" } },
               name: true,
               kind: true,
               adAccount: { select: { label: true, fbAccountId: true } },
             },
           },
+          logs: { orderBy: { ts: "asc" } },
         },
       });
       if (run?.userId !== userId) {
         throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.id} not found` });
       }
-      return normalizeRun(run);
+
+      const logsByPosition: Record<number, typeof run.logs> = {};
+      for (const log of run.logs) {
+        const position = getPositionFromMeta(log.meta);
+        if (position !== undefined) {
+          (logsByPosition[position] ??= []).push(log);
+        }
+      }
+
+      return {
+        ...normalizeRun(run),
+        steps: buildRunStepResults(
+          run.scenario?.steps ?? [],
+          logsByPosition,
+          getFailedPosition(run.status, run.logs),
+        ),
+      };
     }),
 
   getDetail: authedProcedure
@@ -201,6 +312,11 @@ export const runsRouter = createTRPCRouter({
         scenario: run.scenario,
         logsByPosition,
         stepsByPosition,
+        steps: buildRunStepResults(
+          run.scenario.steps,
+          logsByPosition,
+          getFailedPosition(run.status, run.logs),
+        ),
       };
     }),
 
@@ -228,6 +344,30 @@ export const runsRouter = createTRPCRouter({
         rerunOf: source.id,
         rerunFromPosition: input.position,
       });
+
+      return { runId };
+    }),
+
+  retry: authedProcedure
+    .input(z.object({ runId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const original = await db.run.findUnique({
+        where: { id: input.runId },
+        select: { scenarioId: true, userId: true },
+      });
+
+      if (!original) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Run not found." });
+      }
+      if (original.userId !== ctx.userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not your run." });
+      }
+
+      const runId = await executeRun(
+        original.scenarioId,
+        "MANUAL",
+        ctx.userId,
+      );
 
       return { runId };
     }),

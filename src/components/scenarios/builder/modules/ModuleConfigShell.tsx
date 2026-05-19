@@ -80,63 +80,61 @@ export function ModuleConfigShell({
             : "border-border",
       )}
     >
-      <button
-        type="button"
-        onClick={onToggleExpand}
-        className={cn(
-          "flex w-full items-center gap-4 px-5 py-4 text-left",
-          "focus-visible:ring-ring rounded-xl focus-visible:ring-2 focus-visible:outline-none",
-        )}
-        aria-label={`Configure step ${position}: ${displayName}`}
-      >
-        {/* Position-number badge — Zapier-style */}
-        <div
-          className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm"
-          aria-hidden="true"
-        >
-          {position}
-        </div>
-
-        {/* Brand icon tile */}
-        <div
+      <div className="flex w-full items-center">
+        <button
+          type="button"
+          onClick={onToggleExpand}
           className={cn(
-            "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
-            tileBg,
+            "flex flex-1 items-center gap-4 py-4 pl-5 pr-0 text-left",
+            "focus-visible:ring-ring rounded-xl focus-visible:ring-2 focus-visible:outline-none",
           )}
+          aria-label={`Configure step ${position}: ${displayName}`}
         >
-          {BrandIcon ? (
-            <BrandIcon className={cn("h-4 w-4", iconColor)} />
-          ) : null}
-          <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full border border-background bg-foreground text-[10px] font-medium text-background">
+          {/* Position-number badge — Zapier-style */}
+          <div
+            className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm"
+            aria-hidden="true"
+          >
             {position}
-          </span>
-        </div>
-
-        {/* Name + summary/description (stacked) */}
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="text-foreground min-w-0 truncate text-base">
-              {displayName}
-            </p>
-            {iteratorBadge}
           </div>
-          {displaySubtitle ? (
-            <p className="text-muted-foreground truncate text-xs">
-              {displaySubtitle}
-            </p>
-          ) : null}
-          {(summary ?? displayDescription) && (
-            <p className="text-muted-foreground truncate text-sm">
-              {summary ?? displayDescription}
-            </p>
-          )}
-        </div>
 
-        {/* Right controls — stop propagation so individual buttons don't open the modal */}
-        <div
-          className="flex shrink-0 items-center gap-1"
-          onClick={(e) => e.stopPropagation()}
-        >
+          {/* Brand icon tile */}
+          <div
+            className={cn(
+              "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
+              tileBg,
+            )}
+          >
+            {BrandIcon ? (
+              <BrandIcon className={cn("h-4 w-4", iconColor)} />
+            ) : null}
+            <span className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full border border-background bg-foreground text-[10px] font-medium text-background">
+              {position}
+            </span>
+          </div>
+
+          {/* Name + summary/description (stacked) */}
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="text-foreground min-w-0 truncate text-base">
+                {displayName}
+              </p>
+              {iteratorBadge}
+            </div>
+            {displaySubtitle ? (
+              <p className="text-muted-foreground truncate text-xs">
+                {displaySubtitle}
+              </p>
+            ) : null}
+            {(summary ?? displayDescription) && (
+              <p className="text-muted-foreground truncate text-sm">
+                {summary ?? displayDescription}
+              </p>
+            )}
+          </div>
+        </button>
+
+        <div className="flex shrink-0 items-center gap-1 px-5 py-4">
           {/* Edit icon — visual cue that clicking opens the config modal */}
           <span
             aria-hidden="true"
@@ -186,7 +184,7 @@ export function ModuleConfigShell({
           {/* Drag handle rendered here */}
           {dragHandle}
         </div>
-      </button>
+      </div>
     </div>
   );
 }

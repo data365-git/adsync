@@ -28,7 +28,6 @@ describe("HANDLERS routing — deferred modules", () => {
     "sheets.delete_row",
     "sheets.get_row",
     "sheets.create_tab",
-    "sheets.watch_new_rows",
     "bitrix.find_leads",
     "bitrix.create_deal",
     "bitrix.update_deal",

@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CheckCircle, Circle, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle,
+  Circle,
+  Loader2,
+  RefreshCwIcon,
+} from "lucide-react";
 import { format } from "date-fns";
 
 import type { OAuthConnection } from "~/server/mocks/types";
@@ -26,6 +32,9 @@ export interface BitrixConnectionCardProps {
   connection: OAuthConnection | null;
   onConnect: () => void;
   onDisconnect: () => void;
+  onVerify?: () => void;
+  isVerifying?: boolean;
+  lastVerifiedLabel?: string | null;
 }
 
 // Derive status from the connection row, falling back to "disconnected" when
@@ -77,7 +86,9 @@ interface BitrixResourcePanelProps {
 }
 
 function BitrixResourcePanel({ onReconnect }: BitrixResourcePanelProps) {
-  const query = api.connections.bitrixPipelines.useQuery(undefined, { retry: 1 });
+  const query = api.connections.bitrixPipelines.useQuery(undefined, {
+    retry: 1,
+  });
   const data = query.data;
 
   return (
@@ -100,6 +111,9 @@ export function BitrixConnectionCard({
   connection,
   onConnect,
   onDisconnect,
+  onVerify,
+  isVerifying = false,
+  lastVerifiedLabel,
 }: BitrixConnectionCardProps) {
   const status = resolveStatus(connection);
 
@@ -182,6 +196,15 @@ export function BitrixConnectionCard({
               </p>
             )}
 
+            {isConnected && (
+              <p className="mt-1">
+                <span className="text-foreground font-medium">
+                  Last verified:
+                </span>{" "}
+                {lastVerifiedLabel ?? "Never verified"}
+              </p>
+            )}
+
             {isExpired && connection?.connectedAt && (
               <p className="text-status-warning mt-1">
                 Token expired — please reconnect to resume Bitrix24 syncs.
@@ -226,7 +249,7 @@ export function BitrixConnectionCard({
                 size="lg"
                 variant="outline"
                 onClick={handleConnect}
-                disabled={isConnecting}
+                disabled={isConnecting || isVerifying}
                 aria-label="Reconnect Bitrix24 with a different account"
                 className="flex-1"
               >
@@ -241,6 +264,21 @@ export function BitrixConnectionCard({
                 ) : (
                   "Reconnect"
                 )}
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                variant="ghost"
+                onClick={onVerify}
+                disabled={isConnecting || isVerifying || !onVerify}
+                aria-label="Verify Bitrix24 connection"
+                className="flex-1"
+              >
+                <RefreshCwIcon
+                  className={`size-3.5 ${isVerifying ? "animate-spin" : ""}`}
+                  aria-hidden="true"
+                />
+                {isVerifying ? "Verifying..." : "Verify"}
               </Button>
 
               {/* Disconnect confirmation popover */}

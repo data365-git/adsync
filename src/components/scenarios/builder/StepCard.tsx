@@ -177,6 +177,27 @@ function validateStepConfig(
     case "trigger.manual":
       // No required fields
       break;
+    case "trigger.webhook":
+      // No required fields. Optional `secret`.
+      break;
+    case "trigger.watch.bitrix_new_lead":
+      // No UI-required fields; worker is the data source.
+      break;
+    case "fb.list_ad_accounts":
+      // No required fields - lists all ad accounts for the connected user.
+      break;
+    case "fb.list_ads":
+    case "fb.get_ad":
+    case "sheets.delete_row":
+    case "sheets.get_row":
+    case "sheets.create_tab":
+    case "bitrix.find_leads":
+    case "bitrix.create_deal":
+    case "bitrix.update_deal": {
+      errors._form =
+        "This module isn't ready yet — pick a different one. (Tracked in docs/MODULE_AUDIT.md.)";
+      break;
+    }
     case "trigger.watch.sheets_new_rows": {
       if (!config.spreadsheetId || (typeof config.spreadsheetId === "string" && !config.spreadsheetId.trim())) {
         errors.spreadsheetId = "Select a spreadsheet — the trigger reads new rows from this sheet.";
@@ -448,13 +469,6 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
       const newTabName = typeof config.newTabName === "string" ? config.newTabName : "";
       if (!spreadsheetId) return "Not configured";
       return newTabName ? `Create tab "${newTabName}"` : "Not configured";
-    }
-
-    case "sheets.watch_new_rows": {
-      const tabName = typeof config.tabName === "string" ? config.tabName : "";
-      const watchColumn = typeof config.watchColumn === "string" ? config.watchColumn : "";
-      if (!tabName) return "Not configured";
-      return `${tabName} · watch column: ${watchColumn || "—"}`;
     }
 
     case "bitrix.create_lead": {

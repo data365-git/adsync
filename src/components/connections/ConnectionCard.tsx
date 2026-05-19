@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, RefreshCwIcon } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
 
 import type { OAuthConnection } from "~/server/mocks/types";
 import { api } from "~/trpc/react";
+import { cn } from "~/lib/utils";
 import {
   Card,
   CardContent,
@@ -43,11 +44,17 @@ interface ConnectedResourcePanelProps {
   onReconnect: () => void;
 }
 
-function ConnectedResourcePanel({ provider, onReconnect }: ConnectedResourcePanelProps) {
-  const googleQuery = api.connections.googleSheetsResources.useQuery(undefined, {
-    enabled: provider === "google",
-    retry: 1,
-  });
+function ConnectedResourcePanel({
+  provider,
+  onReconnect,
+}: ConnectedResourcePanelProps) {
+  const googleQuery = api.connections.googleSheetsResources.useQuery(
+    undefined,
+    {
+      enabled: provider === "google",
+      retry: 1,
+    },
+  );
   const fbQuery = api.connections.facebookAdAccounts.useQuery(undefined, {
     enabled: provider === "facebook",
     retry: 1,
@@ -145,8 +152,13 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
   const [optimisticStatus, setOptimisticStatus] = useState<
     OAuthConnection["status"] | null
   >(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   const utils = api.useUtils();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const effectiveStatus = optimisticStatus ?? connection.status;
   const showExpiryWarning =
@@ -233,7 +245,34 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
     refreshMutation.mutate({ id: connection.id });
   }
 
-  const isAnyLoading = isConnecting || isDisconnecting || isRefreshing;
+  // --- verify connection health ---
+  const verifyMutation = api.connections.verify.useMutation({
+    onSuccess: ({ ok }) => {
+      setOptimisticStatus(ok ? "connected" : "expired");
+      void utils.connections.list.invalidate();
+      if (ok) {
+        toast.success("Connection is healthy.");
+      } else {
+        toast.error("Connection ping failed. Try reconnecting.");
+      }
+    },
+    onError: (error) => {
+      toast.error(`Verify failed: ${error.message}`);
+    },
+  });
+
+  function handleVerify() {
+    verifyMutation.mutate({ provider: connection.provider });
+  }
+
+  const lastVerifiedLabel = connection.lastVerifiedAt
+    ? isMounted
+      ? formatDistanceToNow(connection.lastVerifiedAt, { addSuffix: true })
+      : format(connection.lastVerifiedAt, "MMM d, yyyy")
+    : null;
+
+  const isAnyLoading =
+    isConnecting || isDisconnecting || isRefreshing || verifyMutation.isPending;
 
   // --- Bitrix24 provider routing ---
   // All hooks above run unconditionally (React rules). After hooks, we can
@@ -245,6 +284,9 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
         connection={connection}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
+        onVerify={handleVerify}
+        isVerifying={verifyMutation.isPending}
+        lastVerifiedLabel={lastVerifiedLabel}
       />
     );
   }
@@ -286,6 +328,12 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
                 {format(connection.expiresAt, "MMM d, yyyy, h:mm a")}
               </p>
             )}
+            <p>
+              <span className="text-foreground font-medium">
+                Last verified:
+              </span>{" "}
+              {lastVerifiedLabel ?? "Never verified"}
+            </p>
           </div>
 
           {/* Resource list — shown only when connected.
@@ -331,6 +379,24 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
                 ) : (
                   "Reconnect"
                 )}
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                variant="ghost"
+                onClick={handleVerify}
+                disabled={isAnyLoading}
+                aria-label={`Verify ${providerLabel} connection`}
+                className="flex-1"
+              >
+                <RefreshCwIcon
+                  className={cn(
+                    "size-3.5",
+                    verifyMutation.isPending && "animate-spin",
+                  )}
+                  aria-hidden="true"
+                />
+                {verifyMutation.isPending ? "Verifying..." : "Verify"}
               </Button>
               <DisconnectDialog
                 providerName={providerLabel}

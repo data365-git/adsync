@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 
@@ -38,7 +39,6 @@ export const ModuleTypeSchema = z.enum([
   "sheets.delete_row",
   "sheets.get_row",
   "sheets.create_tab",
-  "sheets.watch_new_rows",
   "bitrix.create_lead",
   "bitrix.update_lead",
   "bitrix.find_leads",
@@ -81,7 +81,8 @@ function scenarioToFrontend(s: ScenarioWithSteps): MockScenario {
       scenarioId: step.scenarioId,
       position: step.position,
       // moduleType is stored as string in DB; cast at this boundary is acceptable
-      moduleType: step.moduleType as MockScenario["steps"][number]["moduleType"],
+      moduleType:
+        step.moduleType as MockScenario["steps"][number]["moduleType"],
       config: step.config as Record<string, unknown>,
     })),
     lastRunAt: s.lastRunAt,
@@ -90,7 +91,6 @@ function scenarioToFrontend(s: ScenarioWithSteps): MockScenario {
     updatedAt: s.updatedAt,
   };
 }
-
 
 /**
  * Validates that sheets steps reference an upstream FB step.
@@ -126,10 +126,17 @@ function firstUrl(rows: unknown[]): string | null {
   for (const row of rows) {
     if (!row || typeof row !== "object") continue;
     for (const value of Object.values(row as Record<string, unknown>)) {
-      if (typeof value === "string" && /^https?:\/\//i.test(value)) return value;
+      if (typeof value === "string" && /^https?:\/\//i.test(value))
+        return value;
     }
   }
   return null;
+}
+
+function isWebhookTrigger(
+  steps: Array<{ moduleType: string }> | undefined,
+): boolean {
+  return steps?.[0]?.moduleType === "trigger.webhook";
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -156,7 +163,10 @@ export const scenariosRouter = createTRPCRouter({
         include: { steps: { orderBy: { position: "asc" } } },
       });
       if (scenario?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
       return scenarioToFrontend(scenario);
     }),
@@ -175,6 +185,9 @@ export const scenariosRouter = createTRPCRouter({
       const userId = ctx.userId;
       // Log validation warning but return Scenario directly for UI compat
       validateFieldMappings(input.steps);
+      const webhookSecret = isWebhookTrigger(input.steps)
+        ? randomBytes(32).toString("hex")
+        : null;
 
       const scenario = await db.scenario.create({
         data: {
@@ -183,6 +196,7 @@ export const scenariosRouter = createTRPCRouter({
           enabled: input.enabled,
           kind: input.kind,
           adAccountId: input.adAccountId ?? null,
+          webhookSecret,
           steps: {
             create: input.steps.map((s) => ({
               position: s.position,
@@ -211,10 +225,29 @@ export const scenariosRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
 
-      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      const existing = await db.scenario.findUnique({
+        where: { id: input.id },
+        select: {
+          userId: true,
+          webhookSecret: true,
+          steps: {
+            orderBy: { position: "asc" },
+            select: { moduleType: true },
+          },
+        },
+      });
       if (existing?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
+
+      const nextWebhookSecret =
+        isWebhookTrigger(input.data.steps ?? existing.steps) &&
+        !existing.webhookSecret
+          ? randomBytes(32).toString("hex")
+          : undefined;
 
       if (input.data.steps) {
         validateFieldMappings(input.data.steps);
@@ -234,7 +267,12 @@ export const scenariosRouter = createTRPCRouter({
         where: { id: input.id },
         data: {
           ...(input.data.name !== undefined && { name: input.data.name }),
-          ...(input.data.enabled !== undefined && { enabled: input.data.enabled }),
+          ...(input.data.enabled !== undefined && {
+            enabled: input.data.enabled,
+          }),
+          ...(nextWebhookSecret !== undefined && {
+            webhookSecret: nextWebhookSecret,
+          }),
         },
         include: { steps: { orderBy: { position: "asc" } } },
       });
@@ -246,9 +284,14 @@ export const scenariosRouter = createTRPCRouter({
     .input(z.object({ id: z.string(), enabled: z.boolean() }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      const existing = await db.scenario.findUnique({
+        where: { id: input.id },
+      });
       if (existing?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
       await db.scenario.update({
         where: { id: input.id },
@@ -261,9 +304,14 @@ export const scenariosRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      const existing = await db.scenario.findUnique({
+        where: { id: input.id },
+      });
       if (existing?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
       const runId = await executeRun(input.id, "MANUAL", userId);
       // Expose both `id` and `runId` for UI compat:
@@ -275,9 +323,14 @@ export const scenariosRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      const existing = await db.scenario.findUnique({
+        where: { id: input.id },
+      });
       if (existing?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
       const runId = await executeRun(input.id, "MANUAL", userId);
       const logs = await db.runLog.findMany({
@@ -353,7 +406,9 @@ export const scenariosRouter = createTRPCRouter({
       const runContext = new RunContext();
       let lastStartMeta: ReturnType<typeof buildStepStartLogMeta> | null = null;
 
-      for (const step of scenario.steps.filter((s) => s.position <= target.position)) {
+      for (const step of scenario.steps.filter(
+        (s) => s.position <= target.position,
+      )) {
         const stepStart = Date.now();
         const upstreamRows = runContext.getUpstreamRows(step.position);
         const upstreamRow0 =
@@ -373,7 +428,11 @@ export const scenariosRouter = createTRPCRouter({
             ctx.userId,
           );
           const durationMs = Date.now() - stepStart;
-          const completeMeta = buildStepCompleteLogMeta(step, result, durationMs);
+          const completeMeta = buildStepCompleteLogMeta(
+            step,
+            result,
+            durationMs,
+          );
           runContext.setMeta(step.position, {
             durationMs,
             rowCount: result.rowCount,
@@ -393,7 +452,8 @@ export const scenariosRouter = createTRPCRouter({
           }
         } catch (error) {
           if (step.id !== target.id) throw error;
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           return {
             inputConfig: startMeta.inputConfig,
             inputSampleRows: startMeta.inputSampleRows,
@@ -410,7 +470,9 @@ export const scenariosRouter = createTRPCRouter({
 
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: lastStartMeta ? "Step did not return a result" : "No steps executed",
+        message: lastStartMeta
+          ? "Step did not return a result"
+          : "No steps executed",
       });
     }),
 
@@ -418,9 +480,14 @@ export const scenariosRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      const existing = await db.scenario.findUnique({ where: { id: input.id } });
+      const existing = await db.scenario.findUnique({
+        where: { id: input.id },
+      });
       if (existing?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
       await db.scenario.delete({ where: { id: input.id } });
       return { success: true as const, id: input.id };
@@ -435,7 +502,10 @@ export const scenariosRouter = createTRPCRouter({
         include: { steps: { orderBy: { position: "asc" } } },
       });
       if (source?.userId !== userId) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Scenario ${input.id} not found` });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `Scenario ${input.id} not found`,
+        });
       }
 
       const duplicate = await db.scenario.create({

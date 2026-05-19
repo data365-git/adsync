@@ -135,6 +135,16 @@ function defaultConfigFor(moduleType: ModuleType): Record<string, unknown> {
       return { spreadsheetId: "", tabName: "", mappedFields: {} };
     case "sheets.upsert":
       return { spreadsheetId: "", tabName: "", keyFields: [], mappedFields: {} };
+    case "sheets.update_row":
+      return { spreadsheetId: "", tabName: "", rowIdentifier: "", mappedFields: {} };
+    case "sheets.find_rows":
+      return { spreadsheetId: "", tabName: "", searchColumn: "", searchValue: "" };
+    case "trigger.watch.sheets_new_rows":
+      return { spreadsheetId: "", tabName: "", watchColumn: "" };
+    case "bitrix.create_lead":
+      return { title: "", name: "", lastName: "", phone: "", email: "", sourceId: "", comments: "" };
+    case "bitrix.update_lead":
+      return { leadId: "", title: "", statusId: "", comments: "" };
     default:
       // Phase 3 module config defaults are populated by their individual
       // config form components in Stage 1'.

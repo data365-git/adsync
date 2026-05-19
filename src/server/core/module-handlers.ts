@@ -69,8 +69,21 @@ const triggerManualHandler: Handler = async (_step, _ctx, _userId) => {
   return { rowCount: 0 };
 };
 
-const triggerWebhookHandler: Handler = async (_step, _ctx, _userId) => {
-  return { rowCount: 0 };
+const triggerWebhookHandler: Handler = async (step, ctx, _userId) => {
+  const seeded = ctx.getOutput(step.position);
+  if (seeded.length > 0) {
+    return { rowCount: seeded.length, rows: seeded };
+  }
+
+  const sample = [
+    {
+      _source: "webhook_sample",
+      event: "test",
+      timestamp: new Date().toISOString(),
+    },
+  ];
+  ctx.setOutput(step.position, sample);
+  return { rowCount: sample.length, rows: sample };
 };
 
 const triggerWatchHandler: Handler = async (_step, _ctx, _userId) => {
@@ -421,7 +434,6 @@ const HANDLERS: Record<string, Handler> = {
   "sheets.delete_row": notImplementedHandler,
   "sheets.get_row": notImplementedHandler,
   "sheets.create_tab": notImplementedHandler,
-  "sheets.watch_new_rows": notImplementedHandler,
 
   // Bitrix24
   "bitrix.create_lead": bitrixCreateLeadHandler,

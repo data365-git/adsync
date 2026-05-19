@@ -18,6 +18,7 @@ type OAuthConnectionRow = {
   email: string | null;
   expiresAt: Date | null;
   connectedAt: Date | null;
+  lastVerifiedAt: Date | null;
 };
 
 function toFrontendConnection(row: OAuthConnectionRow) {
@@ -41,7 +42,16 @@ function toFrontendConnection(row: OAuthConnectionRow) {
     email: row.email,
     expiresAt: row.expiresAt,
     connectedAt: row.connectedAt,
+    lastVerifiedAt: row.lastVerifiedAt,
   };
+}
+
+function providerFromInput(
+  provider: "google" | "facebook" | "bitrix",
+): Provider {
+  if (provider === "google") return Provider.GOOGLE_SHEETS;
+  if (provider === "facebook") return Provider.FACEBOOK;
+  return Provider.BITRIX24;
 }
 
 export const connectionsRouter = createTRPCRouter({
@@ -110,6 +120,67 @@ export const connectionsRouter = createTRPCRouter({
       return toFrontendConnection(row);
     }),
 
+  verify: authedProcedure
+    .input(z.object({ provider: z.enum(["google", "facebook", "bitrix"]) }))
+    .mutation(async ({ ctx, input }) => {
+      const providerEnum = providerFromInput(input.provider);
+      const conn = await db.oAuthConnection.findUnique({
+        where: {
+          userId_provider: { userId: ctx.userId, provider: providerEnum },
+        },
+      });
+
+      if (!conn) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Not connected.",
+        });
+      }
+
+      let ok = false;
+      try {
+        if (input.provider === "google") {
+          const auth = await getAuthedClient(ctx.userId);
+          const drive = google.drive({ version: "v3", auth });
+          await drive.about.get({ fields: "user" });
+          ok = true;
+        } else if (input.provider === "facebook") {
+          const token = await getFbAccessToken(ctx.userId);
+          const version = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
+          const response = await fetch(
+            `https://graph.facebook.com/${version}/me?fields=id&access_token=${token}`,
+          );
+          const payload = (await response.json()) as {
+            id?: string;
+            error?: { message?: string };
+          };
+          if (payload.id) {
+            ok = true;
+          } else if (payload.error?.message) {
+            throw new Error(payload.error.message);
+          }
+        } else {
+          await bitrixCall<unknown[]>("crm.dealcategory.list", { start: 0 });
+          ok = true;
+        }
+      } catch {
+        ok = false;
+      }
+
+      const lastVerifiedAt = new Date();
+      await db.oAuthConnection.update({
+        where: {
+          userId_provider: { userId: ctx.userId, provider: providerEnum },
+        },
+        data: {
+          lastVerifiedAt,
+          status: ok ? ConnectionStatus.CONNECTED : ConnectionStatus.EXPIRED,
+        },
+      });
+
+      return { ok, lastVerifiedAt };
+    }),
+
   /**
    * List Google Drive spreadsheets accessible via the connected Google account.
    * Uses the drive.metadata.readonly scope — no spreadsheet content is read.
@@ -117,7 +188,12 @@ export const connectionsRouter = createTRPCRouter({
    */
   googleSheetsResources: authedProcedure.query(async ({ ctx }) => {
     const conn = await db.oAuthConnection.findUnique({
-      where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
+      where: {
+        userId_provider: {
+          userId: ctx.userId,
+          provider: Provider.GOOGLE_SHEETS,
+        },
+      },
     });
     if (conn?.status !== ConnectionStatus.CONNECTED) {
       return { identifier: null, items: [], truncated: false };
@@ -156,10 +232,18 @@ export const connectionsRouter = createTRPCRouter({
    */
   listSpreadsheets: authedProcedure.query(async ({ ctx }) => {
     const conn = await db.oAuthConnection.findUnique({
-      where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
+      where: {
+        userId_provider: {
+          userId: ctx.userId,
+          provider: Provider.GOOGLE_SHEETS,
+        },
+      },
     });
     if (conn?.status !== ConnectionStatus.CONNECTED) {
-      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Google Sheets not connected",
+      });
     }
 
     const auth = await getAuthedClient(ctx.userId);
@@ -186,10 +270,18 @@ export const connectionsRouter = createTRPCRouter({
     .input(z.object({ spreadsheetId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const conn = await db.oAuthConnection.findUnique({
-        where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
+        where: {
+          userId_provider: {
+            userId: ctx.userId,
+            provider: Provider.GOOGLE_SHEETS,
+          },
+        },
       });
       if (conn?.status !== ConnectionStatus.CONNECTED) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Google Sheets not connected",
+        });
       }
 
       const auth = await getAuthedClient(ctx.userId);
@@ -213,13 +305,26 @@ export const connectionsRouter = createTRPCRouter({
    * Filters out empty/whitespace-only cells.
    */
   listSheetColumns: authedProcedure
-    .input(z.object({ spreadsheetId: z.string().min(1), tabName: z.string().min(1) }))
+    .input(
+      z.object({
+        spreadsheetId: z.string().min(1),
+        tabName: z.string().min(1),
+      }),
+    )
     .query(async ({ ctx, input }) => {
       const conn = await db.oAuthConnection.findUnique({
-        where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
+        where: {
+          userId_provider: {
+            userId: ctx.userId,
+            provider: Provider.GOOGLE_SHEETS,
+          },
+        },
       });
       if (conn?.status !== ConnectionStatus.CONNECTED) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Google Sheets not connected",
+        });
       }
 
       const auth = await getAuthedClient(ctx.userId);
@@ -231,7 +336,9 @@ export const connectionsRouter = createTRPCRouter({
       });
 
       const firstRow = (res.data.values ?? [])[0] ?? [];
-      return (firstRow as string[]).map((v) => v.trim()).filter((v) => v.length > 0);
+      return (firstRow as string[])
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0);
     }),
 
   /**
@@ -248,10 +355,18 @@ export const connectionsRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const conn = await db.oAuthConnection.findUnique({
-        where: { userId_provider: { userId: ctx.userId, provider: Provider.GOOGLE_SHEETS } },
+        where: {
+          userId_provider: {
+            userId: ctx.userId,
+            provider: Provider.GOOGLE_SHEETS,
+          },
+        },
       });
       if (conn?.status !== ConnectionStatus.CONNECTED) {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Google Sheets not connected" });
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Google Sheets not connected",
+        });
       }
 
       const rowCount = input.rowCount ?? 1;
@@ -263,12 +378,16 @@ export const connectionsRouter = createTRPCRouter({
       });
 
       const values = (res.data.values ?? []) as string[][];
-      const columns = (values[0] ?? []).map((value) => value.trim()).filter(Boolean);
-      const rows = values.slice(1, rowCount + 1).map((row) =>
-        Object.fromEntries(
-          columns.map((column, index) => [column, row[index] ?? ""]),
-        ),
-      );
+      const columns = (values[0] ?? [])
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const rows = values
+        .slice(1, rowCount + 1)
+        .map((row) =>
+          Object.fromEntries(
+            columns.map((column, index) => [column, row[index] ?? ""]),
+          ),
+        );
 
       return { columns, rows };
     }),
@@ -293,13 +412,18 @@ export const connectionsRouter = createTRPCRouter({
       const parts = parsed.pathname.split("/").filter(Boolean);
       // pathname: /rest/<userId>/<token>
       const userId = parts[1] ?? null;
-      identifier = userId ? `Portal: ${host} · User #${userId}` : `Portal: ${host}`;
+      identifier = userId
+        ? `Portal: ${host} · User #${userId}`
+        : `Portal: ${host}`;
     } catch {
       // malformed URL — skip identifier
     }
 
     type DealCategory = { ID: string; NAME: string };
-    const categories = await bitrixCall<DealCategory[]>("crm.dealcategory.list", {});
+    const categories = await bitrixCall<DealCategory[]>(
+      "crm.dealcategory.list",
+      {},
+    );
 
     const items: { id: string; name: string }[] = [
       { id: "lead", name: "Leads (default pipeline)" },
@@ -307,7 +431,12 @@ export const connectionsRouter = createTRPCRouter({
     ];
 
     const truncated = items.length > 25;
-    return { identifier, items: items.slice(0, 25), truncated, totalCount: items.length };
+    return {
+      identifier,
+      items: items.slice(0, 25),
+      truncated,
+      totalCount: items.length,
+    };
   }),
 
   /**
@@ -316,7 +445,9 @@ export const connectionsRouter = createTRPCRouter({
    */
   facebookAdAccounts: authedProcedure.query(async ({ ctx }) => {
     const conn = await db.oAuthConnection.findUnique({
-      where: { userId_provider: { userId: ctx.userId, provider: Provider.FACEBOOK } },
+      where: {
+        userId_provider: { userId: ctx.userId, provider: Provider.FACEBOOK },
+      },
     });
     if (conn?.status !== ConnectionStatus.CONNECTED) {
       return { identifier: null, items: [], truncated: false };
@@ -334,7 +465,9 @@ export const connectionsRouter = createTRPCRouter({
 
     const accounts = await listAdAccounts(ctx.userId);
     const truncated = accounts.length > 25;
-    const items = accounts.slice(0, 25).map((a) => ({ id: a.id, name: a.name }));
+    const items = accounts
+      .slice(0, 25)
+      .map((a) => ({ id: a.id, name: a.name }));
 
     return { identifier, items, truncated, totalCount: accounts.length };
   }),

@@ -1,53 +1,65 @@
 "use client";
 
 import * as React from "react";
-import { SCENARIO_TEMPLATES } from "~/lib/scenario-templates";
-import { TemplatePicker } from "~/components/scenarios/builder/TemplatePicker";
-import { ScenarioBuilder, type DraftStep } from "~/components/scenarios/builder/ScenarioBuilder";
+import { toast } from "sonner";
 
-interface NewScenarioClientProps {
-  /** undefined = show template picker. String = build with that template or empty if "scratch" */
-  templateId?: string;
-}
+import { TemplatePicker } from "~/components/scenarios/TemplatePicker";
+import {
+  ScenarioBuilder,
+  type DraftStep,
+} from "~/components/scenarios/builder/ScenarioBuilder";
+import { api } from "~/trpc/react";
 
-export function NewScenarioClient({ templateId }: NewScenarioClientProps) {
-  // No templateId = show the picker
-  if (!templateId) {
-    return <TemplatePicker />;
+export function NewScenarioClient() {
+  const [chosen, setChosen] = React.useState<{
+    name: string;
+    steps: DraftStep[];
+  } | null>(null);
+  const templatesQ = api.modules.listTemplates.useQuery();
+  const utils = api.useUtils();
+
+  async function pickTemplate(templateId: string) {
+    try {
+      const tpl = await utils.modules.getTemplate.fetch({ templateId });
+      const steps: DraftStep[] = tpl.steps.map((s, idx) => ({
+        id: `draft_template_${templateId}_${idx}`,
+        position: s.position,
+        moduleType: s.moduleType,
+        config: s.config,
+      }));
+      setChosen({ name: tpl.name, steps });
+    } catch (err) {
+      toast.error(
+        `Couldn't load template: ${
+          err instanceof Error ? err.message : "unknown"
+        }`,
+      );
+    }
   }
 
-  // "scratch" or unrecognized id = empty builder
-  const template = SCENARIO_TEMPLATES.find((t) => t.id === templateId);
-  if (!template) {
-    // From-scratch builder: one empty trigger step
+  function startScratch() {
+    setChosen({ name: "", steps: [] });
+  }
+
+  if (chosen === null) {
     return (
-      <ScenarioBuilder
-        initialName="Untitled scenario"
-        initialSteps={[
-          {
-            id: "draft_trigger_1",
-            position: 1,
-            moduleType: "trigger.manual" as const,
-            config: {},
-          } satisfies DraftStep,
-        ]}
+      <TemplatePicker
+        templates={(templatesQ.data ?? []).map((t) => ({
+          id: t.id,
+          name: t.name,
+          description: t.description,
+        }))}
+        isLoading={templatesQ.isPending}
+        onPickTemplate={(templateId) => void pickTemplate(templateId)}
+        onStartScratch={startScratch}
       />
     );
   }
 
-  // Template builder
-  const partial = template.factory();
-  const initialSteps: DraftStep[] = partial.steps.map((s) => ({
-    id: s.id,
-    position: s.position,
-    moduleType: s.moduleType,
-    config: s.config,
-  }));
-
   return (
     <ScenarioBuilder
-      initialName={partial.name}
-      initialSteps={initialSteps}
+      initialName={chosen.name}
+      initialSteps={chosen.steps}
     />
   );
 }

@@ -10,6 +10,7 @@ import {
   humanizeCronShort,
   type Frequency,
 } from "~/lib/cron-builder";
+import { computeNextRuns } from "~/lib/cron-preview";
 import {
   Select,
   SelectContent,
@@ -468,6 +469,70 @@ function CronPreview({ expr }: CronPreviewProps) {
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
+interface NextRunPreviewProps {
+  cron: string;
+  timezone: string;
+}
+
+function NextRunPreview({ cron, timezone }: NextRunPreviewProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const result = React.useMemo(
+    () =>
+      mounted ? computeNextRuns(cron, timezone, 3) : { next: [], timezone },
+    [cron, mounted, timezone],
+  );
+
+  const formatter = React.useMemo(
+    () =>
+      mounted && !result.error
+        ? new Intl.DateTimeFormat(undefined, {
+            timeZone: timezone,
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        : null,
+    [mounted, result.error, timezone],
+  );
+
+  if (!mounted) return null;
+
+  if (result.error) {
+    return (
+      <p className="text-muted-foreground mt-2 text-xs">
+        Next run preview unavailable: {result.error}
+      </p>
+    );
+  }
+
+  if (result.next.length === 0 || !formatter) {
+    return (
+      <p className="text-muted-foreground mt-2 text-xs">
+        No upcoming runs in the next year.
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className="border-border bg-muted/20 mt-2 rounded-lg border px-3 py-2 text-xs"
+      aria-live="polite"
+      aria-label="Upcoming schedule runs"
+    >
+      <p className="text-foreground font-medium">Upcoming runs ({timezone})</p>
+      <ul className="text-muted-foreground mt-1 space-y-0.5">
+        {result.next.map((date) => (
+          <li key={date.toISOString()}>{formatter.format(date)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function ScheduleConfig({
   config,
   onChange,
@@ -602,6 +667,7 @@ export function ScheduleConfig({
       />
 
       <CronPreview expr={derivedCron} />
+      <NextRunPreview cron={derivedCron} timezone={initialTimezone} />
 
       {errors?.cronExpression && (
         <p

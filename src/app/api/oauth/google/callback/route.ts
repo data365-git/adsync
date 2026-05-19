@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL));
+    return NextResponse.redirect(new URL("/login", process.env.NEXTAUTH_URL ?? req.url));
   }
 
   const code = req.nextUrl.searchParams.get("code");

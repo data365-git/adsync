@@ -22,6 +22,7 @@ import type { InputJsonValue } from "@prisma/client/runtime/library";
 type ExecuteRunOptions = {
   rerunOf?: string;
   rerunFromPosition?: number;
+  webhookTriggerPayload?: unknown;
 };
 
 function toInputJsonValue(value: unknown): InputJsonValue {
@@ -66,9 +67,8 @@ export function resolveStepConfig(
   // backwards-compat branch then incorrectly copied the upstream column value.
   const resolved: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(config)) {
-    resolved[key] = typeof value === "string"
-      ? interpolate(value, upstreamRow)
-      : value;
+    resolved[key] =
+      typeof value === "string" ? interpolate(value, upstreamRow) : value;
   }
   return resolved;
 }
@@ -125,7 +125,9 @@ export function buildStepStartLogMeta(
     stepId: step.id,
     position: step.position,
     inputConfig: toInputJsonValue(step.config),
-    inputSampleRows: upstreamRows.slice(0, 3).map((row) => toInputJsonValue(row)),
+    inputSampleRows: upstreamRows
+      .slice(0, 3)
+      .map((row) => toInputJsonValue(row)),
   };
 }
 
@@ -186,6 +188,10 @@ export async function executeRun(
     )) {
       ctx.setOutput(position, rows);
     }
+  }
+
+  if (options.webhookTriggerPayload !== undefined) {
+    ctx.setOutput(1, [options.webhookTriggerPayload]);
   }
 
   try {
@@ -276,8 +282,7 @@ export async function executeRun(
   } catch (error: unknown) {
     // ── Error path: persist FAILED ───────────────────────────────────────────
     const totalDurationMs = Date.now() - startedAt;
-    const errorMessage =
-      error instanceof Error ? error.message : String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     const stack = error instanceof Error ? error.stack : undefined;
 
     await db.runLog.create({

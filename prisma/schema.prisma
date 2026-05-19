@@ -66,18 +66,19 @@ model VerificationToken {
 // ─── Domain models ───────────────────────────────────────────────────────────
 
 model OAuthConnection {
-  id           String           @id @default(cuid())
-  userId       String
-  provider     Provider
-  status       ConnectionStatus
-  email        String?
-  externalId   String?
-  accessToken  String           @db.Text
-  refreshToken String?          @db.Text
-  scope        String?
-  expiresAt    DateTime?
-  connectedAt  DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  userId         String
+  provider       Provider
+  status         ConnectionStatus
+  email          String?
+  externalId     String?
+  accessToken    String           @db.Text
+  refreshToken   String?          @db.Text
+  scope          String?
+  expiresAt      DateTime?
+  connectedAt    DateTime         @default(now())
+  lastVerifiedAt DateTime?
+  updatedAt      DateTime         @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -125,16 +126,17 @@ enum AdLevel {
 }
 
 model Scenario {
-  id            String      @id @default(cuid())
+  id            String       @id @default(cuid())
   userId        String
   name          String
   kind          ScenarioKind
-  enabled       Boolean     @default(false)
+  enabled       Boolean      @default(false)
   adAccountId   String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
   lastRunAt     DateTime?
   lastRunStatus RunStatus?
+  webhookSecret String?      @db.Text
 
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   adAccount AdAccount?     @relation(fields: [adAccountId], references: [id])
@@ -148,7 +150,7 @@ enum ScenarioKind {
 }
 
 model ScenarioStep {
-  id         String   @id @default(cuid())
+  id         String @id @default(cuid())
   scenarioId String
   position   Int
   moduleType String

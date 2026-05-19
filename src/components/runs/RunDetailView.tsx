@@ -1,11 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, RefreshCwIcon } from "lucide-react";
+import { toast } from "sonner";
 
 import type { RouterOutputs } from "~/trpc/react";
+import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { StepResultCard } from "~/components/runs/StepResultCard";
+import { cn } from "~/lib/utils";
 
 type RunDetailData = RouterOutputs["runs"]["getDetail"];
 type RunLog = RunDetailData["run"]["logs"][number];
@@ -47,9 +51,21 @@ function findFailedPosition(data: RunDetailData): number | undefined {
 }
 
 export function RunDetailView({ data }: { data: RunDetailData }) {
+  const router = useRouter();
   const failedPosition = findFailedPosition(data);
   const errorMessage = data.run.errorMessage ?? undefined;
   const hasLoggedSteps = data.run.logs.length > 0;
+  const retryMutation = api.runs.retry.useMutation({
+    onSuccess: ({ runId }) => {
+      toast.success("New run started", {
+        action: { label: "View", onClick: () => router.push(`/runs/${runId}`) },
+      });
+      router.push(`/runs/${runId}`);
+    },
+    onError: (error) => {
+      toast.error(`Retry failed: ${error.message}`);
+    },
+  });
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -65,13 +81,31 @@ export function RunDetailView({ data }: { data: RunDetailData }) {
         </Button>
       </nav>
 
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-normal text-foreground">
-          Run details
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {data.scenario.name}
-        </p>
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-normal text-foreground">
+            Run details
+          </h1>
+          <p className="text-sm text-muted-foreground">{data.scenario.name}</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={retryMutation.isPending}
+          onClick={() => retryMutation.mutate({ runId: data.run.id })}
+          aria-label="Retry this run"
+          className="w-full sm:w-auto"
+        >
+          <RefreshCwIcon
+            className={cn(
+              "size-3.5",
+              retryMutation.isPending && "animate-spin",
+            )}
+            aria-hidden="true"
+          />
+          <span>{retryMutation.isPending ? "Retrying..." : "Retry run"}</span>
+        </Button>
       </header>
 
       {!hasLoggedSteps ? (

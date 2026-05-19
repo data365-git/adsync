@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import {
@@ -30,7 +31,6 @@ const ModuleTypeSchema = z.enum([
   "sheets.delete_row",
   "sheets.get_row",
   "sheets.create_tab",
-  "sheets.watch_new_rows",
   "bitrix.create_lead",
   "bitrix.update_lead",
   "bitrix.find_leads",
@@ -40,8 +40,8 @@ const ModuleTypeSchema = z.enum([
 
 /**
  * Templates are exposed without their `factory` (a function won't serialize
- * cleanly across tRPC + SuperJSON). Callers re-look-up the factory by id from
- * `~/lib/scenario-templates` on the client side.
+ * cleanly across tRPC + SuperJSON). Callers use getTemplate to fetch the
+ * server-generated draft step shape for a selected template.
  */
 type SerializableTemplate = Omit<ScenarioTemplate, "factory">;
 
@@ -55,6 +55,29 @@ export const modulesRouter = createTRPCRouter({
       description,
     })),
   ),
+
+  getTemplate: publicProcedure
+    .input(z.object({ templateId: z.string() }))
+    .query(({ input }) => {
+      const tpl = SCENARIO_TEMPLATES.find((t) => t.id === input.templateId);
+      if (!tpl) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Template not found.",
+        });
+      }
+
+      const scenario = tpl.factory();
+      return {
+        id: tpl.id,
+        name: tpl.name,
+        steps: scenario.steps.map((s) => ({
+          position: s.position,
+          moduleType: s.moduleType,
+          config: s.config,
+        })),
+      };
+    }),
 
   getStepOutputSample: publicProcedure
     .input(

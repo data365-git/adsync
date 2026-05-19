@@ -212,7 +212,13 @@ async function main() {
 
   // F: buildRowFromMapping
   console.log("\n=== F: buildRowFromMapping with canonical bitrix mapping ===");
-  const upstream = { id: 7, name: "Alice", email: "alice@x.com", status: "new" };
+  const upstream = {
+    id: 7,
+    name: "Alice",
+    email: "alice@x.com",
+    phone: "+1 555 0100",
+    status: "new",
+  };
   const built = buildRowFromMapping(upstream, CANONICAL.bitrixMapping);
   record(
     "F.built.title",
@@ -231,7 +237,7 @@ async function main() {
   );
   record(
     "F.built.empty",
-    built.phone === "",
+    built.phone === upstream.phone,
     `empty expr → "" (interpolated)`,
   );
   record(

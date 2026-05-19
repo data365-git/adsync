@@ -207,6 +207,7 @@ export function ConnectionsClient() {
                       email: null,
                       expiresAt: null,
                       connectedAt: null,
+                      lastVerifiedAt: null,
                     }
                   }
                 />

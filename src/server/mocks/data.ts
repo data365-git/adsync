@@ -39,6 +39,7 @@ export const MOCK_CONNECTIONS: OAuthConnection[] = [
     email: "jumanovsamandar005@gmail.com",
     expiresAt: relative(2 * DAY),
     connectedAt: relative(-30 * DAY),
+    lastVerifiedAt: relative(-2 * HOUR),
   },
   {
     id: "oauth_facebook_01",
@@ -48,6 +49,7 @@ export const MOCK_CONNECTIONS: OAuthConnection[] = [
     email: "jumanovsamandar005@gmail.com",
     expiresAt: null,
     connectedAt: relative(-45 * DAY),
+    lastVerifiedAt: relative(-6 * HOUR),
   },
   {
     id: "conn_bitrix_01",
@@ -57,6 +59,7 @@ export const MOCK_CONNECTIONS: OAuthConnection[] = [
     email: null,
     expiresAt: null,
     connectedAt: new Date("2025-05-11T00:00:00Z"),
+    lastVerifiedAt: null,
   },
 ];
 
@@ -258,7 +261,13 @@ export const MOCK_SCENARIOS: Scenario[] = [
         config: {
           spreadsheetId: ACC_01.spreadsheetId,
           tabName: "DailyRoundup",
-          mappedFields: ["impressions", "reach", "spend", "clicks", "ctr"],
+          mappedFields: {
+            impressions: "",
+            reach: "",
+            spend: "",
+            clicks: "",
+            ctr: "",
+          },
         },
       },
     ],
@@ -301,7 +310,13 @@ export const MOCK_SCENARIOS: Scenario[] = [
           spreadsheetId: ACC_02.spreadsheetId,
           tabName: "WeeklyCampaigns",
           keyFields: ["date", "campaign_id"],
-          mappedFields: ["impressions", "clicks", "spend", "cpc", "ctr"],
+          mappedFields: {
+            impressions: "",
+            clicks: "",
+            spend: "",
+            cpc: "",
+            ctr: "",
+          },
         },
       },
     ],
@@ -343,7 +358,7 @@ export const MOCK_SCENARIOS: Scenario[] = [
         config: {
           spreadsheetId: ACC_01.spreadsheetId,
           tabName: "AdSpotChecks",
-          mappedFields: ["impressions", "spend", "video_views"],
+          mappedFields: { impressions: "", spend: "", video_views: "" },
         },
       },
     ],
@@ -386,7 +401,7 @@ export const MOCK_SCENARIOS: Scenario[] = [
           spreadsheetId: ACC_02.spreadsheetId,
           tabName: "VelocityCheck",
           keyFields: ["date", "hour", "campaign_id"],
-          mappedFields: ["impressions", "clicks", "spend"],
+          mappedFields: { impressions: "", clicks: "", spend: "" },
         },
       },
     ],
@@ -451,7 +466,7 @@ function buildRuns(): Run[] {
         ? null
         : status === "running"
           ? null
-          : 800 + Math.floor(((i * 7919) % 44200));
+          : 800 + Math.floor((i * 7919) % 44200);
     const finishedAt =
       durationMs !== null ? new Date(startedAt.getTime() + durationMs) : null;
     const campaignLevel = i % 2 === 0;
@@ -511,17 +526,13 @@ function buildLogs(): RunLog[] {
     const breadcrumbCount = 5 + ((counter * 3) % 2); // 5 or 6 breadcrumbs
     const start = run.startedAt.getTime();
     for (let j = 0; j < breadcrumbCount; j++) {
-      const msg =
-        LOG_BREADCRUMBS[j % LOG_BREADCRUMBS.length] ?? "Working...";
+      const msg = LOG_BREADCRUMBS[j % LOG_BREADCRUMBS.length] ?? "Working...";
       logs.push({
         id: `log_${String(counter).padStart(3, "0")}`,
         runId: run.id,
         level: "INFO",
         message: msg,
-        meta:
-          j === 3
-            ? { campaigns_count: 14, ads_count: 87 }
-            : null,
+        meta: j === 3 ? { campaigns_count: 14, ads_count: 87 } : null,
         timestamp: new Date(start + j * 800),
       });
       counter++;

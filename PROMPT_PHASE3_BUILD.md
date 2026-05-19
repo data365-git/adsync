@@ -363,7 +363,6 @@ export type ModuleType =
   | 'sheets.delete_row'
   | 'sheets.get_row'
   | 'sheets.create_tab'
-  | 'sheets.watch_new_rows'
   | 'bitrix.create_lead'
   | 'bitrix.update_lead'
   | 'bitrix.find_leads'
@@ -598,31 +597,6 @@ For `outputsArray: true` modules, `sampleOutput` MUST have exactly 3 rows.
   ],
 }
 ```
-
-**`sheets.watch_new_rows`** — Watch trigger:
-```typescript
-{
-  id: 'sheets.watch_new_rows',
-  name: 'Watch - New Rows',
-  shortName: 'Watch New Rows',
-  description: 'Triggers whenever a new row is appended to a sheet tab. (Polling — Phase 4 wires real polling.)',
-  group: 'googleSheets',
-  outputsArray: false,
-  configSchema: [
-    { key: 'spreadsheetId', label: 'Spreadsheet ID', type: 'text', required: true,
-      help: 'The ID from your Google Sheets URL' },
-    { key: 'tabName', label: 'Tab name', type: 'text', required: true,
-      help: 'Name of the sheet tab to watch' },
-    { key: 'watchColumn', label: 'Watch column', type: 'text', required: true,
-      help: 'Column header used to detect new rows (e.g. "id"). Values must be unique per row.' },
-  ],
-  sampleOutput: [
-    { row: 14, id: '99', name: 'New Contact', email: 'new@example.com', createdAt: '2025-05-11T08:00:00Z' },
-  ],
-}
-```
-
----
 
 #### New Bitrix24 modules (6)
 
@@ -1129,7 +1103,6 @@ src/components/scenarios/builder/modules/BitrixUpdateLeadConfig.tsx     (NEW)
 src/components/scenarios/builder/modules/BitrixFindLeadsConfig.tsx      (NEW)
 src/components/scenarios/builder/modules/BitrixCreateDealConfig.tsx     (NEW)
 src/components/scenarios/builder/modules/BitrixUpdateDealConfig.tsx     (NEW)
-src/components/scenarios/builder/modules/BitrixCreateSmartProcessItemConfig.tsx (NEW)
 src/components/scenarios/builder/StepCard.tsx    (EDIT — MODULE_CONFIG_MAP entries ONLY)
 ```
 
@@ -1181,7 +1154,6 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, React.ComponentType<StepConf
   'bitrix.find_leads':   BitrixFindLeadsConfig,
   'bitrix.create_deal':  BitrixCreateDealConfig,
   'bitrix.update_deal':  BitrixUpdateDealConfig,
-  'bitrix.create_smart_process_item': BitrixCreateSmartProcessItemConfig,
 }
 ```
 
@@ -1437,21 +1409,6 @@ Fields: `dealId` (required), `stageId` (optional), `opportunity` (optional numbe
 **Acceptance criteria:**
 - [ ] 4 fields render
 - [ ] Required validation works
-- [ ] `pnpm typecheck` passes
-
----
-
-#### Task A.14 — `BitrixCreateSmartProcessItemConfig.tsx`
-
-Fields: `entityTypeId` (required), `title` (required), `stageId` (optional), `fields` (FieldMappingPicker, optional).
-
-**Info notice** at bottom: slate/blue info box — "Smart Process Items are Bitrix24's flexible custom CRM entity primitive. They extend beyond standard leads and deals with custom fields and workflows."
-
-**Validation:** `entityTypeId`, `title` required.
-
-**Acceptance criteria:**
-- [ ] 3 text fields + FieldMappingPicker + info notice render
-- [ ] Required validations work
 - [ ] `pnpm typecheck` passes
 
 ---
@@ -1805,7 +1762,7 @@ Watch subgroup divider JSX:
 </div>
 ```
 
-2. Google Sheets section: add 6 new module cards for `sheets.find_rows`, `sheets.update_row`, `sheets.delete_row`, `sheets.get_row`, `sheets.create_tab`, `sheets.watch_new_rows`.
+2. Google Sheets section: add 5 new module cards for `sheets.find_rows`, `sheets.update_row`, `sheets.delete_row`, `sheets.get_row`, `sheets.create_tab`.
 
 3. Add new Bitrix24 section after Google Sheets section, using the same section header pattern as existing sections. Use `BitrixIcon`, `bg-bitrix-cyan/10`, `text-bitrix-cyan`. Include 6 module cards for all `bitrix.*` modules.
 

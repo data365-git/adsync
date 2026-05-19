@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { TriangleAlertIcon } from "lucide-react";
 import { cn } from "~/lib/utils";
 import {
   Dialog,
@@ -265,6 +266,16 @@ export function StepConfigModal({
             )}
           </div>
         </DialogHeader>
+
+        {validationErrors._form ? (
+          <div
+            role="alert"
+            className="mx-6 mt-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+          >
+            <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <p>{validationErrors._form}</p>
+          </div>
+        ) : null}
 
         {/* Tabs */}
         <div className="px-6 pt-4">

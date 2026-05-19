@@ -172,3 +172,47 @@ describe("runs.rerunFromStep", () => {
     expect(executeRunMock).not.toHaveBeenCalled();
   });
 });
+
+describe("runs.retry", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    runFindUniqueMock.mockReset();
+    executeRunMock.mockReset();
+  });
+
+  it("starts a new manual run for the original scenario", async () => {
+    runFindUniqueMock.mockResolvedValue({
+      scenarioId: "scenario_1",
+      userId: "user_1",
+    });
+    executeRunMock.mockResolvedValue("run_2");
+
+    const caller = await createRunsCaller();
+    const result = await caller.retry({ runId: "run_1" });
+
+    expect(result).toEqual({ runId: "run_2" });
+    expect(runFindUniqueMock).toHaveBeenCalledWith({
+      where: { id: "run_1" },
+      select: { scenarioId: true, userId: true },
+    });
+    expect(executeRunMock).toHaveBeenCalledWith(
+      "scenario_1",
+      "MANUAL",
+      "user_1",
+    );
+  });
+
+  it("throws FORBIDDEN when the run belongs to another user", async () => {
+    runFindUniqueMock.mockResolvedValue({
+      scenarioId: "scenario_1",
+      userId: "user_2",
+    });
+
+    const caller = await createRunsCaller();
+
+    await expect(caller.retry({ runId: "run_1" })).rejects.toMatchObject({
+      code: "FORBIDDEN" satisfies TRPCError["code"],
+    });
+    expect(executeRunMock).not.toHaveBeenCalled();
+  });
+});

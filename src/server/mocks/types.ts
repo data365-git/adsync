@@ -17,6 +17,7 @@ export type OAuthConnection = {
   email: string | null;
   expiresAt: Date | null;
   connectedAt: Date | null;
+  lastVerifiedAt: Date | null;
 };
 
 export type AdAccount = {
@@ -99,7 +100,6 @@ export type ModuleType =
   | "sheets.delete_row"
   | "sheets.get_row"
   | "sheets.create_tab"
-  | "sheets.watch_new_rows"
   | "bitrix.create_lead"
   | "bitrix.update_lead"
   | "bitrix.find_leads"

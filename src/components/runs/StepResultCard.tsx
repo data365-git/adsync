@@ -6,6 +6,7 @@ import { Copy, ExternalLink, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { api, type RouterOutputs } from "~/trpc/react";
+import { CsvExportButton } from "~/components/runs/CsvExportButton";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -56,6 +57,28 @@ function getDurationMs(meta: Record<string, unknown>): number | undefined {
 
 function getSampleRows(meta: Record<string, unknown>): unknown[] {
   return Array.isArray(meta.sampleRows) ? meta.sampleRows : [];
+}
+
+function getOutputSchema(
+  meta: Record<string, unknown>,
+  sampleRows: Array<Record<string, unknown>>,
+): string[] {
+  const outputSchema = Array.isArray(meta.outputSchema)
+    ? meta.outputSchema.filter(
+        (column): column is string => typeof column === "string",
+      )
+    : [];
+
+  return outputSchema.length > 0
+    ? outputSchema
+    : Object.keys(sampleRows[0] ?? {});
+}
+
+function getRecordRows(rows: unknown[]): Array<Record<string, unknown>> {
+  return rows.filter(
+    (row): row is Record<string, unknown> =>
+      typeof row === "object" && row !== null && !Array.isArray(row),
+  );
 }
 
 function getInputSampleRows(meta: Record<string, unknown>): unknown[] {
@@ -114,6 +137,13 @@ function valueToString(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return value.toString();
+  return JSON.stringify(value);
+}
+
+function formatCell(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
 }
 
@@ -188,6 +218,66 @@ function KeyValueTable({ record }: { record: Record<string, unknown> }) {
   );
 }
 
+function OutputRowsTable({
+  runId,
+  position,
+  sampleRows,
+  outputSchema,
+  rowCount,
+}: {
+  runId: string;
+  position: number;
+  sampleRows: Array<Record<string, unknown>>;
+  outputSchema: string[];
+  rowCount: number;
+}) {
+  const visibleRows = sampleRows.slice(0, 100);
+
+  if (visibleRows.length === 0) return null;
+
+  return (
+    <div className="mt-3 rounded-lg border border-border bg-muted/20">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+        <span className="text-xs font-medium text-foreground">
+          Output rows - showing {visibleRows.length} of {rowCount}
+        </span>
+        <CsvExportButton
+          filename={`run-${runId}-step${position}.csv`}
+          columns={outputSchema}
+          rows={sampleRows}
+        />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/40">
+            <tr>
+              {outputSchema.map((column) => (
+                <th
+                  key={column}
+                  className="border-b border-border px-3 py-1.5 text-left font-medium text-muted-foreground"
+                >
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((row, index) => (
+              <tr key={index} className="border-b border-border last:border-0">
+                {outputSchema.map((column) => (
+                  <td key={column} className="px-3 py-1.5 align-top">
+                    {formatCell(row[column])}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function StepResultCard({
   runId,
   runStatus,
@@ -204,7 +294,8 @@ export function StepResultCard({
   const meta = getMetaRecord(completedLog?.meta);
   const rowCount = getRowCount(meta);
   const durationMs = getDurationMs(meta);
-  const sampleRows = getSampleRows(meta);
+  const sampleRows = getRecordRows(getSampleRows(meta));
+  const outputSchema = getOutputSchema(meta, sampleRows);
   const inputConfig = getInputConfig(startMeta);
   const inputSampleRows = getInputSampleRows(startMeta);
   const rowLinks = extractRowLinks(sampleRows);
@@ -309,7 +400,10 @@ export function StepResultCard({
               </div>
             </div>
           </details>
-          <details open className="rounded-lg border border-border bg-muted/30">
+          <details
+            open={(rowCount ?? 0) > 0}
+            className="rounded-lg border border-border bg-muted/30"
+          >
             <summary className="cursor-pointer px-3 py-2 text-sm font-medium">
               Output
             </summary>
@@ -337,7 +431,19 @@ export function StepResultCard({
                 <p className="px-3 pb-1 text-xs font-medium text-muted-foreground">
                   Rows out
                 </p>
-                <ObjectRowsTable rows={sampleRows} />
+                {sampleRows.length > 0 ? (
+                  <div className="px-3 pb-3">
+                    <OutputRowsTable
+                      runId={runId}
+                      position={step.position}
+                      sampleRows={sampleRows}
+                      outputSchema={outputSchema}
+                      rowCount={rowCount ?? sampleRows.length}
+                    />
+                  </div>
+                ) : (
+                  <ObjectRowsTable rows={sampleRows} />
+                )}
               </div>
             </div>
           </details>

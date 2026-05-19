@@ -28,7 +28,6 @@ Decision legend:
 | `sheets.delete_row` | sheets | Delete a row | DEFER | _____ |
 | `sheets.get_row` | sheets | Fetch a single row by id | DEFER | _____ |
 | `sheets.create_tab` | sheets | Create a new sheet tab | DEFER | _____ |
-| `sheets.watch_new_rows` | sheets | Polling trigger for new rows | DEFER | _____ |
 | `bitrix.create_lead` | bitrix24 | Create a Bitrix24 lead | KEEP-IMPL | _____ |
 | `bitrix.update_lead` | bitrix24 | Update a lead by id | KEEP-IMPL | _____ |
 | `bitrix.find_leads` | bitrix24 | Search leads by filter | DEFER | _____ |
@@ -59,7 +58,6 @@ Fill in the **User decision** column for every row, then signal Task 3 to procee
 - `sheets.delete_row`
 - `sheets.get_row`
 - `sheets.create_tab`
-- `sheets.watch_new_rows`
 - `bitrix.find_leads`
 - `bitrix.create_deal`
 - `bitrix.update_deal`

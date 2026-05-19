@@ -1,0 +1,17 @@
+
+> adsync@0.1.0 dev C:\Users\saman\OneDrive\Documents\data-365-projects\automation
+> next dev --turbo
+
+   ▲ Next.js 15.5.18 (Turbopack)
+   - Local:        http://localhost:3002
+   - Network:      http://10.2.0.2:3002
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Compiled middleware in 236ms
+ ✓ Ready in 2.4s
+ ○ Compiling /login ...
+ ✓ Compiled /login in 3.1s
+ GET /login?next=%2Fscenarios 200 in 3769ms
+ ✓ Compiled middleware in 16ms
+[?25h

@@ -1,0 +1,42 @@
+{
+  "url": "http://localhost:3000/login",
+  "console": [
+    {
+      "where": "mobile-375",
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+    },
+    {
+      "where": "desktop-1280",
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+    }
+  ],
+  "pageErrors": [],
+  "failedRequests": [],
+  "hydrationWarnings": [],
+  "screenshots": [
+    {
+      "where": "mobile-375",
+      "path": "C:\\Users\\saman\\OneDrive\\Documents\\data-365-projects\\automation\\local\\qa-snapshots\\login-mobile-375.png",
+      "viewport": {
+        "width": 375,
+        "height": 700
+      },
+      "status": 200,
+      "title": "adsync",
+      "signInExists": true
+    },
+    {
+      "where": "desktop-1280",
+      "path": "C:\\Users\\saman\\OneDrive\\Documents\\data-365-projects\\automation\\local\\qa-snapshots\\login-desktop-1280.png",
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "status": 200,
+      "title": "adsync",
+      "signInExists": true
+    }
+  ]
+}

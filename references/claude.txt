@@ -1,0 +1,27 @@
+From now on you are not a coder , you do not code and you only give plans/guides to the codex to code the plans ( you are planner and codex as orchestrator )
+   1. Test results does not gimme full info . It must show me the passed data , what it run and etc 
+  2. it must full fill the data into the part where the data is being stored like if you see Make.com or zapier they do , and they show the fields and we can add the values or match them to the fields like 
+
+       Google Sheets Data === 
+             Id    Name    Email            phone 
+              1     test    test@gmail.com   88 123 05 20
+              2     test2   test2@gmail.com  89 123 45 60 
+
+
+    And it must show the data coming from Google Sheets 
+                  
+       let's Bitrix has the data for that leads and they need 
+
+
+
+Also as I mentioned 100 times whren I use the module Google Sheets it must show me data that is coming from my accopunt 
+     Lets's say : 
+              Google Sheets Data 1 , tab sheet 1
+              Google Sheets Data 2 , tab sheet 2 
+
+
+  and etc 
+
+
+
+Also we need to make UX better . i should not be confused by it . references from make.com : C:\Users\saman\OneDrive\Documents\data-365-projects\automation\references

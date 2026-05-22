@@ -1,6 +1,58 @@
 import { google } from "googleapis";
 import { getAuthedClient } from "./oauth";
 
+export class PartialWriteError extends Error {
+  constructor(
+    public readonly rowsCommitted: number,
+    public readonly rowsAttempted: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "PartialWriteError";
+  }
+}
+
+export async function readValues(
+  userId: string,
+  spreadsheetId: string,
+  range: string,
+): Promise<string[][]> {
+  const auth = await getAuthedClient(userId);
+  const sheets = google.sheets({ version: "v4", auth });
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  return (res.data.values ?? []) as string[][];
+}
+
+export async function clearRange(
+  userId: string,
+  spreadsheetId: string,
+  range: string,
+): Promise<void> {
+  const auth = await getAuthedClient(userId);
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range,
+    requestBody: {},
+  });
+}
+
+export async function writeValues(
+  userId: string,
+  spreadsheetId: string,
+  range: string,
+  rows: string[][],
+): Promise<void> {
+  const auth = await getAuthedClient(userId);
+  const sheets = google.sheets({ version: "v4", auth });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range,
+    valueInputOption: "USER_ENTERED",
+    requestBody: { values: rows },
+  });
+}
+
 /**
  * Appends rows to a tab. Creates the tab if it doesn't exist.
  * Returns the number of rows appended.
@@ -19,16 +71,35 @@ export async function appendRows(
   await ensureTabExists(sheets, spreadsheetId, tabName);
 
   const headers = Object.keys(rows[0]!);
-  const values = [headers, ...rows.map((r) => headers.map((h) => r[h] ?? ""))];
+  const existing = await readTab(sheets, spreadsheetId, tabName);
+  const shouldWriteHeaders = existing.length === 0;
+  let rowsCommitted = 0;
 
-  await sheets.spreadsheets.values.append({
-    spreadsheetId,
-    range: `${tabName}!A1`,
-    valueInputOption: "USER_ENTERED",
-    requestBody: { values },
-  });
+  try {
+    if (shouldWriteHeaders) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${tabName}!A1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [headers] },
+      });
+    }
 
-  return rows.length;
+    for (const row of rows) {
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: `${tabName}!A1`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [headers.map((h) => row[h] ?? "")] },
+      });
+      rowsCommitted += 1;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new PartialWriteError(rowsCommitted, rows.length, message);
+  }
+
+  return rowsCommitted;
 }
 
 /**
@@ -106,8 +177,9 @@ export async function findRows(
   userId: string,
   spreadsheetId: string,
   tabName: string,
-  searchColumn: string,
-  searchValue: string,
+  searchColumn?: string,
+  searchValue?: string,
+  limit?: number,
 ): Promise<Array<Record<string, unknown>>> {
   const client = await getAuthedClient(userId);
   const sheets = google.sheets({ version: "v4", auth: client });
@@ -125,6 +197,16 @@ export async function findRows(
   // values.length === 0 is guarded above, so values[0] is always defined here
   const headers = values[0]!;
   const dataRows = values.slice(1);
+  if (!searchColumn) {
+    return dataRows.slice(0, limit).map((row, idx) => {
+      const obj: Record<string, unknown> = { row: idx + 2 };
+      headers.forEach((header, hIdx) => {
+        obj[header] = row[hIdx] ?? "";
+      });
+      return obj;
+    });
+  }
+
   const colIndex = headers.indexOf(searchColumn);
   if (colIndex === -1) {
     throw new Error(
@@ -134,7 +216,7 @@ export async function findRows(
 
   const matches: Array<Record<string, unknown>> = [];
   dataRows.forEach((row, idx) => {
-    if ((row[colIndex] ?? "") === searchValue) {
+    if ((row[colIndex] ?? "") === (searchValue ?? "")) {
       const obj: Record<string, unknown> = { row: idx + 2 };
       headers.forEach((header, hIdx) => {
         obj[header] = row[hIdx] ?? "";
@@ -142,7 +224,7 @@ export async function findRows(
       matches.push(obj);
     }
   });
-  return matches;
+  return matches.slice(0, limit);
 }
 
 /**

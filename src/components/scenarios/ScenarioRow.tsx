@@ -10,6 +10,7 @@ import {
   Pencil,
   Play,
   Trash2,
+  FolderInput,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -28,18 +29,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { Checkbox } from "~/components/ui/checkbox";
 import { TableCell, TableRow } from "~/components/ui/table";
 import { api } from "~/trpc/react";
 import type { Scenario } from "~/server/mocks/types";
 import { ScenarioKindBadge } from "./ScenarioKindBadge";
 import { ScenarioEnabledToggle } from "./ScenarioEnabledToggle";
 import { LastRunCell } from "./LastRunCell";
+import { MoveToFolderDialog } from "./MoveToFolderDialog";
+import { highlight } from "~/lib/highlight";
 
 type Props = {
   scenario: Scenario;
   runCount?: number;
   onDuplicated: (newScenario: Scenario) => void;
   onDeleted: (id: string) => void;
+  selected: boolean;
+  onSelectedChange: (checked: boolean) => void;
+  searchQuery?: string;
+  draggable?: boolean;
 };
 
 export function ScenarioRow({
@@ -47,9 +55,15 @@ export function ScenarioRow({
   runCount,
   onDuplicated,
   onDeleted,
+  selected,
+  onSelectedChange,
+  searchQuery,
+  draggable = false,
 }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const runNowMutation = api.scenarios.runNow.useMutation({
     onMutate() {
@@ -92,25 +106,57 @@ export function ScenarioRow({
     <>
       <TableRow
         tabIndex={0}
-        className="focus-visible:ring-ring hover:bg-muted/50 h-18 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+        draggable={draggable}
+        onDragStart={(event) => {
+          if (!draggable) return;
+          event.dataTransfer.effectAllowed = "move";
+          event.dataTransfer.setData("text/scenario-id", scenario.id);
+          setIsDragging(true);
+        }}
+        onDragEnd={() => setIsDragging(false)}
+        className={`h-13 cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none focus-visible:ring-inset ${
+          isDragging ? "opacity-50" : ""
+        }`}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             window.location.href = `/scenarios/${scenario.id}`;
           }
         }}
       >
+        {/* Select */}
+        <TableCell className="w-10 px-4 py-3">
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(checked) => onSelectedChange(Boolean(checked))}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+            aria-label={`Select scenario ${scenario.name}`}
+          />
+        </TableCell>
+
         {/* Name */}
-        <TableCell className="max-w-[280px] min-w-[180px]">
+        <TableCell className="max-w-[280px] min-w-[180px] py-3 pr-4 pl-5">
           <div className="flex flex-col gap-0.5">
             <Link
               href={`/scenarios/${scenario.id}`}
               className="text-foreground text-base hover:underline focus-visible:underline focus-visible:outline-none"
               tabIndex={-1}
             >
-              {scenario.name}
+              {searchQuery?.trim()
+                ? highlight(scenario.name, searchQuery)
+                : scenario.name}
             </Link>
+            {"description" in scenario &&
+              typeof scenario.description === "string" &&
+              scenario.description.trim() && (
+                <span className="truncate text-xs text-slate-500">
+                  {searchQuery?.trim()
+                    ? highlight(scenario.description, searchQuery)
+                    : scenario.description}
+                </span>
+              )}
             {runCount !== undefined && (
-              <span className="text-muted-foreground text-sm">
+              <span className="text-xs text-slate-500">
                 {runCount === 0
                   ? "No runs"
                   : `${runCount} run${runCount === 1 ? "" : "s"}`}
@@ -120,12 +166,12 @@ export function ScenarioRow({
         </TableCell>
 
         {/* Kind */}
-        <TableCell className="min-w-[100px]">
+        <TableCell className="min-w-[100px] px-4 py-3">
           <ScenarioKindBadge kind={scenario.kind} />
         </TableCell>
 
         {/* Enabled toggle */}
-        <TableCell>
+        <TableCell className="px-4 py-3">
           <ScenarioEnabledToggle
             id={scenario.id}
             initialEnabled={scenario.enabled}
@@ -134,7 +180,7 @@ export function ScenarioRow({
         </TableCell>
 
         {/* Last run */}
-        <TableCell className="min-w-[140px]">
+        <TableCell className="min-w-[140px] px-4 py-3">
           <LastRunCell
             lastRunAt={scenario.lastRunAt}
             lastRunStatus={scenario.lastRunStatus}
@@ -143,7 +189,7 @@ export function ScenarioRow({
         </TableCell>
 
         {/* Actions (kebab) */}
-        <TableCell className="w-10">
+        <TableCell className="w-10 px-4 py-3">
           <DropdownMenu>
             <DropdownMenuTrigger
               className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring aria-expanded:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
@@ -185,6 +231,10 @@ export function ScenarioRow({
                   <Copy className="size-4" aria-hidden />
                 )}
                 Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setMoveOpen(true)}>
+                <FolderInput className="size-4" aria-hidden />
+                Move to folder
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -230,6 +280,17 @@ export function ScenarioRow({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Move to folder dialog */}
+      <MoveToFolderDialog
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        scenarioIds={[scenario.id]}
+        currentParentId={scenario.folderId ?? null}
+        onMoved={() => {
+          // Parent will invalidate via its own query
+        }}
+      />
     </>
   );
 }

@@ -76,6 +76,7 @@ function scenarioToFrontend(s: ScenarioWithSteps): MockScenario {
     name: s.name,
     kind: s.kind,
     enabled: s.enabled,
+    folderId: s.folderId ?? null,
     steps: s.steps.map((step) => ({
       id: step.id,
       scenarioId: step.scenarioId,
@@ -143,13 +144,63 @@ function isWebhookTrigger(
 
 export const scenariosRouter = createTRPCRouter({
   list: authedProcedure
-    .input(z.object({ includeQuickSetup: z.boolean().optional() }).optional())
-    .query(async ({ ctx }) => {
+    .input(
+      z
+        .object({
+          includeQuickSetup: z.boolean().optional(),
+          folderId: z.string().nullable().optional(),
+          q: z.string().optional(),
+          scope: z.enum(["this", "all"]).optional(),
+          kind: z.enum(["CUSTOM", "QUICK_SETUP"]).optional(),
+          enabled: z.boolean().optional(),
+          sort: z.enum(["name", "updated", "lastRun"]).optional(),
+          dir: z.enum(["asc", "desc"]).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ input, ctx }) => {
       const userId = ctx.userId;
+      const sort = input?.sort ?? "updated";
+      const dir = input?.dir ?? "desc";
+
+      const where: Prisma.ScenarioWhereInput = { userId };
+
+      if (input?.includeQuickSetup === false) {
+        where.kind = { in: ["CUSTOM"] };
+      }
+      if (input?.kind) {
+        where.kind = { in: [input.kind] };
+      }
+      if (input?.enabled !== undefined) {
+        where.enabled = input.enabled;
+      }
+
+      // Folder scoping
+      if (input?.scope === "all") {
+        // Global search — no folder restriction
+      } else if (input?.folderId !== undefined) {
+        where.folderId = input.folderId; // null = root, string = specific folder
+      }
+
+      // Search filter
+      if (input?.q) {
+        const terms = input.q.trim().split(/\s+/).filter(Boolean);
+        if (terms.length > 0) {
+          where.AND = terms.map((term) => ({
+            name: { contains: term, mode: "insensitive" as const },
+          }));
+        }
+      }
+
+      const orderBy: Record<string, string> = {};
+      if (sort === "name") orderBy.name = dir;
+      else if (sort === "lastRun") orderBy.lastRunAt = dir;
+      else orderBy.updatedAt = dir;
+
       const scenarios = await db.scenario.findMany({
-        where: { userId },
+        where,
         include: { steps: { orderBy: { position: "asc" } } },
-        orderBy: { createdAt: "desc" },
+        orderBy,
       });
       return scenarios.map(scenarioToFrontend);
     }),
@@ -177,6 +228,7 @@ export const scenariosRouter = createTRPCRouter({
         name: z.string().min(1).max(120),
         enabled: z.boolean().default(false),
         adAccountId: z.string().optional(),
+        folderId: z.string().nullable().optional(),
         kind: z.enum(["QUICK_SETUP", "CUSTOM"]).default("CUSTOM"),
         steps: z.array(ScenarioStepInput).min(1),
       }),
@@ -196,6 +248,7 @@ export const scenariosRouter = createTRPCRouter({
           enabled: input.enabled,
           kind: input.kind,
           adAccountId: input.adAccountId ?? null,
+          folderId: input.folderId ?? null,
           webhookSecret,
           steps: {
             create: input.steps.map((s) => ({
@@ -515,6 +568,7 @@ export const scenariosRouter = createTRPCRouter({
           kind: "CUSTOM",
           enabled: false,
           adAccountId: source.adAccountId,
+          folderId: source.folderId,
           steps: {
             create: source.steps.map((s) => ({
               position: s.position,
@@ -541,4 +595,169 @@ export const scenariosRouter = createTRPCRouter({
     }
     return counts;
   }),
+
+  /**
+   * Move one or more scenarios to a folder (or to root with folderId=null).
+   */
+  move: authedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1),
+        folderId: z.string().nullable(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+
+      // Verify all scenarios belong to this user
+      const count = await db.scenario.count({
+        where: { id: { in: input.ids }, userId },
+      });
+      if (count !== input.ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more scenarios not found",
+        });
+      }
+
+      // Verify folder belongs to this user if specified
+      if (input.folderId !== null) {
+        const folder = await db.folder.findUnique({
+          where: { id: input.folderId },
+          select: { userId: true },
+        });
+        if (folder?.userId !== userId) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Folder not found" });
+        }
+      }
+
+      await db.scenario.updateMany({
+        where: { id: { in: input.ids }, userId },
+        data: { folderId: input.folderId },
+      });
+
+      return { success: true as const, count: input.ids.length };
+    }),
+
+  /**
+   * Bulk enable or disable scenarios.
+   */
+  bulkSetEnabled: authedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1),
+        enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+
+      const count = await db.scenario.count({
+        where: { id: { in: input.ids }, userId },
+      });
+      if (count !== input.ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more scenarios not found",
+        });
+      }
+
+      await db.scenario.updateMany({
+        where: { id: { in: input.ids }, userId },
+        data: { enabled: input.enabled },
+      });
+
+      return { success: true as const, count: input.ids.length };
+    }),
+
+  /**
+   * Bulk delete scenarios.
+   */
+  bulkDelete: authedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string()).min(1),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+
+      const count = await db.scenario.count({
+        where: { id: { in: input.ids }, userId },
+      });
+      if (count !== input.ids.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more scenarios not found",
+        });
+      }
+
+      await db.scenario.deleteMany({
+        where: { id: { in: input.ids }, userId },
+      });
+
+      return { success: true as const, count: input.ids.length };
+    }),
+
+  /**
+   * Search scenarios — scoped or global.
+   * When recursive=true and folderId is set, searches the full subtree.
+   */
+  search: authedProcedure
+    .input(
+      z.object({
+        q: z.string().min(1),
+        folderId: z.string().nullable().optional(),
+        recursive: z.boolean().default(false),
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const terms = input.q.trim().split(/\s+/).filter(Boolean);
+
+      type SearchWhere = {
+        userId: string;
+        folderId?: string | null | { in: string[] };
+        AND?: Array<{ name: { contains: string; mode: "insensitive" } }>;
+      };
+
+      const where: SearchWhere = { userId };
+
+      if (terms.length > 0) {
+        where.AND = terms.map((term) => ({
+          name: { contains: term, mode: "insensitive" as const },
+        }));
+      }
+
+      if (input.folderId !== undefined) {
+        if (input.recursive && input.folderId !== null) {
+          // Collect all folder IDs in the subtree
+          const subtree = new Set<string>([input.folderId]);
+          const queue = [input.folderId];
+          while (queue.length > 0) {
+            const cur = queue.shift()!;
+            const children = await db.folder.findMany({
+              where: { parentId: cur, userId },
+              select: { id: true },
+            });
+            for (const c of children) {
+              subtree.add(c.id);
+              queue.push(c.id);
+            }
+          }
+          where.folderId = { in: Array.from(subtree) };
+        } else {
+          where.folderId = input.folderId;
+        }
+      }
+
+      const scenarios = await db.scenario.findMany({
+        where,
+        include: { steps: { orderBy: { position: "asc" } } },
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+      });
+
+      return scenarios.map(scenarioToFrontend);
+    }),
 });

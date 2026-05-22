@@ -48,12 +48,16 @@ export function ThemeSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Appearance</CardTitle>
-        <CardDescription>Choose how the dashboard looks.</CardDescription>
+    <Card className="rounded-lg border border-slate-200 bg-white py-5 text-slate-950 shadow-none ring-0">
+      <CardHeader className="gap-1 px-5">
+        <CardTitle className="text-lg font-semibold leading-7 text-slate-900">
+          Appearance
+        </CardTitle>
+        <CardDescription className="text-sm font-normal leading-5 text-slate-500">
+          Choose how the dashboard looks.
+        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-5">
         <div
           role="radiogroup"
           aria-label="Theme"
@@ -68,18 +72,18 @@ export function ThemeSection() {
                 aria-checked={selected}
                 onClick={() => handleSelect(value)}
                 className={[
-                  "flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-4 text-sm font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  "flex min-h-20 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border p-4 text-sm font-medium transition-colors duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2",
                   selected
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-border bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "border-sky-600 bg-sky-50 text-slate-900"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900",
                 ].join(" ")}
               >
                 <span className="relative flex items-center justify-center">
                   <Icon className="size-5" aria-hidden="true" />
                   {selected && (
-                    <span className="absolute -right-2 -top-2 flex size-3.5 items-center justify-center rounded-full bg-primary">
-                      <CheckIcon className="size-2.5 text-primary-foreground" aria-hidden="true" />
+                    <span className="absolute -right-2 -top-2 flex size-3.5 items-center justify-center rounded-full bg-sky-600">
+                      <CheckIcon className="size-2.5 text-white" aria-hidden="true" />
                     </span>
                   )}
                 </span>

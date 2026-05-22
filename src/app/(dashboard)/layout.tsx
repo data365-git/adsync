@@ -1,5 +1,7 @@
 import { Sidebar } from "~/components/layout/Sidebar";
 import { TopBar } from "~/components/layout/TopBar";
+import { CommandPalette } from "~/components/palette/CommandPalette";
+import { CommandPaletteProvider } from "~/components/palette/CommandPaletteProvider";
 import { auth } from "~/server/auth";
 import type { User } from "~/server/mocks/types";
 
@@ -22,18 +24,21 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar user={user} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar user={user} />
-        <main
-          id="main"
-          tabIndex={-1}
-          className="flex-1 px-4 py-6 md:px-8 md:py-8"
-        >
-          {children}
-        </main>
+    <CommandPaletteProvider>
+      <div className="flex min-h-screen">
+        <Sidebar user={user} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar user={user} />
+          <main
+            id="main"
+            tabIndex={-1}
+            className="flex-1 px-4 py-6 md:px-8 md:py-8"
+          >
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+      <CommandPalette />
+    </CommandPaletteProvider>
   );
 }

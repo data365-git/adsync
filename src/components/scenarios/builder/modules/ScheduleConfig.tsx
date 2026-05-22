@@ -23,6 +23,13 @@ import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
+const LABEL_CLASS = "text-sm font-medium text-slate-700";
+const INPUT_CLASS =
+  "h-9 rounded-md border border-slate-300 bg-white focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/20 aria-invalid:border-red-500 aria-invalid:ring-2 aria-invalid:ring-red-500/20";
+const SELECT_TRIGGER_CLASS =
+  "h-9 rounded-md border-slate-300 bg-white focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/20 aria-invalid:border-red-500 aria-invalid:ring-2 aria-invalid:ring-red-500/20 data-[size=default]:h-9";
+const HELPER_CLASS = "text-xs text-slate-500";
+
 // ─── Prop contract (same shape as Phase 1.5) ──────────────────────────────────
 
 interface ScheduleConfigProps {
@@ -92,14 +99,19 @@ interface FrequencySelectProps {
 function FrequencySelect({ value, onChange }: FrequencySelectProps) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="sched-frequency">Frequency</Label>
+      <Label htmlFor="sched-frequency" className={LABEL_CLASS}>
+        Frequency
+      </Label>
       <Select
         value={value}
         onValueChange={(v) => {
           if (v !== null) onChange(v);
         }}
       >
-        <SelectTrigger id="sched-frequency" className="w-full">
+        <SelectTrigger
+          id="sched-frequency"
+          className={cn("w-full", SELECT_TRIGGER_CLASS)}
+        >
           <SelectValue placeholder="Select frequency" />
         </SelectTrigger>
         <SelectContent>
@@ -123,7 +135,9 @@ interface TimePickerProps {
 function TimePicker({ hour, minute, onChange }: TimePickerProps) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="sched-time">Run at (24h)</Label>
+      <Label htmlFor="sched-time" className={LABEL_CLASS}>
+        Run at (24h)
+      </Label>
       <input
         id="sched-time"
         type="time"
@@ -133,9 +147,9 @@ function TimePicker({ hour, minute, onChange }: TimePickerProps) {
           onChange(h, m);
         }}
         className={cn(
-          "border-input h-9 w-full min-w-0 rounded-lg border bg-transparent px-3 text-sm",
-          "placeholder:text-muted-foreground transition-colors outline-none",
-          "focus-visible:border-ring focus-visible:ring-ring focus-visible:ring-2",
+          INPUT_CLASS,
+          "w-full min-w-0 px-3 text-sm",
+          "placeholder:text-slate-500 transition-colors outline-none",
           "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
           "[&::-webkit-calendar-picker-indicator]:hidden",
         )}
@@ -167,7 +181,7 @@ function DayOfWeekPills({ selected, onChange }: DayOfWeekPillsProps) {
 
   return (
     <div className="space-y-1.5">
-      <Label>Days of week</Label>
+      <Label className={LABEL_CLASS}>Days of week</Label>
       <div
         className="flex flex-wrap gap-2"
         role="group"
@@ -191,10 +205,10 @@ function DayOfWeekPills({ selected, onChange }: DayOfWeekPillsProps) {
               }}
               className={cn(
                 "inline-flex min-h-[36px] min-w-[40px] cursor-pointer items-center justify-center rounded-md px-2.5 text-sm font-medium transition-colors",
-                "focus-visible:ring-ring focus-visible:border-ring outline-none focus-visible:ring-2",
+                "outline-none focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/20",
                 isSelected
                   ? "bg-primary text-primary-foreground border border-transparent"
-                  : "border-border text-foreground hover:bg-muted border bg-transparent",
+                  : "border border-slate-300 bg-white text-slate-900 hover:bg-slate-50",
               )}
             >
               {label}
@@ -226,7 +240,9 @@ function MinutePicker({ minute, onChange }: MinutePickerProps) {
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="sched-minute">At minute</Label>
+      <Label htmlFor="sched-minute" className={LABEL_CLASS}>
+        At minute
+      </Label>
       <Input
         id="sched-minute"
         type="number"
@@ -236,7 +252,7 @@ function MinutePicker({ minute, onChange }: MinutePickerProps) {
         onChange={handleChange}
         aria-invalid={!!error}
         aria-describedby={error ? "minute-error" : undefined}
-        className="w-24"
+        className={cn("w-24", INPUT_CLASS)}
       />
       {error && (
         <p
@@ -268,7 +284,9 @@ function DayOfMonthInput({ value, onChange }: DayOfMonthInputProps) {
 
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="sched-dom">On day of month</Label>
+      <Label htmlFor="sched-dom" className={LABEL_CLASS}>
+        On day of month
+      </Label>
       <Input
         id="sched-dom"
         type="number"
@@ -278,7 +296,7 @@ function DayOfMonthInput({ value, onChange }: DayOfMonthInputProps) {
         onChange={handleChange}
         aria-invalid={isInvalid}
         aria-describedby={isInvalid ? "dom-error" : "dom-hint"}
-        className="w-24"
+        className={cn("w-24", INPUT_CLASS)}
       />
       {isInvalid ? (
         <p
@@ -291,7 +309,7 @@ function DayOfMonthInput({ value, onChange }: DayOfMonthInputProps) {
           Day must be between 1 and 31.
         </p>
       ) : (
-        <p id="dom-hint" className="text-muted-foreground text-xs">
+        <p id="dom-hint" className={HELPER_CLASS}>
           If the month has fewer days, the run is skipped.
         </p>
       )}
@@ -351,32 +369,34 @@ function RawCronInput({ expression, onChange, onSimplify }: RawCronInputProps) {
   return (
     <div className="space-y-2">
       <div className="space-y-1.5">
-        <Label htmlFor="sched-raw-cron">Cron expression</Label>
+        <Label htmlFor="sched-raw-cron" className={LABEL_CLASS}>
+          Cron expression
+        </Label>
         <Input
           id="sched-raw-cron"
           type="text"
           value={expression}
           onChange={handleChange}
           placeholder="0 7 * * *"
-          className="font-mono"
+          className={cn("font-mono", INPUT_CLASS)}
           aria-describedby="raw-cron-preview"
           spellCheck={false}
         />
-        <p id="raw-cron-preview" className="text-muted-foreground text-xs">
+        <p id="raw-cron-preview" className={HELPER_CLASS}>
           {preview || "Enter a valid 5-field cron expression"}
         </p>
       </div>
 
       {simplifiableFreq && (
-        <div className="border-border bg-muted/40 flex items-start gap-2 rounded-lg border px-3 py-2">
+        <div className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
           <InfoIcon
-            className="text-muted-foreground mt-0.5 size-4 shrink-0"
+            className="mt-0.5 size-4 shrink-0 text-slate-500"
             aria-hidden="true"
           />
           <div className="flex-1 space-y-1">
-            <p className="text-muted-foreground text-xs">
+            <p className={HELPER_CLASS}>
               This matches the{" "}
-              <span className="text-foreground font-medium capitalize">
+              <span className="font-medium text-slate-900 capitalize">
                 {simplifiableFreq}
               </span>{" "}
               pattern — you can switch to simplified mode.
@@ -405,7 +425,7 @@ interface TimezoneSelectProps {
 function TimezoneSelect({ value, onChange, error }: TimezoneSelectProps) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="sched-timezone">
+      <Label htmlFor="sched-timezone" className={LABEL_CLASS}>
         Timezone
         <span className="text-destructive ml-1" aria-hidden="true">
           *
@@ -419,7 +439,7 @@ function TimezoneSelect({ value, onChange, error }: TimezoneSelectProps) {
       >
         <SelectTrigger
           id="sched-timezone"
-          className="w-full"
+          className={cn("w-full", SELECT_TRIGGER_CLASS)}
           aria-invalid={!!error}
         >
           <SelectValue placeholder="Select timezone" />
@@ -454,13 +474,13 @@ function CronPreview({ expr }: CronPreviewProps) {
   if (!expr.trim()) return null;
   return (
     <div
-      className="border-border bg-muted/40 rounded-lg border px-3 py-2"
+      className="rounded-md border border-slate-200 bg-slate-50 p-3"
       aria-live="polite"
       aria-label="Schedule preview"
     >
-      <p className="text-muted-foreground text-xs">Schedule preview</p>
+      <p className={HELPER_CLASS}>Schedule preview</p>
       <p className="mt-0.5 font-mono text-sm font-medium">{expr}</p>
-      <p className="text-muted-foreground mt-0.5 text-xs">
+      <p className={cn("mt-0.5", HELPER_CLASS)}>
         {humanizeCronShort(expr)}
       </p>
     </div>
@@ -503,7 +523,7 @@ function NextRunPreview({ cron, timezone }: NextRunPreviewProps) {
 
   if (result.error) {
     return (
-      <p className="text-muted-foreground mt-2 text-xs">
+      <p className={cn("mt-2", HELPER_CLASS)}>
         Next run preview unavailable: {result.error}
       </p>
     );
@@ -511,7 +531,7 @@ function NextRunPreview({ cron, timezone }: NextRunPreviewProps) {
 
   if (result.next.length === 0 || !formatter) {
     return (
-      <p className="text-muted-foreground mt-2 text-xs">
+      <p className={cn("mt-2", HELPER_CLASS)}>
         No upcoming runs in the next year.
       </p>
     );
@@ -519,12 +539,12 @@ function NextRunPreview({ cron, timezone }: NextRunPreviewProps) {
 
   return (
     <div
-      className="border-border bg-muted/20 mt-2 rounded-lg border px-3 py-2 text-xs"
+      className="mt-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-xs"
       aria-live="polite"
       aria-label="Upcoming schedule runs"
     >
-      <p className="text-foreground font-medium">Upcoming runs ({timezone})</p>
-      <ul className="text-muted-foreground mt-1 space-y-0.5">
+      <p className="font-medium text-slate-900">Upcoming runs ({timezone})</p>
+      <ul className="mt-1 space-y-0.5 text-xs text-slate-500">
         {result.next.map((date) => (
           <li key={date.toISOString()}>{formatter.format(date)}</li>
         ))}

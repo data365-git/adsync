@@ -1,3 +1,5 @@
+import { computeNextRuns } from "./cron-preview";
+
 export type Frequency =
   | "hourly"
   | "daily"
@@ -121,61 +123,14 @@ export function humanizeCronShort(expr: string): string {
   }
 }
 
-/**
- * Compute the next fire time for a cron expression.
- * Returns null if the expression cannot be parsed or the next fire time
- * is more than 31 days away (guard against runaway loops).
- *
- * Implementation: brute-force minute-by-minute scan from `from` up to 31 days.
- * Adequate for our 4 named patterns; custom schedules return null.
- *
- * Note: the `_timezone` parameter is accepted for API compatibility but is
- * not used in Phase 1.6 — all computations are in local time. Phase 2 should
- * swap this for a proper Intl-based implementation.
- */
 export function nextFireAt(
   expr: string,
-  _timezone: string,
+  timezone?: string | null,
   from: Date = new Date(),
 ): Date | null {
-  const parsed = parseCron(expr);
-  if (!parsed || parsed.frequency === "advanced") return null;
-
-  const MAX_ITERATIONS = 60 * 24 * 31; // 31 days in minutes
-  const candidate = new Date(from);
-  // Round up to the next whole minute
-  candidate.setSeconds(0, 0);
-  candidate.setMinutes(candidate.getMinutes() + 1);
-
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const m = candidate.getMinutes();
-    const h = candidate.getHours();
-    const d = candidate.getDate();
-    const dow = candidate.getDay();
-
-    let matches = false;
-    switch (parsed.frequency) {
-      case "hourly":
-        matches = m === (parsed.minute ?? 0);
-        break;
-      case "daily":
-        matches = h === (parsed.hour ?? 0) && m === (parsed.minute ?? 0);
-        break;
-      case "weekly":
-        matches =
-          (parsed.daysOfWeek ?? [1]).includes(dow) &&
-          h === (parsed.hour ?? 0) &&
-          m === (parsed.minute ?? 0);
-        break;
-      case "monthly":
-        matches =
-          d === (parsed.dayOfMonth ?? 1) &&
-          h === (parsed.hour ?? 0) &&
-          m === (parsed.minute ?? 0);
-        break;
-    }
-    if (matches) return new Date(candidate);
-    candidate.setMinutes(candidate.getMinutes() + 1);
-  }
-  return null;
+  // Empty timezone values should fall back to UTC.
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  const r = computeNextRuns(expr.trim(), timezone || "UTC", 1, from);
+  if (r.error || r.next.length === 0) return null;
+  return r.next[0] ?? null;
 }

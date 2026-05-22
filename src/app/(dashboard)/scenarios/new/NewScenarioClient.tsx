@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { TemplatePicker } from "~/components/scenarios/TemplatePicker";
@@ -11,6 +12,8 @@ import {
 import { api } from "~/trpc/react";
 
 export function NewScenarioClient() {
+  const searchParams = useSearchParams();
+  const folderId = searchParams.get("folder");
   const [chosen, setChosen] = React.useState<{
     name: string;
     steps: DraftStep[];
@@ -60,6 +63,7 @@ export function NewScenarioClient() {
     <ScenarioBuilder
       initialName={chosen.name}
       initialSteps={chosen.steps}
+      initialFolderId={folderId}
     />
   );
 }

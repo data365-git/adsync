@@ -149,6 +149,8 @@ interface ScenarioBuilderProps {
   initialName?: string;
   /** Pre-populated steps (from template) */
   initialSteps?: DraftStep[];
+  /** Folder where a newly-created scenario should be placed. */
+  initialFolderId?: string | null;
 }
 
 // ─── New-scenario builder (no tabs) ──────────────────────────────────────────
@@ -156,6 +158,7 @@ interface ScenarioBuilderProps {
 export function ScenarioBuilder({
   initialName,
   initialSteps,
+  initialFolderId = null,
 }: ScenarioBuilderProps) {
   const router = useRouter();
 
@@ -362,6 +365,7 @@ export function ScenarioBuilder({
       const result = await createMutation.mutateAsync({
         name,
         enabled,
+        folderId: initialFolderId,
         steps: steps.map((s) => ({
           position: s.position,
           moduleType: s.moduleType,

@@ -90,6 +90,7 @@ export function ScenarioCard({
   return (
     <>
       <div className="bg-card flex flex-col gap-4 rounded-xl border p-6">
+        {/* TODO mobile-bulk-select */}
         {/* Header: name + badge + kebab */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex min-w-0 flex-col gap-1">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "~/components/ui/switch";
 import { api } from "~/trpc/react";
@@ -18,6 +18,12 @@ type Props = {
 export function ScenarioEnabledToggle({ id, initialEnabled, name }: Props) {
   const [optimisticEnabled, setOptimisticEnabled] = useState(initialEnabled);
   const inFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (!inFlightRef.current) {
+      setOptimisticEnabled(initialEnabled);
+    }
+  }, [initialEnabled]);
 
   const toggleMutation = api.scenarios.toggleEnabled.useMutation({
     onSuccess(data) {
@@ -49,6 +55,7 @@ export function ScenarioEnabledToggle({ id, initialEnabled, name }: Props) {
       onCheckedChange={handleCheckedChange}
       disabled={toggleMutation.isPending}
       aria-label={`${optimisticEnabled ? "Disable" : "Enable"} ${name}`}
+      className="data-checked:bg-sky-600 data-unchecked:bg-slate-200 [&_[data-slot=switch-thumb]]:bg-white"
     />
   );
 }

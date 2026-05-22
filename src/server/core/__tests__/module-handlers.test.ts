@@ -576,15 +576,18 @@ describe("bitrixCreateLeadHandler", () => {
       }),
     ]);
     expect(createLeadSpy).toHaveBeenCalledTimes(1);
-    expect(createLeadSpy).toHaveBeenCalledWith({
-      title: "Website inquiry",
-      name: "Alice",
-      lastName: "Smith",
-      phone: "+1-555-1234",
-      email: "alice@example.com",
-      sourceId: "WEB",
-      comments: "from contact form",
-    });
+    expect(createLeadSpy).toHaveBeenCalledWith(
+      {
+        title: "Website inquiry",
+        name: "Alice",
+        lastName: "Smith",
+        phone: "+1-555-1234",
+        email: "alice@example.com",
+        sourceId: "WEB",
+        comments: "from contact form",
+      },
+      "u",
+    );
     expect(calls.length).toBe(1);
   });
 
@@ -665,12 +668,15 @@ describe("bitrixUpdateLeadHandler", () => {
     expect(result.rows).toEqual([
       expect.objectContaining({ leadId: "4242", updated: true }),
     ]);
-    expect(updateLeadSpy).toHaveBeenCalledWith({
-      leadId: "4242",
-      title: "Updated title",
-      statusId: "IN_PROCESS",
-      comments: "follow-up scheduled",
-    });
+    expect(updateLeadSpy).toHaveBeenCalledWith(
+      {
+        leadId: "4242",
+        title: "Updated title",
+        statusId: "IN_PROCESS",
+        comments: "follow-up scheduled",
+      },
+      "u",
+    );
   });
 
   it("propagates BitrixError from updateLead", async () => {

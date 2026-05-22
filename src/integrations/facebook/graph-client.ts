@@ -1,4 +1,5 @@
 import { getFbAccessToken } from "./oauth";
+import { withRetry } from "~/server/core/retry";
 
 const FB_VERSION = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
 const BASE = `https://graph.facebook.com/${FB_VERSION}`;
@@ -41,8 +42,16 @@ function stubRows(metrics: string[], n = 3): InsightRow[] {
 // ─── Real API calls ──────────────────────────────────────────────────────────
 
 async function fetchJson<T>(url: string, accessToken: string): Promise<T> {
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  const res = await withRetry(async () => {
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (response.status >= 500) {
+      throw Object.assign(new Error(`HTTP ${response.status}`), {
+        status: response.status,
+      });
+    }
+    return response;
   });
   if (!res.ok) {
     const err = (await res
@@ -68,19 +77,19 @@ function buildInsightsUrl(
     "ad_id",
     ...metrics,
   ].join(",");
-  const datePreset =
-    dateWindowDays <= 7
-      ? "last_7d"
-      : dateWindowDays <= 14
-        ? "last_14d"
-        : "last_30d";
-  return (
-    `${BASE}/${fbAccountId}/insights` +
-    `?level=${level}` +
-    `&fields=${fields}` +
-    `&date_preset=${datePreset}` +
-    `&limit=500`
-  );
+  const until = new Date();
+  const since = new Date(until);
+  since.setUTCDate(since.getUTCDate() - dateWindowDays);
+  const params = new URLSearchParams({
+    level,
+    fields,
+    time_range: JSON.stringify({
+      since: since.toISOString().slice(0, 10),
+      until: until.toISOString().slice(0, 10),
+    }),
+    limit: "500",
+  });
+  return `${BASE}/${fbAccountId}/insights?${params.toString()}`;
 }
 
 export async function getAccountInsights(
@@ -133,17 +142,26 @@ export async function getAdInsights(
 
 export async function listAdAccounts(
   userId: string,
-): Promise<{ id: string; name: string }[]> {
+): Promise<{ id: string; name: string; account_status?: number }[]> {
   if (isStubMode()) {
     return [
-      { id: "act_stub_001", name: "Stub Account — Dev Mode" },
-      { id: "act_stub_002", name: "Stub Account 2 — Dev Mode" },
+      { id: "act_stub_001", name: "Stub Account — Dev Mode", account_status: 1 },
+      { id: "act_stub_002", name: "Stub Account 2 — Dev Mode", account_status: 1 },
     ];
   }
   const token = await getFbAccessToken(userId);
-  const url = `${BASE}/me/adaccounts?fields=account_id,name&limit=50`;
+  const url = `${BASE}/me/adaccounts?fields=account_id,name,account_status&limit=50`;
   const data = await fetchJson<{
-    data: Array<{ id: string; account_id: string; name: string }>;
+    data: Array<{
+      id: string;
+      account_id: string;
+      name: string;
+      account_status?: number;
+    }>;
   }>(url, token);
-  return (data.data ?? []).map((a) => ({ id: a.id, name: a.name }));
+  return (data.data ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    account_status: a.account_status,
+  }));
 }

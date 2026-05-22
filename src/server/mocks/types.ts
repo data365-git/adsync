@@ -120,6 +120,8 @@ export type Scenario = {
   name: string;
   kind: ScenarioKind;
   enabled: boolean;
+  /** null = root, undefined/absent in legacy mock data */
+  folderId?: string | null;
   steps: ScenarioStep[];
   lastRunAt: Date | null;
   lastRunStatus: "success" | "failed" | null;

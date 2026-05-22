@@ -8,19 +8,19 @@ import { Zap } from "lucide-react";
  */
 export function QuickSetupBanner() {
   return (
-    <div className="bg-muted/50 flex items-center gap-3 rounded-xl border px-4 py-3">
-      <div className="bg-muted shrink-0 rounded-md p-2">
-        <Zap className="text-muted-foreground size-4" aria-hidden />
+    <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+      <div className="shrink-0 rounded-md bg-white/70 p-2">
+        <Zap className="size-4 text-sky-700" aria-hidden />
       </div>
       <div className="flex min-w-0 flex-col gap-0.5">
-        <p className="text-foreground text-sm font-medium">
+        <p className="text-sm font-semibold text-slate-900">
           Quick Setup scenarios
         </p>
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-slate-600">
           Quick Setup scenarios are auto-generated from your{" "}
           <Link
             href="/ad-accounts"
-            className="hover:text-foreground focus-visible:ring-ring rounded underline underline-offset-2 focus-visible:ring-2 focus-visible:outline-none"
+            className="rounded underline underline-offset-2 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none"
           >
             Ad Accounts
           </Link>

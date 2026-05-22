@@ -57,14 +57,14 @@ export function Sidebar({ user }: { user: User }) {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex h-11 items-center gap-3 rounded-md px-3 text-base transition-colors",
+                    "flex h-9 items-center gap-3 rounded-md border-l-2 px-3 text-sm transition-colors",
                     "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
                     active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                      ? "border-sky-700 bg-slate-100 font-medium text-slate-900"
+                      : "border-transparent text-slate-700 hover:bg-slate-100 hover:text-slate-900",
                   )}
                 >
-                  <Icon className="h-4 w-4" aria-hidden />
+                  <Icon className="h-[18px] w-[18px]" aria-hidden />
                   <span>{item.label}</span>
                 </Link>
               </li>

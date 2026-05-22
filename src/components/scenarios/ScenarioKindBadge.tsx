@@ -1,4 +1,4 @@
-import { Badge } from "~/components/ui/badge";
+import { cn } from "~/lib/utils";
 import type { ScenarioKind } from "~/server/mocks/types";
 
 type Props = {
@@ -11,17 +11,17 @@ type Props = {
  * - QUICK_SETUP → outline badge (muted) — a legacy shortcut, secondary importance
  */
 export function ScenarioKindBadge({ kind }: Props) {
-  if (kind === "CUSTOM") {
-    return (
-      <Badge variant="secondary" role="status">
-        Custom
-      </Badge>
-    );
-  }
-
   return (
-    <Badge variant="outline" role="status">
-      Quick Setup
-    </Badge>
+    <span
+      className={cn(
+        "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[11px] font-medium tracking-[0.04em] uppercase",
+        kind === "CUSTOM"
+          ? "bg-slate-100 text-slate-700"
+          : "bg-sky-50 text-sky-700",
+      )}
+      role="status"
+    >
+      {kind === "CUSTOM" ? "Custom" : "Quick Setup"}
+    </span>
   );
 }

@@ -1,6 +1,7 @@
-import "server-only";
 import type { BitrixBatchResult, BatchOperation } from "./types";
 import { BitrixError } from "./types";
+import { withRetry } from "~/server/core/retry";
+import { TokenRefreshError } from "~/integrations/google/oauth";
 
 // 2 req/sec max → enforce 500ms minimum gap between calls
 const MIN_INTERVAL_MS = 500;
@@ -14,32 +15,55 @@ async function rateLimit(): Promise<void> {
   lastCallAt = Date.now();
 }
 
-async function fetchWithRetry(
+class HttpStatusError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "HttpStatusError";
+  }
+}
+
+async function fetchJson(
   url: string,
   body: Record<string, unknown>,
-  attempt = 0,
 ): Promise<unknown> {
-  try {
+  return withRetry(async () => {
     await rateLimit();
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (res.status === 503 || res.status === 429) {
-      if (attempt >= 4) throw new Error(`HTTP ${res.status} after ${attempt + 1} attempts`);
-      await new Promise<void>((r) =>
-        setTimeout(r, Math.min(1_000 * 2 ** attempt, 30_000)),
-      );
-      return fetchWithRetry(url, body, attempt + 1);
+    if (!res.ok) {
+      throw new HttpStatusError(res.status, `HTTP ${res.status}: ${res.statusText}`);
     }
     return res.json() as unknown;
-  } catch (err) {
-    if (attempt >= 4) throw err;
-    await new Promise<void>((r) =>
-      setTimeout(r, Math.min(1_000 * 2 ** attempt, 30_000)),
-    );
-    return fetchWithRetry(url, body, attempt + 1);
+  });
+}
+
+async function ensureBitrixTokenFresh(userId?: string): Promise<void> {
+  if (!userId) return;
+
+  const [{ db }, { ConnectionStatus, Provider }] = await Promise.all([
+    import("~/server/db"),
+    import("@prisma/client"),
+  ]);
+  const conn = await db.oAuthConnection.findUnique({
+    where: { userId_provider: { userId, provider: Provider.BITRIX24 } },
+  });
+
+  if (conn?.status !== ConnectionStatus.CONNECTED) {
+    throw new TokenRefreshError("Bitrix");
+  }
+
+  if ((conn.expiresAt?.getTime() ?? Infinity) - Date.now() < 5 * 60 * 1000) {
+    await db.oAuthConnection.update({
+      where: { userId_provider: { userId, provider: Provider.BITRIX24 } },
+      data: { status: ConnectionStatus.EXPIRED },
+    });
+    throw new TokenRefreshError("Bitrix");
   }
 }
 
@@ -74,7 +98,7 @@ export async function call<T>(
   params: Record<string, unknown> = {},
 ): Promise<T> {
   const url = `${getWebhookBase()}/${method}.json`;
-  const raw = (await fetchWithRetry(url, params)) as {
+  const raw = (await fetchJson(url, params)) as {
     result?: T;
     error?: string;
     error_description?: string;
@@ -157,7 +181,9 @@ export type CreateLeadInput = {
 
 export async function createLead(
   input: CreateLeadInput,
+  userId?: string,
 ): Promise<{ leadId: string }> {
+  await ensureBitrixTokenFresh(userId);
   const fields: Record<string, unknown> = {
     TITLE: input.title,
     NAME: input.name,
@@ -185,7 +211,9 @@ export type UpdateLeadInput = {
 
 export async function updateLead(
   input: UpdateLeadInput,
+  userId?: string,
 ): Promise<{ leadId: string; updated: true }> {
+  await ensureBitrixTokenFresh(userId);
   const fields: Record<string, unknown> = {};
   if (input.title) fields.TITLE = input.title;
   if (input.statusId) fields.STATUS_ID = input.statusId;

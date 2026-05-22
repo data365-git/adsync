@@ -29,6 +29,15 @@ export function getOAuthClient() {
   );
 }
 
+export class TokenRefreshError extends Error {
+  readonly code = "TOKEN_REFRESH_FAILED";
+
+  constructor(provider: "Google" | "Bitrix") {
+    super(`Reconnect ${provider} in the Connections page`);
+    this.name = "TokenRefreshError";
+  }
+}
+
 export function getAuthorizationUrl(state: string): string {
   const client = getOAuthClient();
   return client.generateAuthUrl({
@@ -97,18 +106,27 @@ export async function getAuthedClient(userId: string) {
 
   // Refresh proactively if expiring within 5 min
   if (conn.expiresAt && conn.expiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
-    const { credentials } = await client.refreshAccessToken();
-    client.setCredentials(credentials);
-    await db.oAuthConnection.update({
-      where: { userId_provider: { userId, provider: Provider.GOOGLE_SHEETS } },
-      data: {
-        accessToken: encryptToken(credentials.access_token!), // re-encrypted after refresh
-        expiresAt: credentials.expiry_date
-          ? new Date(credentials.expiry_date)
-          : null,
-        status: ConnectionStatus.CONNECTED,
-      },
-    });
+    try {
+      const { credentials } = await client.refreshAccessToken();
+      if (!credentials.access_token) throw new Error("No refreshed access token");
+      client.setCredentials(credentials);
+      await db.oAuthConnection.update({
+        where: { userId_provider: { userId, provider: Provider.GOOGLE_SHEETS } },
+        data: {
+          accessToken: encryptToken(credentials.access_token), // re-encrypted after refresh
+          expiresAt: credentials.expiry_date
+            ? new Date(credentials.expiry_date)
+            : null,
+          status: ConnectionStatus.CONNECTED,
+        },
+      });
+    } catch {
+      await db.oAuthConnection.update({
+        where: { userId_provider: { userId, provider: Provider.GOOGLE_SHEETS } },
+        data: { status: ConnectionStatus.EXPIRED },
+      });
+      throw new TokenRefreshError("Google");
+    }
   }
 
   return client;

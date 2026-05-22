@@ -16,9 +16,11 @@ type OAuthConnectionRow = {
   provider: Provider;
   status: ConnectionStatus;
   email: string | null;
+  scope: string | null;
   expiresAt: Date | null;
   connectedAt: Date | null;
   lastVerifiedAt: Date | null;
+  updatedAt: Date;
 };
 
 function toFrontendConnection(row: OAuthConnectionRow) {
@@ -40,9 +42,12 @@ function toFrontendConnection(row: OAuthConnectionRow) {
     provider: provider[row.provider],
     status: status[row.status],
     email: row.email,
+    scope: row.scope,
     expiresAt: row.expiresAt,
     connectedAt: row.connectedAt,
+    issuedAt: row.connectedAt,
     lastVerifiedAt: row.lastVerifiedAt,
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -52,6 +57,87 @@ function providerFromInput(
   if (provider === "google") return Provider.GOOGLE_SHEETS;
   if (provider === "facebook") return Provider.FACEBOOK;
   return Provider.BITRIX24;
+}
+
+type ConnectionTestResult = {
+  ok: boolean;
+  asUser?: string;
+  message: string;
+  latencyMs: number;
+};
+
+const TEST_CACHE_TTL_MS = 60_000;
+const testCache = new Map<
+  string,
+  { result: ConnectionTestResult; expiresAt: number }
+>();
+
+async function runConnectionTest(
+  userId: string,
+  provider: "google" | "facebook" | "bitrix",
+): Promise<ConnectionTestResult> {
+  const startedAt = Date.now();
+
+  try {
+    if (provider === "google") {
+      const auth = await getAuthedClient(userId);
+      const drive = google.drive({ version: "v3", auth });
+      const response = await drive.about.get({ fields: "user" });
+      const user = response.data.user;
+      const asUser =
+        user?.emailAddress ?? user?.displayName ?? user?.permissionId ?? undefined;
+
+      return {
+        ok: true,
+        asUser,
+        message: asUser
+          ? `Google Drive responded for ${asUser}.`
+          : "Google Drive responded.",
+        latencyMs: Date.now() - startedAt,
+      };
+    }
+
+    if (provider === "facebook") {
+      const token = await getFbAccessToken(userId);
+      const version = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
+      const response = await fetch(
+        `https://graph.facebook.com/${version}/me?fields=id,name&access_token=${token}`,
+      );
+      const payload = (await response.json()) as {
+        id?: string;
+        name?: string;
+        error?: { message?: string };
+      };
+
+      if (!response.ok || !payload.id) {
+        throw new Error(payload.error?.message ?? "Facebook Graph did not return a user.");
+      }
+
+      return {
+        ok: true,
+        asUser: payload.name ?? payload.id,
+        message: payload.name
+          ? `Facebook Graph responded for ${payload.name}.`
+          : "Facebook Graph responded.",
+        latencyMs: Date.now() - startedAt,
+      };
+    }
+
+    await bitrixCall<unknown[]>("crm.dealcategory.list", { start: 0 });
+
+    return {
+      ok: true,
+      message: "Bitrix24 responded.",
+      latencyMs: Date.now() - startedAt,
+    };
+  } catch (error) {
+    void error;
+    return {
+      ok: false,
+      message: "Connection test failed. Reconnect this provider and try again.",
+      latencyMs: Date.now() - startedAt,
+    };
+  }
 }
 
 export const connectionsRouter = createTRPCRouter({
@@ -80,6 +166,14 @@ export const connectionsRouter = createTRPCRouter({
 
       return { id: input.id, status: "disconnected" as const };
     }),
+
+  disconnectAll: authedProcedure.mutation(async ({ ctx }) => {
+    const result = await db.oAuthConnection.deleteMany({
+      where: { userId: ctx.userId },
+    });
+
+    return { ok: true, count: result.count } as const;
+  }),
 
   refresh: authedProcedure
     .input(z.object({ id: z.string() }))
@@ -180,6 +274,44 @@ export const connectionsRouter = createTRPCRouter({
 
       return { ok, lastVerifiedAt };
     }),
+
+  test: authedProcedure
+    .input(z.object({ provider: z.enum(["google", "facebook", "bitrix"]) }))
+    .mutation(async ({ ctx, input }) => {
+      const providerEnum = providerFromInput(input.provider);
+      const conn = await db.oAuthConnection.findUnique({
+        where: {
+          userId_provider: { userId: ctx.userId, provider: providerEnum },
+        },
+      });
+
+      if (!conn || conn.status === ConnectionStatus.DISCONNECTED) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Provider is not connected.",
+        });
+      }
+
+      const cacheKey = `${ctx.userId}:${input.provider}`;
+      const cached = testCache.get(cacheKey);
+      const now = Date.now();
+      if (cached && cached.expiresAt > now) {
+        return cached.result;
+      }
+
+      const result = await runConnectionTest(ctx.userId, input.provider);
+      testCache.set(cacheKey, {
+        result,
+        expiresAt: now + TEST_CACHE_TTL_MS,
+      });
+
+      return result;
+    }),
+
+  bitrixHealth: authedProcedure.query(async ({ ctx }) => {
+    const { checkBitrixHealth } = await import("~/server/bitrix24/health");
+    return checkBitrixHealth(ctx.session.user?.id ?? ctx.userId);
+  }),
 
   /**
    * List Google Drive spreadsheets accessible via the connected Google account.

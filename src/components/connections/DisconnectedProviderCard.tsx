@@ -75,37 +75,36 @@ export function DisconnectedProviderCard({
 }: DisconnectedProviderCardProps) {
   return (
     <article aria-label={`${label} connection`} className="flex flex-col">
-      <Card className="flex flex-1 flex-col">
-        <CardHeader className="border-b">
+      <Card className="flex flex-1 flex-col rounded-lg border border-slate-200 bg-white text-slate-900 shadow-sm ring-0">
+        <CardHeader className="border-b border-slate-200">
           <div className="flex items-center gap-3">
             <ProviderIcon provider={provider} />
             <div className="min-w-0 flex-1">
-              <CardTitle>{label}</CardTitle>
+              <CardTitle className="text-base font-semibold text-slate-900">
+                {label}
+              </CardTitle>
             </div>
             <ConnectionStatus status="disconnected" />
           </div>
         </CardHeader>
 
         <CardContent className="flex flex-col justify-between gap-3 pt-4">
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-slate-500">
             {PROVIDER_DESCRIPTION[provider]}
           </p>
         </CardContent>
 
-        <CardFooter className="flex flex-wrap gap-2">
+        <CardFooter className="flex flex-wrap gap-2 border-t border-slate-200 bg-slate-50">
           <Button
             size="lg"
             onClick={() => onConnect(provider)}
             disabled={pending}
             aria-label={`Connect ${label}`}
-            className="flex-1"
+            className="h-9 flex-1 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
           >
             {pending ? (
               <>
-                <Loader2
-                  className="size-3.5 animate-spin"
-                  aria-hidden="true"
-                />
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                 Connecting…
               </>
             ) : (

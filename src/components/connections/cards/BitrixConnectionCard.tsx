@@ -1,344 +1,388 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 import {
-  AlertCircle,
-  CheckCircle,
-  Circle,
+  ChevronDown,
   Loader2,
+  MoreHorizontal,
   RefreshCwIcon,
+  TestTube2,
 } from "lucide-react";
-import { format } from "date-fns";
 
 import type { OAuthConnection } from "~/server/mocks/types";
 import { BitrixIcon } from "~/lib/integration-icons";
-import { api } from "~/trpc/react";
+import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover";
-import { ResourceList } from "~/components/connections/ResourceList";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { ConnectionStatus } from "~/components/connections/ConnectionStatus";
+import { DisconnectDialog } from "~/components/connections/DisconnectDialog";
+import { api } from "~/trpc/react";
+
+const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+type FrontendConnection = OAuthConnection & {
+  scope?: string | null;
+  issuedAt?: Date | null;
+  updatedAt?: Date | null;
+};
+
+type ActivityEvent = {
+  id: string;
+  label: string;
+  timestamp: Date;
+  tone: "neutral" | "success" | "error";
+};
 
 export interface BitrixConnectionCardProps {
-  connection: OAuthConnection | null;
+  connection: FrontendConnection | null;
   onConnect: () => void;
   onDisconnect: () => void;
   onVerify?: () => void;
+  onTest?: () => void;
   isVerifying?: boolean;
-  lastVerifiedLabel?: string | null;
+  isTesting?: boolean;
+  isDisconnecting?: boolean;
+  testEvents?: ActivityEvent[];
+  lastRefreshLabel?: string | null;
 }
 
-// Derive status from the connection row, falling back to "disconnected" when
-// no connection row exists yet.
-type ConnectionStatus = "connected" | "expired" | "disconnected";
+type BitrixStatus = "connected" | "expired" | "disconnected";
 
-function resolveStatus(connection: OAuthConnection | null): ConnectionStatus {
+function resolveStatus(connection: FrontendConnection | null): BitrixStatus {
   if (connection === null) return "disconnected";
   return connection.status;
 }
 
-interface StatusIconProps {
-  status: ConnectionStatus;
+function splitScopes(scope: string | null | undefined): string[] {
+  if (!scope) return [];
+  return scope
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
-function StatusIcon({ status }: StatusIconProps) {
-  if (status === "connected") {
-    return (
-      <CheckCircle
-        className="text-status-success size-4 shrink-0"
-        aria-hidden="true"
-      />
-    );
+function getExpiryProgress(
+  connection: FrontendConnection | null,
+  nowMs: number | null,
+) {
+  if (!connection?.expiresAt) return null;
+  if (nowMs === null) return null;
+
+  const issuedMs =
+    (connection.issuedAt ?? connection.connectedAt)?.getTime() ?? nowMs;
+  const expiresMs = connection.expiresAt.getTime();
+  const totalMs = Math.max(expiresMs - issuedMs, 1);
+  const remainingMs = expiresMs - nowMs;
+
+  return {
+    percent: Math.min(Math.max(((nowMs - issuedMs) / totalMs) * 100, 0), 100),
+    fillClassName:
+      remainingMs <= 0
+        ? "bg-red-500"
+        : remainingMs <= THREE_DAYS_MS
+          ? "bg-amber-500"
+          : "bg-sky-600",
+    shouldReconnect: remainingMs <= THREE_DAYS_MS,
+  };
+}
+
+function ScopeChips({ scopes }: { scopes: string[] }) {
+  if (scopes.length === 0) {
+    return <p className="text-xs text-slate-500">No scopes recorded</p>;
   }
-  if (status === "expired") {
-    return (
-      <AlertCircle
-        className="text-status-warning size-4 shrink-0"
-        aria-hidden="true"
-      />
-    );
-  }
+
   return (
-    <Circle className="text-status-queued size-4 shrink-0" aria-hidden="true" />
+    <div className="flex flex-wrap gap-1.5" aria-label="OAuth scopes">
+      {scopes.map((scope) => (
+        <span
+          key={scope}
+          className="max-w-full truncate rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600"
+          title={scope}
+        >
+          {scope}
+        </span>
+      ))}
+    </div>
   );
 }
 
-function statusLabel(status: ConnectionStatus): string {
-  if (status === "connected") return "Connected";
-  if (status === "expired") return "Expired";
-  return "Disconnected";
-}
-
-// ─── BitrixResourcePanel ─────────────────────────────────────────────────────
-// Fetches Bitrix24 pipelines and renders them inside the card.
-
-interface BitrixResourcePanelProps {
-  onReconnect: () => void;
-}
-
-function BitrixResourcePanel({ onReconnect }: BitrixResourcePanelProps) {
-  const query = api.connections.bitrixPipelines.useQuery(undefined, {
-    retry: 1,
-  });
-  const data = query.data;
-
+function ActivityLog({
+  events,
+  open,
+  onToggle,
+}: {
+  events: ActivityEvent[];
+  open: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <ResourceList
-      isLoading={query.isLoading}
-      isError={query.isError}
-      identifier={data?.identifier ?? null}
-      items={data?.items ?? []}
-      truncated={data?.truncated ?? false}
-      totalCount={(data as { totalCount?: number } | undefined)?.totalCount}
-      emptyMessage="No CRM pipelines found — check your webhook URL."
-      onRetry={onReconnect}
-    />
+    <div className="border-t border-slate-200 pt-3">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex min-h-9 w-full items-center justify-between rounded-md text-left text-sm font-medium text-slate-700 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:outline-none"
+        aria-expanded={open}
+      >
+        Recent events
+        <ChevronDown
+          className={cn("size-4 transition-transform", open && "rotate-180")}
+          aria-hidden="true"
+        />
+      </button>
+
+      {open && (
+        <ul className="mt-2 space-y-2" aria-label="Recent connection events">
+          {events.slice(0, 10).map((event) => (
+            <li key={event.id} className="flex items-start gap-2 text-xs">
+              <span
+                className={cn(
+                  "mt-1.5 size-1.5 shrink-0 rounded-full",
+                  event.tone === "success" && "bg-green-500",
+                  event.tone === "error" && "bg-red-500",
+                  event.tone === "neutral" && "bg-slate-400",
+                )}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 flex-1 text-slate-600">
+                {event.label}
+              </span>
+              <time className="font-mono text-slate-500">
+                {formatDistanceToNow(event.timestamp)} ago
+              </time>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+const primaryOutlineButtonClass =
+  "h-9 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2";
+
+const primaryButtonClass =
+  "h-9 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2";
+
+const ghostButtonClass =
+  "h-9 rounded-md px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2";
 
 export function BitrixConnectionCard({
   connection,
   onConnect,
   onDisconnect,
   onVerify,
+  onTest,
   isVerifying = false,
-  lastVerifiedLabel,
+  isTesting = false,
+  isDisconnecting = false,
+  testEvents = [],
+  lastRefreshLabel,
 }: BitrixConnectionCardProps) {
   const status = resolveStatus(connection);
-
-  // isConnecting: tracks the in-flight connect CTA click. We manage it locally
-  // because the parent's connectMutation is provider-agnostic and may be shared
-  // with other CTAs. The parent's onConnect will navigate the window away, so
-  // we never need to reset this; but if the parent errors, the card is still
-  // mounted and the user would see the spinner — acceptable for this phase.
   const [isConnecting, setIsConnecting] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
+  const [eventsOpen, setEventsOpen] = useState(false);
+  const [nowMs, setNowMs] = useState<number | null>(null);
 
-  // isDisconnectOpen: controls the confirmation popover open state explicitly
-  // so we can close it on Cancel or after Confirm.
-  const [isDisconnectOpen, setIsDisconnectOpen] = useState(false);
+  const scopes = useMemo(() => splitScopes(connection?.scope), [connection?.scope]);
+  const expiry = getExpiryProgress(connection, nowMs);
+  const isConnected = status === "connected";
+  const isExpired = status === "expired";
+  const bitrixHealth = api.connections.bitrixHealth.useQuery(undefined, {
+    enabled: isConnected,
+  });
+  const events = useMemo<ActivityEvent[]>(() => {
+    const updatedAt = connection?.updatedAt ?? connection?.connectedAt;
+    const base = updatedAt
+      ? [
+          {
+            id: "connection-updated",
+            label: "Bitrix24 CRM connection updated",
+            timestamp: updatedAt,
+            tone: "neutral" as const,
+          },
+        ]
+      : [];
+    return [...testEvents, ...base].slice(0, 10);
+  }, [connection?.connectedAt, connection?.updatedAt, testEvents]);
 
   function handleConnect() {
     setIsConnecting(true);
     onConnect();
   }
 
-  function handleConfirmDisconnect() {
-    setIsDisconnectOpen(false);
-    onDisconnect();
-  }
-
-  const isConnected = status === "connected";
-  const isExpired = status === "expired";
-  const isDisconnected = status === "disconnected";
-  const showConnectCta = isDisconnected || isExpired;
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, []);
 
   return (
-    <article aria-label="Bitrix24 connection" className="flex flex-col">
-      <Card className="flex flex-1 flex-col">
-        {/* ── Header ── */}
-        <CardHeader className="border-b">
-          <div className="flex items-center gap-3">
-            {/* Brand tile */}
-            <div className="bg-brand-bitrix/10 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-              <BitrixIcon className="text-brand-bitrix h-5 w-5" />
-            </div>
+    <article
+      aria-label="Bitrix24 connection"
+      className="flex flex-col rounded-lg border border-slate-200 bg-white p-5 text-slate-900 shadow-sm"
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-50">
+          <BitrixIcon
+            className="text-brand-bitrix size-5"
+            aria-hidden="true"
+          />
+        </div>
 
-            <div className="min-w-0 flex-1">
-              <CardTitle>Bitrix24 CRM</CardTitle>
-              {connection?.email && (
-                <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                  {connection.email}
-                </p>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-base font-semibold text-slate-900">
+            Bitrix24 CRM
+          </h2>
+          {connection?.email && (
+            <p className="mt-0.5 truncate text-sm text-slate-500">
+              {connection.email}
+            </p>
+          )}
+        </div>
+
+        <ConnectionStatus status={status} />
+      </div>
+
+      <div className="mt-5 flex flex-1 flex-col gap-4">
+        <ScopeChips scopes={scopes} />
+
+        <div className="space-y-2">
+          <p className="font-mono text-xs text-slate-500">
+            {lastRefreshLabel ?? "never"}
+          </p>
+
+          {expiry && (
+            <div aria-label="Token expiry progress">
+              <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className={cn("h-full rounded-full", expiry.fillClassName)}
+                  style={{ width: `${expiry.percent}%` }}
+                />
+              </div>
+              {(isExpired || expiry.shouldReconnect) && (
+                <button
+                  type="button"
+                  onClick={handleConnect}
+                  disabled={isConnecting}
+                  className="mt-2 text-xs font-medium text-amber-700 underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+                >
+                  Reconnect
+                </button>
               )}
             </div>
+          )}
+        </div>
 
-            {/* Status badge — icon + text label so color is never the only signal */}
-            <div className="flex items-center gap-1.5">
-              <StatusIcon status={status} />
-              <span
-                className={
-                  status === "connected"
-                    ? "text-status-success text-xs font-medium"
-                    : status === "expired"
-                      ? "text-status-warning text-xs font-medium"
-                      : "text-muted-foreground text-xs font-medium"
+        <ActivityLog
+          events={events}
+          open={eventsOpen}
+          onToggle={() => setEventsOpen((open) => !open)}
+        />
+
+        {bitrixHealth.data?.canListLeads === false && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            ⚠️ Webhook lacks crm.lead.list permission. Re-add crm scope to the
+            inbound webhook in Bitrix24 to enable read-back.{" "}
+            <a
+              href="https://www.bitrix24.com/apps/dev.php"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium underline underline-offset-2 hover:no-underline"
+            >
+              Edit webhook ↗
+            </a>
+          </div>
+        )}
+
+        {bitrixHealth.data?.canListLeads === true &&
+          bitrixHealth.data.canListDealCategories === true && (
+            <div className="rounded-md border border-green-200 bg-green-50 p-2 text-sm text-green-800">
+              ✓ Webhook scopes OK
+            </div>
+          )}
+      </div>
+
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-4">
+        {isConnected || isExpired ? (
+          <>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              onClick={onTest}
+              disabled={isConnecting || isTesting || isVerifying || !onTest}
+              className={`${primaryOutlineButtonClass} flex-1`}
+            >
+              <TestTube2 className="size-3.5" aria-hidden="true" />
+              {isTesting ? "Testing..." : "Test"}
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="ghost"
+              onClick={onVerify}
+              disabled={isConnecting || isTesting || isVerifying || !onVerify}
+              className={`${ghostButtonClass} flex-1`}
+            >
+              <RefreshCwIcon
+                className={cn("size-3.5", isVerifying && "animate-spin")}
+                aria-hidden="true"
+              />
+              {isVerifying ? "Verifying..." : "Verify"}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-lg"
+                    aria-label="Open Bitrix24 actions"
+                    className="rounded-md text-slate-700 hover:bg-slate-100 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
+                  />
                 }
               >
-                {statusLabel(status)}
-              </span>
-            </div>
-          </div>
-        </CardHeader>
-
-        {/* ── Body ── */}
-        <CardContent className="flex min-h-[5rem] flex-col justify-between gap-3 pt-4">
-          <div className="text-muted-foreground space-y-1 text-xs">
-            <p>
-              Automate leads, deals, and smart process items in your Bitrix24
-              org.
-            </p>
-
-            {isConnected && connection?.connectedAt && (
-              <p className="mt-1">
-                <span className="text-foreground font-medium">Connected</span>{" "}
-                {format(connection.connectedAt, "MMM d, yyyy")}
-              </p>
-            )}
-
-            {isConnected && (
-              <p className="mt-1">
-                <span className="text-foreground font-medium">
-                  Last verified:
-                </span>{" "}
-                {lastVerifiedLabel ?? "Never verified"}
-              </p>
-            )}
-
-            {isExpired && connection?.connectedAt && (
-              <p className="text-status-warning mt-1">
-                Token expired — please reconnect to resume Bitrix24 syncs.
-              </p>
-            )}
-          </div>
-
-          {/* Pipeline list — shown only when connected */}
-          {isConnected && <BitrixResourcePanel onReconnect={onConnect} />}
-        </CardContent>
-
-        {/* ── Footer ── */}
-        <CardFooter className="flex gap-2">
-          {showConnectCta && (
-            <Button
-              size="lg"
-              onClick={handleConnect}
-              disabled={isConnecting}
-              aria-label={isExpired ? "Reconnect Bitrix24" : "Connect Bitrix24"}
-              className="flex-1"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2
-                    className="size-3.5 animate-spin"
-                    aria-hidden="true"
-                  />
-                  Connecting…
-                </>
-              ) : isExpired ? (
-                "Reconnect"
-              ) : (
-                "Connect"
-              )}
-            </Button>
-          )}
-
-          {isConnected && (
-            <>
-              {/* Reconnect with a different account */}
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleConnect}
-                disabled={isConnecting || isVerifying}
-                aria-label="Reconnect Bitrix24 with a different account"
-                className="flex-1"
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2
-                      className="size-3.5 animate-spin"
-                      aria-hidden="true"
-                    />
-                    Connecting…
-                  </>
-                ) : (
-                  "Reconnect"
-                )}
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                variant="ghost"
-                onClick={onVerify}
-                disabled={isConnecting || isVerifying || !onVerify}
-                aria-label="Verify Bitrix24 connection"
-                className="flex-1"
-              >
-                <RefreshCwIcon
-                  className={`size-3.5 ${isVerifying ? "animate-spin" : ""}`}
-                  aria-hidden="true"
-                />
-                {isVerifying ? "Verifying..." : "Verify"}
-              </Button>
-
-              {/* Disconnect confirmation popover */}
-              <Popover
-                open={isDisconnectOpen}
-                onOpenChange={setIsDisconnectOpen}
-              >
-                <PopoverTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="lg"
-                      aria-label="Disconnect Bitrix24 connection"
-                      className="flex-1"
-                    />
-                  }
-                >
+                <MoreHorizontal className="size-4" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setDisconnectOpen(true)}>
                   Disconnect
-                </PopoverTrigger>
-                <PopoverContent
-                  side="top"
-                  align="end"
-                  className="w-72"
-                  // Close on Escape is handled by the Popover primitive itself.
-                >
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <p className="text-foreground text-sm font-medium">
-                        Disconnect Bitrix24?
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        This will disconnect Bitrix24. Running scenarios that
-                        use Bitrix modules will fail. Continue?
-                      </p>
-                    </div>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        size="lg"
-                        variant="outline"
-                        onClick={() => setIsDisconnectOpen(false)}
-                        aria-label="Cancel disconnect"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        size="lg"
-                        variant="destructive"
-                        onClick={handleConfirmDisconnect}
-                        aria-label="Confirm disconnect Bitrix24"
-                      >
-                        Confirm
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
-        </CardFooter>
-      </Card>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DisconnectDialog
+              providerName="Bitrix24"
+              isDisconnecting={isDisconnecting}
+              onConfirm={onDisconnect}
+              open={disconnectOpen}
+              onOpenChange={setDisconnectOpen}
+              showTrigger={false}
+            />
+          </>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            onClick={handleConnect}
+            disabled={isConnecting}
+            className={`${primaryButtonClass} flex-1`}
+          >
+            {isConnecting ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                Connecting...
+              </>
+            ) : (
+              "Connect"
+            )}
+          </Button>
+        )}
+      </div>
     </article>
   );
 }

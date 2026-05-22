@@ -1,34 +1,38 @@
-import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import type { OAuthConnection } from "~/server/mocks/types";
 
 const STATUS_CONFIG = {
   connected: {
     label: "Connected",
-    icon: CheckCircle2,
     className:
-      "inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success",
+      "inline-flex items-center gap-1.5 rounded-md border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700",
+    dotClassName: "bg-green-500",
   },
   expired: {
     label: "Expired",
-    icon: AlertTriangle,
     className:
-      "inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning-foreground",
+      "inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700",
+    dotClassName: "bg-amber-500",
   },
   disconnected: {
-    label: "Disconnected",
-    icon: XCircle,
+    label: "Not connected",
     className:
-      "inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground",
+      "inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600",
+    dotClassName: "bg-slate-400",
+  },
+  error: {
+    label: "Error",
+    className:
+      "inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700",
+    dotClassName: "bg-red-500",
   },
 } as const;
 
 interface ConnectionStatusProps {
-  status: OAuthConnection["status"];
+  status: OAuthConnection["status"] | "error";
 }
 
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
   const config = STATUS_CONFIG[status];
-  const Icon = config.icon;
 
   return (
     <span
@@ -36,7 +40,10 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
       aria-label={`Status: ${config.label}`}
       className={config.className}
     >
-      <Icon className="size-3 shrink-0" aria-hidden="true" />
+      <span
+        className={`size-1.5 shrink-0 rounded-full ${config.dotClassName}`}
+        aria-hidden="true"
+      />
       {config.label}
     </span>
   );

@@ -15,7 +15,7 @@ import { z } from "zod";
 import { db } from "~/server/db";
 import { authedProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { executeRun } from "~/server/core/executor";
-import type { AdAccount as MockAdAccount } from "~/server/mocks/types";
+import type { AdAccount } from "~/server/mocks/types";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
@@ -38,11 +38,14 @@ const AdAccountInputSchema = z.object({
 // ── Normalizer ────────────────────────────────────────────────────────────────
 
 type DbAdAccount = Awaited<ReturnType<typeof db.adAccount.findUniqueOrThrow>>;
+type DbAdAccountWithCounts = DbAdAccount & {
+  _count?: { scenarios: number };
+};
 
 function normalizeAdAccount(
-  a: DbAdAccount,
+  a: DbAdAccountWithCounts,
   lastRunStatus?: string | null,
-): MockAdAccount {
+) {
   return {
     id: a.id,
     userId: a.userId,
@@ -57,15 +60,21 @@ function normalizeAdAccount(
     adTabName: a.adTabName,
     cronExpression: a.cronExpression,
     timezone: a.timezone,
+    isPinned: a.isPinned,
+    lastSyncedAt: a.lastSyncedAt,
+    scenarioCount: a._count?.scenarios ?? 0,
+    currency: "USD",
+    linkedSheetName: a.campaignTabName,
     lastRunAt: null,
-    lastRunStatus:
-      lastRunStatus === "SUCCESS"
-        ? "success"
-        : lastRunStatus === "FAILED"
-          ? "failed"
-          : null,
+    lastRunStatus: narrowRunStatus(lastRunStatus),
     createdAt: a.createdAt,
   };
+}
+
+function narrowRunStatus(status: string | null | undefined): AdAccount["lastRunStatus"] {
+  if (status === "SUCCESS" || status === "success") return "success";
+  if (status === "FAILED" || status === "failed") return "failed";
+  return null;
 }
 
 async function getLastRunStatus(
@@ -90,6 +99,18 @@ function assertOwned(
   }
 }
 
+function assertMutationOwned(
+  resource: { userId: string } | null,
+  userId: string,
+): asserts resource is { userId: string } {
+  if (!resource) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Ad account not found" });
+  }
+  if (resource.userId !== userId) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Not your ad account" });
+  }
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 
 export const adAccountsRouter = createTRPCRouter({
@@ -97,6 +118,7 @@ export const adAccountsRouter = createTRPCRouter({
     const userId = ctx.userId;
     const accounts = await db.adAccount.findMany({
       where: { userId },
+      include: { _count: { select: { scenarios: true } } },
       orderBy: { createdAt: "desc" },
     });
     return Promise.all(
@@ -111,7 +133,10 @@ export const adAccountsRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      const account = await db.adAccount.findUnique({ where: { id: input.id } });
+      const account = await db.adAccount.findUnique({
+        where: { id: input.id },
+        include: { _count: { select: { scenarios: true } } },
+      });
       assertOwned(account, userId, `Ad account ${input.id}`);
       const status = await getLastRunStatus(input.id, userId);
       return normalizeAdAccount(account, status);
@@ -177,6 +202,41 @@ export const adAccountsRouter = createTRPCRouter({
         data: { enabled: input.enabled },
       });
       return { id: input.id, enabled: input.enabled };
+    }),
+
+  setPinned: authedProcedure
+    .input(z.object({ id: z.string(), isPinned: z.boolean() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const existing = await db.adAccount.findUnique({
+        where: { id: input.id },
+        select: { userId: true },
+      });
+      assertMutationOwned(existing, userId);
+      const account = await db.adAccount.update({
+        where: { id: input.id },
+        data: { isPinned: input.isPinned },
+        include: { _count: { select: { scenarios: true } } },
+      });
+      const status = await getLastRunStatus(input.id, userId);
+      return normalizeAdAccount(account, status);
+    }),
+
+  syncNow: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.userId;
+      const existing = await db.adAccount.findUnique({
+        where: { id: input.id },
+        select: { userId: true },
+      });
+      assertMutationOwned(existing, userId);
+      const syncedAt = new Date();
+      await db.adAccount.update({
+        where: { id: input.id },
+        data: { lastSyncedAt: syncedAt },
+      });
+      return { ok: true as const, syncedAt };
     }),
 
   runNow: authedProcedure

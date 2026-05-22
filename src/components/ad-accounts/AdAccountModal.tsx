@@ -30,15 +30,15 @@ export function AdAccountModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[min(96vw,820px)] max-w-none p-0 sm:max-w-none"
+        className="w-[min(96vw,820px)] max-w-none rounded-lg border-slate-200 p-0 shadow-lg sm:max-w-none"
         showCloseButton
         aria-label={mode === "new" ? "Add ad account" : "Edit ad account"}
       >
-        <DialogHeader className="border-border border-b px-6 py-5">
-          <DialogTitle className="text-base">
+        <DialogHeader className="border-b border-slate-200 px-6 py-5">
+          <DialogTitle className="text-base font-semibold text-slate-900">
             {mode === "new" ? "Add ad account" : "Edit ad account"}
           </DialogTitle>
-          <p className="text-muted-foreground mt-0.5 text-sm">
+          <p className="mt-0.5 text-sm text-slate-500">
             {mode === "new"
               ? "Connect a Facebook ad account and configure its sync schedule."
               : "Update this account's metrics, schedule, or destination tabs."}

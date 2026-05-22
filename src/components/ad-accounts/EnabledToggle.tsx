@@ -45,6 +45,7 @@ export function EnabledToggle({ id, initialEnabled, label }: Props) {
       onCheckedChange={handleCheckedChange}
       disabled={toggleMutation.isPending}
       aria-label={`${optimisticEnabled ? "Disable" : "Enable"} ${label}`}
+      className="data-checked:bg-sky-600 data-unchecked:bg-slate-200 focus-visible:ring-sky-500/40"
     />
   );
 }

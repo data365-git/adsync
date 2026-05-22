@@ -94,23 +94,23 @@ export function FbAccountPicker({
               setOpen((v) => !v);
             }
           }}
-          className={`focus-visible:border-ring focus-visible:ring-ring flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`flex h-9 w-full items-center justify-between rounded-md border bg-white px-3 py-1 text-sm text-slate-900 transition-colors outline-none focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50 ${
             error
               ? "border-destructive ring-destructive/20 ring-3"
-              : "border-input hover:bg-muted/50"
-          } ${open ? "border-ring ring-ring/50 ring-3" : ""}`}
+              : "border-slate-300 hover:bg-slate-50"
+          } ${open ? "border-sky-500 ring-2 ring-sky-500/20" : ""}`}
         >
           {loading ? (
-            <span className="text-muted-foreground">Loading accounts…</span>
+            <span className="text-slate-500">Loading accounts…</span>
           ) : selected ? (
             <span className="flex flex-1 items-center gap-2 truncate text-left">
               <span className="font-medium">{selected.name}</span>
-              <span className="text-muted-foreground text-xs">
+              <span className="text-xs text-slate-500">
                 {selected.id}
               </span>
             </span>
           ) : (
-            <span className="text-muted-foreground">Search ad accounts…</span>
+            <span className="text-slate-500">Search ad accounts…</span>
           )}
           <div className="flex shrink-0 items-center gap-1">
             {selected && (
@@ -125,20 +125,20 @@ export function FbAccountPicker({
                     handleClear(e as unknown as React.MouseEvent);
                   }
                 }}
-                className="hover:bg-muted rounded p-0.5"
+                className="rounded p-0.5 hover:bg-slate-100"
               >
-                <XIcon className="text-muted-foreground size-3.5" />
+                <XIcon className="size-3.5 text-slate-500" />
               </span>
             )}
             <ChevronDownIcon
-              className={`text-muted-foreground size-4 transition-transform ${open ? "rotate-180" : ""}`}
+              className={`size-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
             />
           </div>
         </button>
 
         {open && (
           <div
-            className="border-border bg-popover absolute z-50 mt-1 w-full overflow-hidden rounded-xl border shadow-md"
+            className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md"
             onKeyDown={handleKeyDown}
           >
             <Command>
@@ -159,7 +159,7 @@ export function FbAccountPicker({
                     >
                       <span className="flex flex-col gap-0.5">
                         <span className="font-medium">{account.name}</span>
-                        <span className="text-muted-foreground text-xs">
+                        <span className="text-xs text-slate-500">
                           {account.id}
                         </span>
                       </span>

@@ -47,7 +47,7 @@ export function DateWindowSlider({
           }}
           aria-hidden="true"
         >
-          <div className="bg-foreground text-background rounded-md px-1.5 py-0.5 text-xs font-medium shadow-sm">
+          <div className="rounded-md bg-slate-900 px-1.5 py-0.5 text-xs font-medium text-white shadow-sm">
             Last {value} {value === 1 ? "day" : "days"}
           </div>
         </div>
@@ -78,16 +78,16 @@ export function DateWindowSlider({
           aria-valuemax={30}
           aria-valuenow={value}
           aria-valuetext={`Last ${value} days`}
-          className="bg-input focus-visible:ring-ring [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:bg-primary h-2 w-full cursor-pointer appearance-none rounded-full outline-none focus-visible:ring-2 [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:shadow-sm [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:hover:scale-110"
+          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40 [&::-moz-range-thumb]:size-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:bg-slate-900 [&::-moz-range-thumb]:shadow-sm [&::-webkit-slider-thumb]:size-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-slate-900 [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:transition-transform"
           style={{
-            background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${tooltipPos}%, hsl(var(--input)) ${tooltipPos}%, hsl(var(--input)) 100%)`,
+            background: `linear-gradient(to right, #0f172a 0%, #0f172a ${tooltipPos}%, #e2e8f0 ${tooltipPos}%, #e2e8f0 100%)`,
           }}
         />
       </div>
 
       {/* Preset quick-picks */}
       <div className="flex items-center gap-2">
-        <span className="text-muted-foreground text-xs">Quick select:</span>
+        <span className="text-xs text-slate-500">Quick select:</span>
         <div className="flex gap-1">
           {presets.map((preset) => (
             <button
@@ -100,15 +100,15 @@ export function DateWindowSlider({
               }}
               className={`rounded px-2 py-0.5 text-xs transition-colors ${
                 value === preset
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
               }`}
             >
               {preset}d
             </button>
           ))}
         </div>
-        <span className="text-foreground ml-auto text-xs font-medium">
+        <span className="ml-auto text-xs font-medium text-slate-900">
           Last {value} {value === 1 ? "day" : "days"}
         </span>
       </div>

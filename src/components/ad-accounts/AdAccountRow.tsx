@@ -58,7 +58,7 @@ export function AdAccountRow({ account }: Props) {
       role="button"
       tabIndex={0}
       aria-label={`Open ${account.label}`}
-      className="focus-visible:ring-ring hover:bg-muted/50 h-18 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+      className="h-[52px] cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-inset focus-visible:outline-none"
       onClick={openAccount}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -70,10 +70,10 @@ export function AdAccountRow({ account }: Props) {
       }}
     >
       {/* Name */}
-      <TableCell className="max-w-[240px] min-w-[160px]">
+      <TableCell className="max-w-[240px] min-w-[160px] py-3 pr-4 pl-5">
         <Link
           href={href}
-          className="text-foreground text-base hover:underline focus-visible:underline focus-visible:outline-none"
+          className="text-sm font-medium text-slate-900 hover:underline focus-visible:underline focus-visible:outline-none"
           tabIndex={-1}
         >
           {account.label}
@@ -81,10 +81,10 @@ export function AdAccountRow({ account }: Props) {
       </TableCell>
 
       {/* FB Account ID */}
-      <TableCell className="min-w-[180px]">
+      <TableCell className="min-w-[180px] px-4 py-3">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger className="text-muted-foreground block max-w-[180px] truncate text-left font-mono text-sm">
+            <TooltipTrigger className="block max-w-[180px] truncate text-left font-mono text-sm text-slate-500">
               {account.fbAccountId}
             </TooltipTrigger>
             <TooltipContent side="top">{account.fbAccountId}</TooltipContent>
@@ -94,6 +94,7 @@ export function AdAccountRow({ account }: Props) {
 
       {/* Enabled toggle */}
       <TableCell
+        className="px-4 py-3"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
@@ -105,16 +106,16 @@ export function AdAccountRow({ account }: Props) {
       </TableCell>
 
       {/* Schedule */}
-      <TableCell className="min-w-[140px]">
+      <TableCell className="min-w-[140px] px-4 py-3">
         {schedule === "No schedule" ? (
-          <span className="text-muted-foreground text-sm">No schedule</span>
+          <span className="text-sm text-slate-500">No schedule</span>
         ) : (
-          <span className="text-sm">{schedule}</span>
+          <span className="text-sm text-slate-700">{schedule}</span>
         )}
       </TableCell>
 
       {/* Last run */}
-      <TableCell className="min-w-[120px]">
+      <TableCell className="min-w-[120px] px-4 py-3">
         <LastRunBadge
           lastRunAt={account.lastRunAt}
           lastRunStatus={account.lastRunStatus}
@@ -124,13 +125,13 @@ export function AdAccountRow({ account }: Props) {
 
       {/* Actions */}
       <TableCell
-        className="w-10"
+        className="w-10 px-4 py-3"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
       >
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring aria-expanded:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none aria-expanded:bg-slate-100"
             aria-label={`Actions for ${account.label}`}
             onClick={(event) => event.stopPropagation()}
           >

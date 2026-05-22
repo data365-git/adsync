@@ -55,7 +55,7 @@ export function RunNowButton({
               disabled={isRunning}
               onClick={() => runNowMutation.mutate({ id })}
               aria-label={`Run now: ${label}`}
-              className="gap-1.5"
+              className="h-9 rounded-md px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
             />
           }
         >

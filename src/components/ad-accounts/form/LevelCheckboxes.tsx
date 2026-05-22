@@ -51,8 +51,8 @@ export function LevelCheckboxes({
               key={lvl.value}
               className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 transition-colors ${
                 checked
-                  ? "border-primary/40 bg-primary/5"
-                  : "border-border bg-transparent hover:bg-muted/50"
+                  ? "border-sky-200 bg-sky-50"
+                  : "border-slate-200 bg-white hover:bg-slate-50"
               }`}
             >
               <Checkbox
@@ -65,7 +65,7 @@ export function LevelCheckboxes({
               />
               <div>
                 <span className="text-sm font-medium">{lvl.label}</span>
-                <span className="ml-1.5 text-xs text-muted-foreground">
+                <span className="ml-1.5 text-xs text-slate-500">
                   {lvl.description}
                 </span>
               </div>

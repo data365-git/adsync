@@ -99,17 +99,17 @@ export function MetricsMultiSelect({
           data-invalid={error ? "true" : undefined}
           onClick={() => setOpen((v) => !v)}
           className={cn(
-            "focus-visible:border-ring focus-visible:ring-ring flex h-8 w-full items-center justify-between rounded-lg border bg-transparent px-2.5 py-1 text-sm transition-colors outline-none focus-visible:ring-2",
+            "flex h-9 w-full items-center justify-between rounded-md border bg-white px-3 py-1 text-sm text-slate-900 transition-colors outline-none focus-visible:border-sky-500 focus-visible:ring-2 focus-visible:ring-sky-500/20",
             error
               ? "border-destructive ring-destructive/20 ring-3"
-              : "border-input hover:bg-muted/50",
-            open ? "border-ring ring-ring/50 ring-3" : "",
+              : "border-slate-300 hover:bg-slate-50",
+            open ? "border-sky-500 ring-2 ring-sky-500/20" : "",
           )}
         >
           <span className="flex items-center gap-2">
             {selectedCount > 0 ? (
               <>
-                <span className="bg-primary/10 text-primary inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold">
+                <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
                   {selectedCount}
                 </span>
                 <span className="text-sm">
@@ -117,7 +117,7 @@ export function MetricsMultiSelect({
                 </span>
               </>
             ) : (
-              <span className="text-muted-foreground">Select metrics…</span>
+              <span className="text-slate-500">Select metrics…</span>
             )}
           </span>
           <div className="flex shrink-0 items-center gap-1">
@@ -136,14 +136,14 @@ export function MetricsMultiSelect({
                     clearAll();
                   }
                 }}
-                className="hover:bg-muted rounded p-0.5"
+                className="rounded p-0.5 hover:bg-slate-100"
               >
-                <XIcon className="text-muted-foreground size-3.5" />
+                <XIcon className="size-3.5 text-slate-500" />
               </span>
             )}
             <ChevronDownIcon
               className={cn(
-                "text-muted-foreground size-4 transition-transform",
+                "size-4 text-slate-500 transition-transform",
                 open && "rotate-180",
               )}
             />
@@ -151,9 +151,9 @@ export function MetricsMultiSelect({
         </button>
 
         {open && (
-          <div className="border-border bg-popover absolute z-50 mt-1 w-full overflow-hidden rounded-xl border shadow-md">
+          <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md">
             {/* Search input */}
-            <div className="border-border border-b px-2 py-1.5">
+            <div className="border-b border-slate-200 px-2 py-1.5">
               <input
                 type="text"
                 placeholder="Search metrics…"
@@ -166,14 +166,14 @@ export function MetricsMultiSelect({
                     triggerRef.current?.focus();
                   }
                 }}
-                className="placeholder:text-muted-foreground w-full bg-transparent text-sm outline-none"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
                 autoFocus
               />
             </div>
 
             <div className="max-h-72 overflow-y-auto p-1">
               {filtered.length === 0 ? (
-                <p className="text-muted-foreground py-6 text-center text-sm">
+                <p className="py-6 text-center text-sm text-slate-500">
                   No metrics found.
                 </p>
               ) : (
@@ -191,16 +191,16 @@ export function MetricsMultiSelect({
                       <button
                         type="button"
                         onClick={() => toggleGroup(group)}
-                        className="hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1 text-left"
+                        className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-slate-100"
                       >
                         <div
                           className={cn(
                             "flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border transition-colors",
                             allSelected
-                              ? "border-primary bg-primary text-primary-foreground"
+                              ? "border-slate-900 bg-slate-900 text-white"
                               : someSelected
-                                ? "border-primary bg-primary/20"
-                                : "border-input",
+                                ? "border-slate-900 bg-slate-200"
+                                : "border-slate-300",
                           )}
                         >
                           {allSelected && (
@@ -215,13 +215,13 @@ export function MetricsMultiSelect({
                             </svg>
                           )}
                           {!allSelected && someSelected && (
-                            <span className="bg-primary block h-px w-2" />
+                            <span className="block h-px w-2 bg-slate-900" />
                           )}
                         </div>
-                        <span className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
                           {group}
                         </span>
-                        <span className="text-muted-foreground ml-auto text-xs">
+                        <span className="ml-auto text-xs text-slate-500">
                           {groupMetrics.filter((m) => value.includes(m)).length}
                           /{groupMetrics.length}
                         </span>
@@ -239,16 +239,16 @@ export function MetricsMultiSelect({
                               aria-selected={checked}
                               onClick={() => toggleMetric(metric)}
                               className={cn(
-                                "hover:bg-muted flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm",
-                                checked && "text-foreground",
+                                "flex w-full items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-slate-100",
+                                checked && "text-slate-900",
                               )}
                             >
                               <div
                                 className={cn(
                                   "flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border transition-colors",
                                   checked
-                                    ? "border-primary bg-primary text-primary-foreground"
-                                    : "border-input",
+                                    ? "border-slate-900 bg-slate-900 text-white"
+                                    : "border-slate-300",
                                 )}
                               >
                                 {checked && (
@@ -276,8 +276,8 @@ export function MetricsMultiSelect({
 
             {/* Footer */}
             {selectedCount > 0 && (
-              <div className="border-border flex items-center justify-between border-t px-2 py-1.5">
-                <span className="text-muted-foreground text-xs">
+              <div className="flex items-center justify-between border-t border-slate-200 px-2 py-1.5">
+                <span className="text-xs text-slate-500">
                   {selectedCount} selected
                 </span>
                 <button

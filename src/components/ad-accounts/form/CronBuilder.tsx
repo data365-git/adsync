@@ -183,7 +183,10 @@ export function CronBuilder({
               if (val !== null) handleFrequencyChange(val);
             }}
           >
-            <SelectTrigger id="cron-frequency" className="w-full">
+            <SelectTrigger
+              id="cron-frequency"
+              className="h-9 w-full rounded-md border-slate-300 bg-white text-sm text-slate-900 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
+            >
               <SelectValue placeholder="Select frequency" />
             </SelectTrigger>
             <SelectContent>
@@ -207,7 +210,10 @@ export function CronBuilder({
               }
             }}
           >
-            <SelectTrigger id="cron-timezone" className="w-full">
+            <SelectTrigger
+              id="cron-timezone"
+              className="h-9 w-full rounded-md border-slate-300 bg-white text-sm text-slate-900 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
+            >
               <SelectValue placeholder="Select timezone" />
             </SelectTrigger>
             <SelectContent>
@@ -231,7 +237,10 @@ export function CronBuilder({
               if (val !== null) handleWeekdayChange(val);
             }}
           >
-            <SelectTrigger id="cron-weekday" className="w-full sm:w-48">
+            <SelectTrigger
+              id="cron-weekday"
+              className="h-9 w-full rounded-md border-slate-300 bg-white text-sm text-slate-900 focus-visible:border-sky-500 focus-visible:ring-sky-500/20 sm:w-48"
+            >
               <SelectValue placeholder="Select day" />
             </SelectTrigger>
             <SelectContent>
@@ -264,11 +273,11 @@ export function CronBuilder({
                 setHour(padded);
                 onBlur?.();
               }}
-              className="w-20"
+              className="h-9 w-20 rounded-md border-slate-300 bg-white text-sm text-slate-900 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
               aria-label="Hour"
             />
           </div>
-          <span className="mb-1.5 text-lg font-bold text-muted-foreground">:</span>
+          <span className="mb-1.5 text-lg font-bold text-slate-500">:</span>
           <div className="space-y-1.5">
             <Label htmlFor="cron-minute">Minute (0–59)</Label>
             <Input
@@ -285,7 +294,7 @@ export function CronBuilder({
                 setMinute(padded);
                 onBlur?.();
               }}
-              className="w-20"
+              className="h-9 w-20 rounded-md border-slate-300 bg-white text-sm text-slate-900 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
               aria-label="Minute"
             />
           </div>
@@ -297,7 +306,7 @@ export function CronBuilder({
         <div className="space-y-1.5">
           <Label htmlFor="cron-custom">
             Custom cron expression
-            <span className="ml-1 font-normal text-muted-foreground text-xs">
+            <span className="ml-1 text-xs font-normal text-slate-500">
               (min hour dom month dow)
             </span>
           </Label>
@@ -308,19 +317,19 @@ export function CronBuilder({
             value={customCron}
             onChange={(e) => handleCustomChange(e.target.value)}
             onBlur={() => onBlur?.()}
-            className="font-mono"
+            className="h-9 rounded-md border-slate-300 bg-white font-mono text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
           />
         </div>
       )}
 
       {/* Human-readable preview */}
       <div
-        className="rounded-lg border border-border bg-muted/40 px-3 py-2"
+        className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
         aria-live="polite"
         aria-label="Schedule preview"
       >
-        <p className="text-xs text-muted-foreground">Schedule preview</p>
-        <p className="mt-0.5 text-sm font-medium">
+        <p className="text-xs text-slate-500">Schedule preview</p>
+        <p className="mt-0.5 text-sm font-medium text-slate-900">
           {humanReadable}
         </p>
       </div>

@@ -1,24 +1,7 @@
 import type { AdAccount } from "~/server/mocks/types";
-import { getStatusColor, getStatusLabel } from "~/lib/utils";
 import { cn } from "~/lib/utils";
-import {
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Loader2,
-  Minus,
-} from "lucide-react";
 
 type LastRunStatus = AdAccount["lastRunStatus"];
-
-function statusIcon(status: NonNullable<LastRunStatus>) {
-  switch (status) {
-    case "success":
-      return <CheckCircle2 className="size-3 shrink-0" aria-hidden />;
-    case "failed":
-      return <XCircle className="size-3 shrink-0" aria-hidden />;
-  }
-}
 
 function relativeTime(date: Date): string {
   const diffMs = Date.now() - date.getTime();
@@ -39,53 +22,98 @@ type Props = {
 };
 
 export function LastRunBadge({ lastRunAt, lastRunStatus, isRunning }: Props) {
+  const status = isRunning
+    ? "running"
+    : !lastRunAt || !lastRunStatus
+      ? "never_run"
+      : lastRunStatus === "success"
+        ? "success"
+        : "failed";
+
+  const labelByStatus = {
+    success: "Success",
+    failed: "Failed",
+    running: "Running",
+    never_run: "Never run",
+  } satisfies Record<typeof status, string>;
+
+  const dotByStatus = {
+    success: "bg-green-500",
+    failed: "bg-red-500",
+    running: "bg-amber-500",
+    never_run: "bg-slate-400",
+  } satisfies Record<typeof status, string>;
+
+  const timeLabel =
+    status === "running"
+      ? "just now"
+      : lastRunAt
+        ? relativeTime(lastRunAt)
+        : null;
+
   if (isRunning) {
     return (
-      <div className="flex flex-col gap-0.5">
-        <span className="text-xs text-muted-foreground tabular-nums">
-          just now
-        </span>
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-            getStatusColor("running"),
-          )}
-          aria-label="Status: Running"
-        >
-          <Loader2 className="size-3 animate-spin" aria-hidden />
-          Running
-        </span>
-      </div>
+      <InlineStatus
+        dotClassName={dotByStatus.running}
+        label={labelByStatus.running}
+        timeLabel={timeLabel}
+        ariaLabel="Status: Running"
+      />
     );
   }
 
   if (!lastRunAt || !lastRunStatus) {
     return (
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Minus className="size-3" aria-hidden />
-        <span>Never run</span>
-      </div>
+      <InlineStatus
+        dotClassName={dotByStatus.never_run}
+        label={labelByStatus.never_run}
+        labelClassName="text-slate-500"
+        ariaLabel="Status: Never run"
+      />
     );
   }
 
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-        <Clock className="size-3 shrink-0" aria-hidden />
-        {relativeTime(lastRunAt)}
+    <InlineStatus
+      dotClassName={dotByStatus[status]}
+      label={labelByStatus[status]}
+      timeLabel={timeLabel}
+      ariaLabel={`Status: ${labelByStatus[status]}`}
+    />
+  );
+}
+
+function InlineStatus({
+  dotClassName,
+  label,
+  labelClassName,
+  timeLabel,
+  ariaLabel,
+}: {
+  dotClassName: string;
+  label: string;
+  labelClassName?: string;
+  timeLabel?: string | null;
+  ariaLabel: string;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 whitespace-nowrap"
+      role="status"
+      aria-label={ariaLabel}
+    >
+      <span className={cn("size-1.5 rounded-full", dotClassName)} aria-hidden />
+      <span className={cn("text-sm text-slate-700", labelClassName)}>
+        {label}
       </span>
-      <span
-        className={cn(
-          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
-          getStatusColor(
-            lastRunStatus === "success" ? "success" : "failed",
-          ),
-        )}
-        aria-label={`Status: ${getStatusLabel(lastRunStatus === "success" ? "success" : "failed")}`}
-      >
-        {statusIcon(lastRunStatus)}
-        {getStatusLabel(lastRunStatus === "success" ? "success" : "failed")}
-      </span>
-    </div>
+      {timeLabel ? (
+        <>
+          <span className="text-slate-400" aria-hidden>
+            ·
+          </span>
+          <span className="font-mono text-xs text-slate-500">{timeLabel}</span>
+        </>
+      ) : null}
+    </span>
   );
 }

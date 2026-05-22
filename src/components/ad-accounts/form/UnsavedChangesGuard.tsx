@@ -64,7 +64,7 @@ export function UnsavedChangesGuard({
             Keep editing
           </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-destructive/10 text-destructive hover:bg-destructive/20"
+            className="rounded-md bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-700 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
             onClick={() => {
               onOpenChange(false);
               onConfirmDiscard();

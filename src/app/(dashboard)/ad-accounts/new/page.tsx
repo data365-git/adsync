@@ -14,7 +14,7 @@ export default function NewAdAccountPage() {
       <nav aria-label="Breadcrumb">
         <Link
           href="/ad-accounts"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-900"
         >
           <ChevronLeftIcon className="size-4" />
           Ad Accounts
@@ -23,10 +23,10 @@ export default function NewAdAccountPage() {
 
       {/* Heading */}
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">
+        <h1 className="text-2xl font-semibold text-slate-900">
           New Ad Account
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-slate-500">
           Connect a Facebook Ad Account and configure what data to sync into
           Google Sheets.
         </p>

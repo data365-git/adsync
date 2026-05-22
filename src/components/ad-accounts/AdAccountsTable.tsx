@@ -21,7 +21,7 @@ import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 import type { AdAccount } from "~/server/mocks/types";
 import { AdAccountRow } from "./AdAccountRow";
-import { AdAccountCard } from "./AdAccountCard";
+import { AdAccountCard, type AdAccountCardAccount } from "./AdAccountCard";
 import { AdAccountEmptyState } from "./AdAccountEmptyState";
 
 type SortKey = "name" | "lastRun";
@@ -39,7 +39,7 @@ function SortIcon({
   if (sort !== column)
     return (
       <ArrowUpDown
-        className="text-muted-foreground ml-1 inline size-3"
+        className="ml-1 inline size-3 text-slate-400"
         aria-hidden
       />
     );
@@ -78,27 +78,24 @@ function SkeletonRows() {
   return (
     <>
       {[1, 2, 3].map((i) => (
-        <TableRow key={i} className="h-18">
-          <td className="p-2">
+        <TableRow key={i} className="h-[52px] border-b border-slate-100">
+          <td className="py-3 pr-4 pl-5">
             <Skeleton className="h-4 w-36" />
           </td>
-          <td className="p-2">
+          <td className="px-4 py-3">
             <Skeleton className="h-4 w-40 font-mono" />
           </td>
-          <td className="p-2">
+          <td className="px-4 py-3">
             <Skeleton className="h-[18px] w-8 rounded-full" />
           </td>
-          <td className="p-2">
+          <td className="px-4 py-3">
             <Skeleton className="h-4 w-28" />
           </td>
-          <td className="p-2">
-            <div className="flex flex-col gap-1">
-              <Skeleton className="h-3.5 w-16" />
-              <Skeleton className="h-5 w-20 rounded-full" />
-            </div>
+          <td className="px-4 py-3">
+            <Skeleton className="h-4 w-28" />
           </td>
-          <td className="p-2">
-            <Skeleton className="h-8 w-8 rounded-lg" />
+          <td className="px-4 py-3">
+            <Skeleton className="h-8 w-8 rounded-md" />
           </td>
         </TableRow>
       ))}
@@ -112,23 +109,23 @@ function SkeletonCards() {
       {[1, 2, 3].map((i) => (
         <div
           key={i}
-          className="flex h-[200px] flex-col gap-4 rounded-xl border p-6"
+          className="flex h-[200px] flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
         >
           <div className="flex items-start justify-between">
             <div className="flex flex-1 flex-col gap-1">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-44" />
             </div>
-            <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
+            <Skeleton className="h-11 w-11 shrink-0 rounded-md" />
           </div>
           <Skeleton className="h-3.5 w-40" />
           <div className="flex flex-col gap-1">
             <Skeleton className="h-3.5 w-16" />
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-5 w-20 rounded-md" />
           </div>
           <div className="flex items-center justify-between border-t pt-1">
-            <Skeleton className="h-[18px] w-16 rounded-full" />
-            <Skeleton className="h-11 w-24 rounded-lg" />
+            <Skeleton className="h-[18px] w-16 rounded-md" />
+            <Skeleton className="h-11 w-24 rounded-md" />
           </div>
         </div>
       ))}
@@ -141,9 +138,15 @@ interface AdAccountsTableProps {
    *  this instead of navigating to /ad-accounts/new — used by the page client
    *  to open the create modal in place. */
   onAddClick?: () => void;
+  onEdit?: (account: AdAccountCardAccount) => void;
+  onOpenDetails?: (account: AdAccountCardAccount) => void;
 }
 
-export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
+export function AdAccountsTable({
+  onAddClick,
+  onEdit,
+  onOpenDetails,
+}: AdAccountsTableProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -184,16 +187,26 @@ export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
     return (
       <>
         {/* Desktop skeleton */}
-        <div className="border-border hidden overflow-hidden rounded-xl border md:block">
+        <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:block">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>FB Account ID</TableHead>
-                <TableHead>Enabled</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Last Run</TableHead>
-                <TableHead className="w-10" />
+              <TableRow className="h-10 border-b border-slate-200 bg-slate-50 hover:bg-slate-50">
+                <TableHead className="px-4 pl-5 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                  Name
+                </TableHead>
+                <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                  FB Account ID
+                </TableHead>
+                <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                  Enabled
+                </TableHead>
+                <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                  Schedule
+                </TableHead>
+                <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                  Last Run
+                </TableHead>
+                <TableHead className="w-10 px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,11 +225,13 @@ export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
   // --- Error state ---
   if (isError) {
     return (
-      <div className="border-destructive/30 bg-destructive/5 flex flex-col items-center justify-center gap-4 rounded-xl border py-16 text-center">
-        <AlertCircle className="text-destructive size-8" aria-hidden />
+      <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+        <AlertCircle className="mt-0.5 size-5 shrink-0 text-red-600" aria-hidden />
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-medium">Failed to load ad accounts</p>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm font-medium text-red-900">
+            Failed to load ad accounts
+          </p>
+          <p className="text-sm text-red-700">
             Check your connection and try again.
           </p>
         </div>
@@ -225,7 +240,7 @@ export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
           size="sm"
           onClick={() => void refetch()}
           disabled={isFetching}
-          className="gap-1.5"
+          className="ml-auto h-8 rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <RefreshCw
             className={`size-3.5 ${isFetching ? "animate-spin" : ""}`}
@@ -239,6 +254,12 @@ export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
 
   const accounts = data ?? [];
   const sorted = sortAccounts(accounts, sort, dir);
+  const openEdit = (account: AdAccountCardAccount) => {
+    onEdit?.(account);
+  };
+  const openDetails = (account: AdAccountCardAccount) => {
+    onOpenDetails?.(account);
+  };
 
   // --- Empty state ---
   if (sorted.length === 0) {
@@ -249,36 +270,42 @@ export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
   return (
     <>
       {/* Desktop table */}
-      <div className="border-border hidden overflow-hidden rounded-xl border md:block">
+      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:block">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>
+            <TableRow className="h-10 border-b border-slate-200 bg-slate-50 hover:bg-slate-50">
+              <TableHead className="px-4 pl-5 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
                 <button
                   type="button"
                   onClick={() => handleSort("name")}
-                  className="text-foreground hover:text-foreground/80 inline-flex items-center font-medium focus-visible:underline focus-visible:outline-none"
+                  className="inline-flex items-center text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase hover:text-slate-700 focus-visible:underline focus-visible:outline-none"
                   aria-label={`Sort by name${sort === "name" ? `, currently ${dir}` : ""}`}
                 >
                   Name
                   <SortIcon column="name" sort={sort} dir={dir} />
                 </button>
               </TableHead>
-              <TableHead>FB Account ID</TableHead>
-              <TableHead>Enabled</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>
+              <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                FB Account ID
+              </TableHead>
+              <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                Enabled
+              </TableHead>
+              <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
+                Schedule
+              </TableHead>
+              <TableHead className="px-4 text-left text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase">
                 <button
                   type="button"
                   onClick={() => handleSort("lastRun")}
-                  className="text-foreground hover:text-foreground/80 inline-flex items-center font-medium focus-visible:underline focus-visible:outline-none"
+                  className="inline-flex items-center text-[12px] font-medium tracking-[0.04em] text-slate-500 uppercase hover:text-slate-700 focus-visible:underline focus-visible:outline-none"
                   aria-label={`Sort by last run${sort === "lastRun" ? `, currently ${dir}` : ""}`}
                 >
                   Last Run
                   <SortIcon column="lastRun" sort={sort} dir={dir} />
                 </button>
               </TableHead>
-              <TableHead className="sr-only w-10">Actions</TableHead>
+              <TableHead className="sr-only w-10 px-4">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -292,7 +319,12 @@ export function AdAccountsTable({ onAddClick }: AdAccountsTableProps = {}) {
       {/* Mobile card layout */}
       <div className="flex flex-col gap-4 md:hidden">
         {sorted.map((account) => (
-          <AdAccountCard key={account.id} account={account} />
+          <AdAccountCard
+            key={account.id}
+            account={account}
+            onEdit={openEdit}
+            onOpenDetails={openDetails}
+          />
         ))}
       </div>
     </>

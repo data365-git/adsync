@@ -24,8 +24,8 @@ export function FormSection({
   title,
   description,
   Icon,
-  tileBg = "bg-muted",
-  iconColor = "text-foreground/70",
+  tileBg = "bg-slate-100",
+  iconColor = "text-slate-700",
   children,
   className,
 }: FormSectionProps) {
@@ -33,11 +33,11 @@ export function FormSection({
 
   return (
     <section className={cn("space-y-5", className)} aria-labelledby={id}>
-      <div className="border-border flex items-start gap-3 border-b pb-4">
+      <div className="flex items-start gap-3 border-b border-slate-200 pb-4">
         {Icon && (
           <div
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
               tileBg,
             )}
             aria-hidden="true"
@@ -46,11 +46,11 @@ export function FormSection({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h2 id={id} className="text-lg tracking-tight">
+          <h2 id={id} className="text-lg font-semibold text-slate-900">
             {title}
           </h2>
           {description && (
-            <p className="text-muted-foreground mt-0.5 text-sm">{description}</p>
+            <p className="mt-0.5 text-sm text-slate-500">{description}</p>
           )}
         </div>
       </div>

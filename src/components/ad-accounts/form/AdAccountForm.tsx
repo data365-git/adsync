@@ -123,11 +123,11 @@ function FormSkeleton() {
       aria-label="Loading form"
     >
       {/* Enabled toggle skeleton */}
-      <div className="border-border bg-muted/30 flex items-center gap-3 rounded-xl border p-4">
-        <div className="bg-muted h-5 w-8 rounded-full" />
+      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <div className="h-5 w-8 rounded-full bg-slate-200" />
         <div className="space-y-1">
-          <div className="bg-muted h-4 w-28 rounded" />
-          <div className="bg-muted h-3 w-48 rounded" />
+          <div className="h-4 w-28 rounded bg-slate-200" />
+          <div className="h-3 w-48 rounded bg-slate-200" />
         </div>
       </div>
 
@@ -135,14 +135,14 @@ function FormSkeleton() {
       {[{ fields: 2 }, { fields: 4 }, { fields: 2 }, { fields: 3 }].map(
         (section, i) => (
           <div key={i} className="space-y-4">
-            <div className="border-border border-b pb-3">
-              <div className="bg-muted h-4 w-32 rounded" />
+            <div className="border-b border-slate-200 pb-3">
+              <div className="h-4 w-32 rounded bg-slate-200" />
             </div>
             <div className="space-y-3">
               {Array.from({ length: section.fields }).map((_, j) => (
                 <div key={j} className="space-y-1.5">
-                  <div className="bg-muted h-3 w-24 rounded" />
-                  <div className="bg-muted h-8 w-full rounded-lg" />
+                  <div className="h-3 w-24 rounded bg-slate-200" />
+                  <div className="h-9 w-full rounded-md bg-slate-200" />
                 </div>
               ))}
             </div>
@@ -151,10 +151,10 @@ function FormSkeleton() {
       )}
 
       {/* Footer skeleton */}
-      <div className="border-border bg-background/95 sticky bottom-0 border-t py-4">
+      <div className="sticky bottom-0 border-t border-slate-200 bg-white/95 py-4">
         <div className="flex items-center justify-end gap-2">
-          <div className="bg-muted h-8 w-20 rounded-lg" />
-          <div className="bg-muted h-8 w-24 rounded-lg" />
+          <div className="h-9 w-20 rounded-md bg-slate-200" />
+          <div className="h-9 w-24 rounded-md bg-slate-200" />
         </div>
       </div>
     </div>
@@ -315,17 +315,17 @@ export function AdAccountForm({
         {saveError && (
           <div
             role="alert"
-            className="border-destructive/30 bg-destructive/5 text-destructive flex items-start gap-3 rounded-xl border p-4 text-sm"
+            className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
           >
             <AlertCircleIcon className="mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="font-medium">Failed to save</p>
+              <p className="font-medium text-red-900">Failed to save</p>
               <p className="mt-0.5 text-xs">{saveError}</p>
             </div>
             <button
               type="button"
               onClick={() => setSaveError(null)}
-              className="hover:bg-destructive/10 ml-auto rounded p-0.5"
+              className="ml-auto rounded p-0.5 hover:bg-red-100"
               aria-label="Dismiss error"
             >
               <XIcon className="size-4" />
@@ -335,10 +335,10 @@ export function AdAccountForm({
 
         {/* ── Enabled toggle ────────────────────────────────────────────── */}
         <div
-          className={`flex items-center gap-4 rounded-xl border p-4 transition-colors ${
+          className={`flex items-center gap-4 rounded-lg border p-4 transition-colors ${
             values.enabled
-              ? "border-primary/30 bg-primary/5"
-              : "border-border bg-muted/30"
+              ? "border-sky-200 bg-sky-50"
+              : "border-slate-200 bg-slate-50"
           }`}
         >
           <Switch
@@ -346,17 +346,18 @@ export function AdAccountForm({
             checked={values.enabled}
             onCheckedChange={(checked) => setField("enabled", checked)}
             aria-describedby="enabled-description"
+            className="data-checked:bg-sky-600 data-unchecked:bg-slate-200 focus-visible:ring-sky-500/40"
           />
           <div className="flex-1">
             <label
               htmlFor="enabled-toggle"
-              className="cursor-pointer text-sm font-semibold"
+              className="cursor-pointer text-sm font-semibold text-slate-900"
             >
               {enabledLabel}
             </label>
             <p
               id="enabled-description"
-              className="text-muted-foreground mt-0.5 text-xs"
+              className="mt-0.5 text-xs text-slate-500"
             >
               {enabledDescription}
             </p>
@@ -383,6 +384,7 @@ export function AdAccountForm({
               placeholder="e.g. Brand Awareness — UZ"
               value={values.label}
               maxLength={60}
+              className="h-9 rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
               onChange={(e) => setField("label", e.target.value)}
               onBlur={() => blurField("label")}
               aria-required="true"
@@ -403,11 +405,11 @@ export function AdAccountForm({
                   {getError("label")}
                 </p>
               ) : (
-                <p id="label-hint" className="text-muted-foreground text-xs">
+                <p id="label-hint" className="text-xs text-slate-500">
                   A short name for your own reference
                 </p>
               )}
-              <span className="text-muted-foreground ml-auto text-xs">
+              <span className="ml-auto text-xs text-slate-500">
                 {values.label.length}/60
               </span>
             </div>
@@ -470,7 +472,7 @@ export function AdAccountForm({
               onBlur={() => blurField("metrics")}
               error={getError("metrics")}
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-slate-500">
               Grouped by Delivery, Cost, Conversion, Video. At least one
               required.
             </p>
@@ -503,7 +505,7 @@ export function AdAccountForm({
                 *
               </span>
             </Label>
-            <InputGroup>
+            <InputGroup className="h-9 rounded-md border-slate-300 bg-white focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20">
               <InputGroupAddon align="inline-start">
                 <FileSpreadsheetIcon className="size-4 text-green-600" />
               </InputGroupAddon>
@@ -512,6 +514,7 @@ export function AdAccountForm({
                 type="text"
                 placeholder="Paste Google Sheets ID or URL"
                 value={values.spreadsheetId}
+                className="h-9 rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
                 onChange={(e) => setField("spreadsheetId", e.target.value)}
                 onBlur={() => blurField("spreadsheetId")}
                 aria-required="true"
@@ -532,7 +535,7 @@ export function AdAccountForm({
                 {getError("spreadsheetId")}
               </p>
             ) : (
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-slate-500">
                 Found in the Sheets URL:{" "}
                 <code className="font-mono text-xs">/spreadsheets/d/[ID]/</code>
               </p>
@@ -555,6 +558,7 @@ export function AdAccountForm({
                 type="text"
                 placeholder="Campaigns"
                 value={values.campaignTabName}
+                className="h-9 rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
                 onChange={(e) => setField("campaignTabName", e.target.value)}
                 onBlur={() => blurField("campaignTabName")}
                 tabIndex={campaignLevelSelected ? 0 : -1}
@@ -591,6 +595,7 @@ export function AdAccountForm({
                 type="text"
                 placeholder="Ads"
                 value={values.adTabName}
+                className="h-9 rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-sky-500 focus-visible:ring-sky-500/20"
                 onChange={(e) => setField("adTabName", e.target.value)}
                 onBlur={() => blurField("adTabName")}
                 tabIndex={adLevelSelected ? 0 : -1}
@@ -633,9 +638,9 @@ export function AdAccountForm({
         </FormSection>
 
         {/* ── Sticky footer ─────────────────────────────────────────────── */}
-        <div className="border-border bg-background/95 fixed right-0 bottom-0 left-0 z-40 border-t shadow-[0_-4px_16px_rgba(0,0,0,0.06)] backdrop-blur-sm supports-backdrop-filter:backdrop-blur-sm md:left-[240px]">
+        <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm supports-backdrop-filter:backdrop-blur-sm md:left-[240px]">
           <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 md:px-8">
-            <div className="text-muted-foreground flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm text-slate-500">
               {isDirty && (
                 <span className="flex items-center gap-1">
                   <span className="bg-status-warning inline-block size-1.5 rounded-full" />
@@ -652,11 +657,16 @@ export function AdAccountForm({
                 variant="outline"
                 onClick={handleDiscard}
                 disabled={isSaving}
+                className="h-9 rounded-md border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
               >
                 <XIcon />
                 Discard
               </Button>
-              <Button type="submit" disabled={isSaving}>
+              <Button
+                type="submit"
+                disabled={isSaving}
+                className="h-9 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
+              >
                 {isSaving ? (
                   <>
                     <RotateCcwIcon className="animate-spin" />

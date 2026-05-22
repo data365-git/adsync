@@ -1,25 +1,20 @@
 import { Skeleton } from "~/components/ui/skeleton";
 
-/** Shown by Next.js during streaming SSR or navigation. */
 export default function RunsLoading() {
   return (
     <div className="flex flex-col gap-6">
-      {/* Page header skeleton */}
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-7 w-32" />
+      <div className="flex flex-col gap-1">
+        <Skeleton className="h-8 w-36" />
         <Skeleton className="h-4 w-64" />
       </div>
 
-      {/* Filter bar skeleton */}
       <div className="flex items-center gap-2">
-        <Skeleton className="h-8 w-28" />
-        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-9 w-28 rounded-md" />
+        <Skeleton className="h-9 w-24 rounded-md" />
       </div>
 
-      {/* Table skeleton — 8 rows, each matching the real row height (~40px) */}
-      <div className="border-border overflow-hidden rounded-xl border">
-        {/* Header */}
-        <div className="bg-card flex items-center border-b px-2 py-2.5">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="flex h-10 items-center border-b border-slate-200 bg-slate-50 px-4">
           {[
             "w-24",
             "w-32",
@@ -35,11 +30,10 @@ export default function RunsLoading() {
           ))}
         </div>
 
-        {/* Rows */}
         {Array.from({ length: 8 }).map((_, i) => (
           <div
             key={i}
-            className="flex items-center border-b px-2 py-3 last:border-0"
+            className="flex h-[52px] items-center border-b border-slate-100 px-4 last:border-0"
             aria-hidden="true"
           >
             <div className="mr-4 w-24 flex-shrink-0">
@@ -67,7 +61,6 @@ export default function RunsLoading() {
         ))}
       </div>
 
-      {/* Pagination skeleton */}
       <div className="flex items-center justify-between pt-2">
         <Skeleton className="h-5 w-20" />
         <div className="flex gap-1">

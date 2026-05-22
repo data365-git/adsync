@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { AlertTriangle, ChevronLeft } from "lucide-react";
+import { AlertCircle, ChevronLeft, RefreshCw } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
@@ -29,7 +29,7 @@ export default function RunDetailPage({ params }: RunDetailPageProps) {
             variant="ghost"
             size="sm"
             render={<Link href="/runs" />}
-            className="gap-1.5"
+            className="h-9 gap-1.5 rounded-md px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
           >
             <ChevronLeft className="size-4" aria-hidden="true" />
             Back to runs
@@ -38,26 +38,29 @@ export default function RunDetailPage({ params }: RunDetailPageProps) {
 
         <div
           role="alert"
-          className="flex flex-col items-center gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-6 py-12 text-center"
+          className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
         >
-          <AlertTriangle
-            className="size-10 text-destructive"
+          <AlertCircle
+            className="mt-0.5 size-4 shrink-0 text-red-600"
             aria-hidden="true"
           />
-          <div className="space-y-1">
-            <p className="text-base font-semibold text-foreground">
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-sm font-semibold text-red-700">
               Failed to load run
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-red-700/90">
               {detailQuery.error?.message ?? "Run not found."}
             </p>
           </div>
           <Button
             variant="outline"
+            size="sm"
             onClick={() => {
               void detailQuery.refetch();
             }}
+            className="h-9 rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
           >
+            <RefreshCw className="size-3.5" aria-hidden="true" />
             Retry
           </Button>
         </div>

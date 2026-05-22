@@ -45,6 +45,7 @@ export function CsvExportButton({
       disabled={(disabled ?? false) || rows.length === 0}
       onClick={handleExport}
       aria-label="Export rows as CSV"
+      className="h-9 rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
     >
       <DownloadIcon className="size-3.5" aria-hidden="true" />
       <span>Export CSV</span>

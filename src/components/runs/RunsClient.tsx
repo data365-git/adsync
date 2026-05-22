@@ -1,123 +1,102 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  useQueryState,
-} from "nuqs";
+import * as React from "react";
 import { api } from "~/trpc/react";
-import type { RunStatus } from "~/server/mocks/types";
 import { RunsFilters } from "~/components/runs/RunsFilters";
-import { RunsTable } from "~/components/runs/RunsTable";
 import { RunsPagination } from "~/components/runs/RunsPagination";
+import { RunsTable } from "~/components/runs/RunsTable";
 
-/** Write URL immediately on filter change, but debounce the actual fetch by 150ms. */
-const FETCH_DEBOUNCE_MS = 150;
+type FilterStatus = "success" | "failed" | "running" | "cancelled";
+
+const PAGE_SIZE = 10;
 
 export function RunsClient() {
-  // --- URL params (nuqs) — written immediately ---
-  const [accountIds, setAccountIds] = useQueryState(
-    "account",
-    parseAsArrayOf(parseAsString).withDefault([]),
-  );
-  const [statuses, setStatuses] = useQueryState(
-    "status",
-    parseAsArrayOf(parseAsString).withDefault([]),
-  );
-  const [page, setPage] = useQueryState(
-    "page",
-    parseAsInteger.withDefault(1),
-  );
+  const [page, setPage] = React.useState(1);
+  const [scenarioIds, setScenarioIds] = React.useState<string[]>([]);
+  const [adAccountId, setAdAccountId] = React.useState<string | null>(null);
+  const [status, setStatus] = React.useState<FilterStatus | null>(null);
+  const [from, setFrom] = React.useState<Date | null>(null);
+  const [to, setTo] = React.useState<Date | null>(null);
+  const [minDurationMs, setMinDurationMs] = React.useState<number | null>(null);
 
-  // --- Debounced fetch params — lag behind URL by 150ms ---
-  const [fetchAccountIds, setFetchAccountIds] = useState<string[]>(accountIds);
-  const [fetchStatuses, setFetchStatuses] = useState<string[]>(statuses);
-  const [fetchPage, setFetchPage] = useState<number>(page);
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      setFetchAccountIds(accountIds);
-      setFetchStatuses(statuses);
-      setFetchPage(page);
-    }, FETCH_DEBOUNCE_MS);
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, [accountIds, statuses, page]);
-
-  // --- tRPC query using debounced params ---
-  const validStatuses = fetchStatuses.filter(
-    (s): s is RunStatus =>
-      s === "queued" || s === "running" || s === "success" || s === "failed",
-  );
-
-  const { data, isLoading, isError, refetch } = api.runs.list.useQuery({
-    accountIds: fetchAccountIds.length > 0 ? fetchAccountIds : undefined,
-    statuses: validStatuses.length > 0 ? validStatuses : undefined,
-    page: fetchPage,
-    pageSize: 10,
+  const query = api.runs.list.useQuery({
+    page,
+    pageSize: PAGE_SIZE,
+    ...(scenarioIds.length > 0 && { scenarioIds }),
+    ...(adAccountId && { adAccountId }),
+    ...(status && { status }),
+    ...(from && { from }),
+    ...(to && { to }),
+    ...(minDurationMs !== null && { minDurationMs }),
   });
 
-  // --- Filter handlers ---
-  function handleAccountIdsChange(ids: string[]) {
-    void setAccountIds(ids.length > 0 ? ids : null);
-    void setPage(1);
-  }
+  const hasFilters =
+    scenarioIds.length > 0 ||
+    adAccountId !== null ||
+    status !== null ||
+    from !== null ||
+    to !== null ||
+    minDurationMs !== null;
 
-  function handleStatusesChange(next: RunStatus[]) {
-    void setStatuses(next.length > 0 ? next : null);
-    void setPage(1);
-  }
-
-  function handleClearAll() {
-    void setAccountIds(null);
-    void setStatuses(null);
-    void setPage(1);
-  }
-
-  function handlePageChange(next: number) {
-    void setPage(next);
-  }
-
-  const hasFilters = accountIds.length > 0 || statuses.length > 0;
+  const clearFilters = () => {
+    setScenarioIds([]);
+    setAdAccountId(null);
+    setStatus(null);
+    setFrom(null);
+    setTo(null);
+    setMinDurationMs(null);
+    setPage(1);
+  };
 
   return (
-    <section aria-label="Sync runs history" className="flex flex-col gap-4">
-      {/* Filters */}
-      <div className="flex items-center justify-between gap-2">
-        <RunsFilters
-          accountIds={accountIds}
-          statuses={validStatuses}
-          onAccountIdsChange={handleAccountIdsChange}
-          onStatusesChange={handleStatusesChange}
-          onClearAll={handleClearAll}
-        />
-      </div>
-
-      {/* Table */}
-      <RunsTable
-        runs={data?.runs ?? []}
-        isLoading={isLoading}
-        isError={isError}
-        hasFilters={hasFilters}
-        onRetry={() => void refetch()}
-        onClearFilters={handleClearAll}
+    <div className="space-y-4">
+      <RunsFilters
+        scenarioIds={scenarioIds}
+        adAccountId={adAccountId}
+        status={status}
+        from={from}
+        to={to}
+        minDurationMs={minDurationMs}
+        onScenarioIdsChange={(ids) => {
+          setScenarioIds(ids);
+          setPage(1);
+        }}
+        onAdAccountIdChange={(id) => {
+          setAdAccountId(id);
+          setPage(1);
+        }}
+        onStatusChange={(value) => {
+          setStatus(value);
+          setPage(1);
+        }}
+        onFromChange={(value) => {
+          setFrom(value);
+          setPage(1);
+        }}
+        onToChange={(value) => {
+          setTo(value);
+          setPage(1);
+        }}
+        onMinDurationMsChange={(value) => {
+          setMinDurationMs(value);
+          setPage(1);
+        }}
+        onClearAll={clearFilters}
       />
-
-      {/* Pagination */}
-      {!isLoading && !isError && (
-        <RunsPagination
-          page={data?.page ?? 1}
-          totalPages={data?.totalPages ?? 1}
-          total={data?.total ?? 0}
-          onPageChange={handlePageChange}
-        />
-      )}
-    </section>
+      <RunsTable
+        runs={query.data?.runs ?? []}
+        isLoading={query.isLoading}
+        isError={query.isError}
+        hasFilters={hasFilters}
+        onRetry={() => void query.refetch()}
+        onClearFilters={clearFilters}
+      />
+      <RunsPagination
+        page={query.data?.page ?? page}
+        totalPages={query.data?.totalPages ?? 1}
+        total={query.data?.total ?? 0}
+        onPageChange={setPage}
+      />
+    </div>
   );
 }

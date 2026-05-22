@@ -28,7 +28,7 @@ export function RunsPagination({
       aria-label="Pagination"
       className="flex items-center justify-between gap-4 pt-4"
     >
-      <p className="text-sm text-muted-foreground" aria-live="polite">
+      <p className="text-sm text-slate-500" aria-live="polite">
         {total === 0
           ? "No results"
           : `Page ${page} of ${totalPages}`}
@@ -41,6 +41,7 @@ export function RunsPagination({
           aria-label="First page"
           disabled={page <= 1}
           onClick={() => onPageChange(1)}
+          className="size-8 rounded-md border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <ChevronFirst aria-hidden="true" />
         </Button>
@@ -51,6 +52,7 @@ export function RunsPagination({
           aria-label="Previous page"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
+          className="size-8 rounded-md border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <ChevronLeft aria-hidden="true" />
         </Button>
@@ -61,6 +63,7 @@ export function RunsPagination({
           aria-label="Next page"
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
+          className="size-8 rounded-md border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <ChevronRight aria-hidden="true" />
         </Button>
@@ -71,6 +74,7 @@ export function RunsPagination({
           aria-label="Last page"
           disabled={page >= totalPages}
           onClick={() => onPageChange(totalPages)}
+          className="size-8 rounded-md border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <ChevronLast aria-hidden="true" />
         </Button>

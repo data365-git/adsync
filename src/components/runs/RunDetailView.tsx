@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, RefreshCwIcon } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, GitCompareArrows, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
 import { StepResultCard } from "~/components/runs/StepResultCard";
+import { RunDiffView } from "~/components/runs/RunDiffView";
+import { RunStatusBadge } from "~/components/runs/RunStatusBadge";
+import { LogViewer } from "~/components/runs/LogViewer";
 import { cn } from "~/lib/utils";
+import type { RunStatus } from "~/server/mocks/types";
 
 type RunDetailData = RouterOutputs["runs"]["getDetail"];
 type RunLog = RunDetailData["run"]["logs"][number];
@@ -50,8 +55,13 @@ function findFailedPosition(data: RunDetailData): number | undefined {
   return Math.max(...startedPositions);
 }
 
+function normalizeStatus(status: RunDetailData["run"]["status"]): RunStatus {
+  return status.toLowerCase() as RunStatus;
+}
+
 export function RunDetailView({ data }: { data: RunDetailData }) {
   const router = useRouter();
+  const [showDiff, setShowDiff] = useState(false);
   const failedPosition = findFailedPosition(data);
   const errorMessage = data.run.errorMessage ?? undefined;
   const hasLoggedSteps = data.run.logs.length > 0;
@@ -74,7 +84,7 @@ export function RunDetailView({ data }: { data: RunDetailData }) {
           variant="ghost"
           size="sm"
           render={<Link href="/runs" />}
-          className="gap-1.5"
+          className="h-9 gap-1.5 rounded-md px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <ChevronLeft className="size-4" aria-hidden="true" />
           Back to runs
@@ -82,34 +92,58 @@ export function RunDetailView({ data }: { data: RunDetailData }) {
       </nav>
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-normal text-foreground">
-            Run details
-          </h1>
-          <p className="text-sm text-muted-foreground">{data.scenario.name}</p>
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Run details
+            </h1>
+            <RunStatusBadge
+              status={normalizeStatus(data.run.status)}
+              pulse={data.run.status === "RUNNING"}
+            />
+          </div>
+          <p className="text-sm text-slate-500">{data.scenario.name}</p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={retryMutation.isPending}
-          onClick={() => retryMutation.mutate({ runId: data.run.id })}
-          aria-label="Retry this run"
-          className="w-full sm:w-auto"
-        >
-          <RefreshCwIcon
-            className={cn(
-              "size-3.5",
-              retryMutation.isPending && "animate-spin",
-            )}
-            aria-hidden="true"
-          />
-          <span>{retryMutation.isPending ? "Retrying..." : "Retry run"}</span>
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {data.run.status === "FAILED" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDiff((current) => !current)}
+              className="h-9 w-full rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 sm:w-auto"
+            >
+              <GitCompareArrows className="size-3.5" aria-hidden="true" />
+              Compare to last success
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={retryMutation.isPending}
+            onClick={() => retryMutation.mutate({ runId: data.run.id })}
+            aria-label="Retry this run"
+            className="h-9 w-full rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 sm:w-auto"
+          >
+            <RefreshCwIcon
+              className={cn(
+                "size-3.5",
+                retryMutation.isPending && "animate-spin",
+              )}
+              aria-hidden="true"
+            />
+            <span>{retryMutation.isPending ? "Retrying..." : "Retry run"}</span>
+          </Button>
+        </div>
       </header>
 
+      {showDiff ? (
+        <RunDiffView runId={data.run.id} onClose={() => setShowDiff(false)} />
+      ) : null}
+
       {!hasLoggedSteps ? (
-        <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
           Run has no logged steps yet.
         </div>
       ) : (
@@ -133,6 +167,8 @@ export function RunDetailView({ data }: { data: RunDetailData }) {
           })}
         </div>
       )}
+
+      <LogViewer runId={data.run.id} runStatus={data.run.status} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { TRPCError } from "@trpc/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const runFindUniqueMock = vi.hoisted(() => vi.fn());
+const runFindFirstMock = vi.hoisted(() => vi.fn());
 const executeRunMock = vi.hoisted(() => vi.fn());
 
 vi.mock("~/server/auth", () => ({
@@ -15,6 +16,7 @@ vi.mock("~/server/db", () => ({
     run: {
       count: vi.fn(),
       findMany: vi.fn(),
+      findFirst: runFindFirstMock,
       findUnique: runFindUniqueMock,
     },
     scenario: {
@@ -125,6 +127,7 @@ describe("runs.rerunFromStep", () => {
   beforeEach(() => {
     vi.resetModules();
     runFindUniqueMock.mockReset();
+    runFindFirstMock.mockReset();
     executeRunMock.mockReset();
   });
 
@@ -152,6 +155,26 @@ describe("runs.rerunFromStep", () => {
     });
   });
 
+  it("throws FORBIDDEN when the run belongs to another user", async () => {
+    runFindUniqueMock.mockResolvedValue({
+      id: "run_1",
+      userId: "user_2",
+      scenarioId: "scenario_1",
+      scenario: {
+        steps: [{ id: "step_1", position: 1 }],
+      },
+    });
+
+    const caller = await createRunsCaller();
+
+    await expect(
+      caller.rerunFromStep({ runId: "run_1", position: 1 }),
+    ).rejects.toMatchObject({
+      code: "FORBIDDEN" satisfies TRPCError["code"],
+    });
+    expect(executeRunMock).not.toHaveBeenCalled();
+  });
+
   it("throws BAD_REQUEST for a position beyond the scenario step count", async () => {
     runFindUniqueMock.mockResolvedValue({
       id: "run_1",
@@ -170,6 +193,150 @@ describe("runs.rerunFromStep", () => {
       code: "BAD_REQUEST" satisfies TRPCError["code"],
     });
     expect(executeRunMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("runs.compareWithLastSuccess", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    runFindUniqueMock.mockReset();
+    runFindFirstMock.mockReset();
+  });
+
+  it("returns baseline and current step comparison data", async () => {
+    const currentStartedAt = new Date("2026-05-14T11:00:00.000Z");
+    runFindUniqueMock.mockResolvedValue({
+      id: "run_failed",
+      userId: "user_1",
+      scenarioId: "scenario_1",
+      startedAt: currentStartedAt,
+      scenario: {
+        steps: [
+          { position: 1, moduleType: "trigger.manual" },
+          { position: 2, moduleType: "sheets.append" },
+        ],
+      },
+      logs: [
+        {
+          message: "Completed step 1",
+          meta: {
+            position: 1,
+            sampleRows: [{ id: "current" }],
+            durationMs: 25,
+          },
+        },
+      ],
+    });
+    runFindFirstMock.mockResolvedValue({
+      id: "run_success",
+      scenario: {
+        steps: [
+          { position: 1, moduleType: "trigger.manual" },
+          { position: 2, moduleType: "sheets.append" },
+        ],
+      },
+      logs: [
+        {
+          message: "Completed step 1",
+          meta: {
+            position: 1,
+            sampleRows: [{ id: "baseline" }],
+            durationMs: 10,
+          },
+        },
+        {
+          message: "Completed step 2",
+          meta: {
+            position: 2,
+            sampleRows: [{ written: true }],
+            durationMs: 40,
+          },
+        },
+      ],
+    });
+
+    const caller = await createRunsCaller();
+    const result = await caller.compareWithLastSuccess({ runId: "run_failed" });
+
+    expect(runFindFirstMock).toHaveBeenCalledWith({
+      where: {
+        userId: "user_1",
+        scenarioId: "scenario_1",
+        status: "SUCCESS",
+        id: { not: "run_failed" },
+        startedAt: { lt: currentStartedAt },
+      },
+      orderBy: { startedAt: "desc" },
+      include: {
+        scenario: {
+          select: {
+            steps: {
+              orderBy: { position: "asc" },
+              select: { position: true, moduleType: true },
+            },
+          },
+        },
+        logs: {
+          orderBy: { ts: "asc" },
+          select: { message: true, meta: true },
+        },
+      },
+    });
+    expect(result).toEqual({
+      baseline: {
+        runId: "run_success",
+        steps: [
+          {
+            position: 1,
+            moduleType: "trigger.manual",
+            sampleRows: [{ id: "baseline" }],
+            durationMs: 10,
+          },
+          {
+            position: 2,
+            moduleType: "sheets.append",
+            sampleRows: [{ written: true }],
+            durationMs: 40,
+          },
+        ],
+      },
+      current: {
+        steps: [
+          {
+            position: 1,
+            moduleType: "trigger.manual",
+            sampleRows: [{ id: "current" }],
+            durationMs: 25,
+          },
+          {
+            position: 2,
+            moduleType: "sheets.append",
+            sampleRows: [],
+            durationMs: null,
+          },
+        ],
+      },
+    });
+  });
+
+  it("throws NOT_FOUND when no prior success exists", async () => {
+    runFindUniqueMock.mockResolvedValue({
+      id: "run_failed",
+      userId: "user_1",
+      scenarioId: "scenario_1",
+      startedAt: new Date("2026-05-14T11:00:00.000Z"),
+      scenario: { steps: [] },
+      logs: [],
+    });
+    runFindFirstMock.mockResolvedValue(null);
+
+    const caller = await createRunsCaller();
+
+    await expect(
+      caller.compareWithLastSuccess({ runId: "run_failed" }),
+    ).rejects.toMatchObject({
+      code: "NOT_FOUND" satisfies TRPCError["code"],
+    });
   });
 });
 

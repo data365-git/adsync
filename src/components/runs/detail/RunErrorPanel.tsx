@@ -17,15 +17,15 @@ export function RunErrorPanel({ errorMessage }: RunErrorPanelProps) {
   return (
     <section
       aria-label="Run error"
-      className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20"
+      className="rounded-lg border border-red-200 bg-red-50 p-4"
     >
       {/* One-line bold summary — answers "what went wrong?" at a glance */}
       <div className="mb-3 flex items-start gap-2">
         <AlertCircle
-          className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400"
+          className="mt-0.5 size-4 shrink-0 text-red-600"
           aria-hidden="true"
         />
-        <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+        <p className="text-sm font-semibold text-red-700">
           {summary}
         </p>
       </div>
@@ -34,7 +34,7 @@ export function RunErrorPanel({ errorMessage }: RunErrorPanelProps) {
       {hasMoreDetail && (
         <pre
           className="max-h-48 overflow-y-auto rounded border border-red-200 bg-red-100/50 p-3
-                     font-mono text-xs text-red-800 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
+                     font-mono text-xs text-red-800"
           aria-label="Full error output"
         >
           {errorMessage}

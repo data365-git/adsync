@@ -16,21 +16,21 @@ const levelStyles: Record<
   { badge: string; border: string; text: string; weight: string }
 > = {
   INFO: {
-    badge: "bg-muted text-muted-foreground",
+    badge: "bg-slate-100 text-slate-700",
     border: "border-l-border",
-    text: "text-foreground",
+    text: "text-slate-700",
     weight: "font-normal",
   },
   WARN: {
-    badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    badge: "bg-amber-50 text-amber-700",
     border: "border-l-amber-400",
-    text: "text-amber-700 dark:text-amber-400",
+    text: "text-amber-700",
     weight: "font-normal",
   },
   ERROR: {
-    badge: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    badge: "bg-red-50 text-red-700",
     border: "border-l-red-500",
-    text: "text-red-700 dark:text-red-400",
+    text: "text-red-700",
     weight: "font-semibold",
   },
 };
@@ -54,7 +54,7 @@ export function RunLogEntry({ log }: RunLogEntryProps) {
         {/* Timestamp */}
         <time
           dateTime={log.timestamp.toISOString()}
-          className="shrink-0 font-mono text-xs text-muted-foreground"
+          className="shrink-0 font-mono text-xs text-slate-500"
         >
           {formatTimestamp(log.timestamp)}
         </time>
@@ -81,10 +81,10 @@ export function RunLogEntry({ log }: RunLogEntryProps) {
       {/* Collapsible meta block — collapsed by default, keyboard-accessible */}
       {hasMeta && (
         <details className="mt-1.5">
-          <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded">
+          <summary className="cursor-pointer rounded text-xs text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40">
             Show meta
           </summary>
-          <pre className="mt-1.5 max-h-48 overflow-y-auto rounded border border-border bg-muted/50 p-2 font-mono text-xs text-foreground">
+          <pre className="mt-1.5 max-h-48 overflow-y-auto rounded border border-slate-200 bg-slate-50 p-2 font-mono text-xs text-slate-700">
             {JSON.stringify(log.meta, null, 2)}
           </pre>
         </details>

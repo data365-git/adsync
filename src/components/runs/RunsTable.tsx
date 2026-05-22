@@ -15,6 +15,8 @@ import { RunsEmptyState } from "~/components/runs/RunsEmptyState";
 import type { Run } from "~/server/mocks/types";
 
 const SKELETON_ROW_COUNT = 8;
+const headerClass =
+  "text-xs font-medium uppercase tracking-[0.04em] text-slate-500";
 
 interface RunsTableProps {
   runs: Run[];
@@ -37,12 +39,17 @@ export function RunsTable({
     return (
       <div
         role="alert"
-        className="flex flex-col items-center justify-center gap-4 py-10 text-center sm:py-16"
+        className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3"
       >
-        <AlertCircle className="text-destructive size-10" aria-hidden="true" />
-        <div>
-          <p className="text-foreground font-medium">Failed to load runs</p>
-          <p className="text-muted-foreground mt-1 text-sm">
+        <AlertCircle
+          className="mt-0.5 size-4 shrink-0 text-red-600"
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-red-700">
+            Failed to load runs
+          </p>
+          <p className="mt-1 text-sm text-red-700/90">
             Something went wrong. Please try again.
           </p>
         </div>
@@ -50,7 +57,7 @@ export function RunsTable({
           variant="outline"
           size="sm"
           onClick={onRetry}
-          className="gap-1.5"
+          className="h-9 gap-1.5 rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
         >
           <RefreshCw className="size-3.5" aria-hidden="true" />
           Retry
@@ -60,20 +67,22 @@ export function RunsTable({
   }
 
   return (
-    <div className="border-border overflow-hidden rounded-xl border">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <Table aria-label="Sync runs" aria-busy={isLoading}>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>When</TableHead>
-            <TableHead>Scenario</TableHead>
-            <TableHead>Account</TableHead>
-            <TableHead>Trigger</TableHead>
-            <TableHead>Status</TableHead>
-            {/* These columns collapse on mobile */}
-            <TableHead className="hidden md:table-cell">Rows Written</TableHead>
-            <TableHead className="hidden md:table-cell">Duration</TableHead>
-            {/* Error / link column — always visible */}
-            <TableHead>
+        <TableHeader className="bg-slate-50">
+          <TableRow className="h-10 border-b border-slate-200 hover:bg-transparent">
+            <TableHead className={`${headerClass} pl-5`}>When</TableHead>
+            <TableHead className={headerClass}>Scenario</TableHead>
+            <TableHead className={headerClass}>Account</TableHead>
+            <TableHead className={headerClass}>Trigger</TableHead>
+            <TableHead className={headerClass}>Status</TableHead>
+            <TableHead className={`${headerClass} hidden md:table-cell`}>
+              Rows Written
+            </TableHead>
+            <TableHead className={`${headerClass} hidden md:table-cell`}>
+              Duration
+            </TableHead>
+            <TableHead className={headerClass}>
               <span className="sr-only">Details</span>
             </TableHead>
           </TableRow>
@@ -82,37 +91,33 @@ export function RunsTable({
         <TableBody>
           {isLoading ? (
             Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
-              <TableRow key={i} aria-hidden="true">
-                {/* When */}
-                <td className="p-2">
+              <TableRow
+                key={i}
+                aria-hidden="true"
+                className="h-[52px] border-b border-slate-100 hover:bg-transparent"
+              >
+                <td className="py-3 pl-5 pr-4">
                   <Skeleton className="h-5 w-24" />
                 </td>
-                {/* Scenario */}
-                <td className="p-2">
+                <td className="px-4 py-3">
                   <Skeleton className="h-5 w-36" />
                 </td>
-                {/* Account */}
-                <td className="p-2">
+                <td className="px-4 py-3">
                   <Skeleton className="h-5 w-32" />
                 </td>
-                {/* Trigger */}
-                <td className="p-2">
+                <td className="px-4 py-3">
                   <Skeleton className="h-5 w-20" />
                 </td>
-                {/* Status */}
-                <td className="p-2">
+                <td className="px-4 py-3">
                   <Skeleton className="h-5 w-16" />
                 </td>
-                {/* Rows Written — hidden mobile */}
-                <td className="hidden p-2 md:table-cell">
+                <td className="hidden px-4 py-3 md:table-cell">
                   <Skeleton className="h-5 w-16" />
                 </td>
-                {/* Duration — hidden mobile */}
-                <td className="hidden p-2 md:table-cell">
+                <td className="hidden px-4 py-3 md:table-cell">
                   <Skeleton className="h-5 w-12" />
                 </td>
-                {/* Link */}
-                <td className="p-2">
+                <td className="px-4 py-3">
                   <Skeleton className="h-5 w-5" />
                 </td>
               </TableRow>

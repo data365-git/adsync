@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { formatDistanceToNow, format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { ExternalLink } from "lucide-react";
 import {
   Tooltip,
@@ -23,7 +23,7 @@ function formatRowsWritten(
   campaignRowsWritten: number | null,
   adRowsWritten: number | null,
 ): string {
-  if (campaignRowsWritten === null && adRowsWritten === null) return "—";
+  if (campaignRowsWritten === null && adRowsWritten === null) return "-";
   const parts: string[] = [];
   if (campaignRowsWritten !== null) parts.push(`${campaignRowsWritten}C`);
   if (adRowsWritten !== null) parts.push(`${adRowsWritten}A`);
@@ -34,7 +34,7 @@ const ERROR_CHAR_LIMIT = 40;
 
 function truncateError(msg: string): { text: string; truncated: boolean } {
   if (msg.length <= ERROR_CHAR_LIMIT) return { text: msg, truncated: false };
-  return { text: msg.slice(0, ERROR_CHAR_LIMIT) + "…", truncated: true };
+  return { text: `${msg.slice(0, ERROR_CHAR_LIMIT)}...`, truncated: true };
 }
 
 interface RunRowProps {
@@ -61,15 +61,17 @@ export function RunRow({ run }: RunRowProps) {
 
   return (
     <TableRow
-      className="focus-within:bg-muted/50 cursor-pointer"
-      aria-label={`Run ${run.id} — ${accountLabel} — ${TRIGGER_LABEL[run.trigger]} — ${run.status}`}
+      className="h-[52px] cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-within:bg-slate-50"
+      aria-label={`Run ${run.id} - ${accountLabel} - ${TRIGGER_LABEL[run.trigger]} - ${run.status}`}
     >
-      {/* When */}
-      <TableCell>
+      <TableCell className="py-3 pl-5 pr-4">
         <TooltipProvider>
           <Tooltip>
-            <TooltipTrigger className="decoration-muted-foreground focus-visible:ring-ring underline decoration-dashed underline-offset-2 focus-visible:ring-2 focus-visible:outline-none">
-              <time dateTime={run.startedAt.toISOString()} className="text-sm">
+            <TooltipTrigger className="rounded underline decoration-slate-300 decoration-dashed underline-offset-2 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none">
+              <time
+                dateTime={run.startedAt.toISOString()}
+                className="text-sm text-slate-700"
+              >
                 {relativeTime}
               </time>
             </TooltipTrigger>
@@ -78,63 +80,60 @@ export function RunRow({ run }: RunRowProps) {
         </TooltipProvider>
       </TableCell>
 
-      {/* Scenario */}
-      <TableCell>
+      <TableCell className="px-4 py-3">
         <div className="flex items-center gap-1.5">
           <Link
             href={`/scenarios/${run.scenarioId}`}
-            className="text-foreground focus-visible:ring-ring max-w-[12rem] truncate rounded text-sm hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            className="max-w-[12rem] truncate rounded text-sm text-slate-900 hover:underline focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none"
             title={scenarioName}
           >
             {scenarioName}
           </Link>
           {isQuickSetup ? (
-            <span className="border-border bg-muted/50 text-muted-foreground inline-flex shrink-0 items-center rounded-full border px-1.5 py-0 text-[10px] font-medium tracking-wide uppercase">
+            <span className="inline-flex shrink-0 items-center rounded-sm bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium tracking-[0.04em] text-sky-700 uppercase">
               Quick
             </span>
           ) : null}
         </div>
       </TableCell>
 
-      {/* Account */}
-      <TableCell>
-        <span className="max-w-[10rem] truncate text-sm" title={accountLabel}>
+      <TableCell className="px-4 py-3">
+        <span className="max-w-[10rem] truncate text-sm text-slate-700" title={accountLabel}>
           {accountLabel}
         </span>
       </TableCell>
 
-      {/* Trigger */}
-      <TableCell>
-        <span className="border-border bg-muted/50 text-muted-foreground inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium">
+      <TableCell className="px-4 py-3">
+        <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
           {TRIGGER_LABEL[run.trigger]}
         </span>
       </TableCell>
 
-      {/* Status */}
-      <TableCell>
-        <RunStatusBadge status={run.status} pulse={isRunning} />
+      <TableCell className="px-4 py-3">
+        <RunStatusBadge
+          status={run.status}
+          pulse={isRunning}
+          timeLabel={relativeTime}
+        />
       </TableCell>
 
-      {/* Rows Written — hidden on mobile */}
-      <TableCell className="hidden md:table-cell">
-        <span className="text-sm tabular-nums">{rowsWritten}</span>
+      <TableCell className="hidden px-4 py-3 md:table-cell">
+        <span className="text-sm tabular-nums text-slate-700">{rowsWritten}</span>
       </TableCell>
 
-      {/* Duration — hidden on mobile */}
-      <TableCell className="hidden md:table-cell">
-        <span className="text-muted-foreground text-sm tabular-nums">
+      <TableCell className="hidden px-4 py-3 md:table-cell">
+        <span className="text-sm tabular-nums text-slate-500">
           {formatDuration(run.durationMs)}
         </span>
       </TableCell>
 
-      {/* Error preview + detail link */}
-      <TableCell>
+      <TableCell className="px-4 py-3">
         <div className="flex items-center gap-2">
           {errorPreview != null ? (
             errorPreview.truncated ? (
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger className="text-status-failed focus-visible:ring-ring max-w-[10rem] overflow-hidden text-xs text-ellipsis whitespace-nowrap focus-visible:ring-2 focus-visible:outline-none">
+                  <TooltipTrigger className="max-w-[10rem] overflow-hidden rounded text-xs text-ellipsis whitespace-nowrap text-red-700 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none">
                     {errorPreview.text}
                   </TooltipTrigger>
                   <TooltipContent
@@ -146,15 +145,13 @@ export function RunRow({ run }: RunRowProps) {
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <span className="text-status-failed text-xs">
-                {errorPreview.text}
-              </span>
+              <span className="text-xs text-red-700">{errorPreview.text}</span>
             )
           ) : null}
 
           <Link
             href={`/runs/${run.id}`}
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring ml-auto shrink-0 rounded p-1 focus-visible:ring-2 focus-visible:outline-none"
+            className="ml-auto shrink-0 rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none"
             aria-label={`View details for run ${run.id}`}
             tabIndex={0}
           >

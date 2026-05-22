@@ -12,10 +12,10 @@ interface MetadataItemProps {
 function MetadataItem({ label, value, valueClassName }: MetadataItemProps) {
   return (
     <div className="flex flex-col gap-1">
-      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <dt className="text-xs font-medium uppercase tracking-[0.04em] text-slate-500">
         {label}
       </dt>
-      <dd className={cn("text-sm font-medium text-foreground", valueClassName)}>
+      <dd className={cn("text-sm font-medium text-slate-900", valueClassName)}>
         {value}
       </dd>
     </div>
@@ -57,13 +57,13 @@ function ScenarioCellValue({ run }: { run: Run }) {
     <div className="flex items-center gap-1.5">
       <Link
         href={`/scenarios/${run.scenarioId}`}
-        className="truncate hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+        className="truncate rounded hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
         title={name}
       >
         {name}
       </Link>
       {isQuickSetup ? (
-        <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-muted/50 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="inline-flex shrink-0 items-center rounded-sm bg-sky-50 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-[0.04em] text-sky-700">
           Quick
         </span>
       ) : null}
@@ -75,7 +75,7 @@ export function RunMetadataGrid({ run }: RunMetadataGridProps) {
   return (
     <section aria-label="Run metadata">
       <dl
-        className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-muted/30 p-4
+        className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm
                    sm:grid-cols-2 md:grid-cols-4"
       >
         <MetadataItem label="Scenario" value={<ScenarioCellValue run={run} />} />

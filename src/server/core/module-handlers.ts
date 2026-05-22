@@ -18,7 +18,7 @@
 
 import type { ScenarioStep } from "@prisma/client";
 import type { RunContext } from "./run-context";
-import { interpolate } from "./template";
+import { interpolateWithWarnings } from "./template";
 
 // ── Integration imports ───────────────────────────────────────────────────────
 // Stubs live in this worktree; real implementations merged from Agents B and C.
@@ -32,6 +32,7 @@ import {
 import {
   appendRows,
   findRows,
+  PartialWriteError,
   readTabRows,
   updateRow,
   upsertRows,
@@ -42,6 +43,8 @@ export type HandlerResult = {
   rowCount: number;
   rows?: unknown[];
   sheetsUrl?: string;
+  message?: string;
+  warnings?: string[];
 };
 
 export type Handler = (
@@ -191,8 +194,11 @@ type SheetsUpsertCfg = SheetsCfg & {
 type SheetsFindRowsCfg = {
   spreadsheetId: string;
   tabName: string;
-  searchColumn: string;
-  searchValue: string;
+  searchColumn?: string;
+  searchValue?: string;
+  filterColumn?: string;
+  filterValue?: string;
+  limit?: number;
 };
 
 type SheetsUpdateRowCfg = {
@@ -243,15 +249,25 @@ export function buildRowFromMapping(
   upstreamRow: Record<string, unknown>,
   mappedFields: Record<string, string>,
 ): Record<string, unknown> {
+  return buildRowFromMappingWithWarnings(upstreamRow, mappedFields).row;
+}
+
+export function buildRowFromMappingWithWarnings(
+  upstreamRow: Record<string, unknown>,
+  mappedFields: Record<string, string>,
+): { row: Record<string, unknown>; warnings: string[] } {
   const result: Record<string, unknown> = {};
+  const warnings: string[] = [];
   for (const [col, expr] of Object.entries(mappedFields)) {
     if (expr !== "") {
-      result[col] = interpolate(expr, upstreamRow);
+      const interpolated = interpolateWithWarnings(expr, upstreamRow);
+      result[col] = interpolated.value;
+      warnings.push(...interpolated.warnings);
     } else {
       result[col] = upstreamRow[col];
     }
   }
-  return result;
+  return { row: result, warnings: Array.from(new Set(warnings)) };
 }
 
 type BitrixCreateLeadCfg = {
@@ -279,17 +295,33 @@ const sheetsAppendHandler: Handler = async (step, ctx, userId) => {
     return {
       rowCount: 0,
       sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+      message: "0 upstream rows; skipped",
     };
   }
-  const rows = upstreamRows.flatMap((row) =>
-    typeof row === "object" && row !== null
-      ? [buildRowFromMapping(row as Record<string, unknown>, mapping)]
-      : [],
-  );
-  await appendRows(userId, config.spreadsheetId, config.tabName, rows);
+  const warnings: string[] = [];
+  const rows = upstreamRows.flatMap((row) => {
+    if (typeof row !== "object" || row === null) return [];
+    const built = buildRowFromMappingWithWarnings(
+      row as Record<string, unknown>,
+      mapping,
+    );
+    warnings.push(...built.warnings);
+    return [built.row];
+  });
+  try {
+    await appendRows(userId, config.spreadsheetId, config.tabName, rows);
+  } catch (error) {
+    if (error instanceof PartialWriteError) {
+      throw new Error(
+        `Partial write: ${error.rowsCommitted} of ${error.rowsAttempted} rows committed before error: ${error.message}`,
+      );
+    }
+    throw error;
+  }
   return {
     rowCount: rows.length,
     sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+    warnings: Array.from(new Set(warnings)),
   };
 };
 
@@ -301,13 +333,19 @@ const sheetsUpsertHandler: Handler = async (step, ctx, userId) => {
     return {
       rowCount: 0,
       sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+      message: "0 upstream rows; skipped",
     };
   }
-  const rows = upstreamRows.flatMap((row) =>
-    typeof row === "object" && row !== null
-      ? [buildRowFromMapping(row as Record<string, unknown>, mapping)]
-      : [],
-  );
+  const warnings: string[] = [];
+  const rows = upstreamRows.flatMap((row) => {
+    if (typeof row !== "object" || row === null) return [];
+    const built = buildRowFromMappingWithWarnings(
+      row as Record<string, unknown>,
+      mapping,
+    );
+    warnings.push(...built.warnings);
+    return [built.row];
+  });
   await upsertRows(
     userId,
     config.spreadsheetId,
@@ -318,6 +356,7 @@ const sheetsUpsertHandler: Handler = async (step, ctx, userId) => {
   return {
     rowCount: rows.length,
     sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+    warnings: Array.from(new Set(warnings)),
   };
 };
 
@@ -327,8 +366,9 @@ const sheetsFindRowsHandler: Handler = async (step, ctx, userId) => {
     userId,
     config.spreadsheetId,
     config.tabName,
-    config.searchColumn,
-    config.searchValue,
+    config.searchColumn ?? config.filterColumn,
+    config.searchValue ?? config.filterValue,
+    config.limit,
   );
   ctx.setOutput(step.position, rows);
   return {
@@ -347,6 +387,7 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
       rowCount: 0,
       rows: [],
       sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+      message: "0 upstream rows; skipped",
     };
   }
 
@@ -354,14 +395,14 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
     typeof upstreamRows[0] === "object" && upstreamRows[0] !== null
       ? (upstreamRows[0] as Record<string, unknown>)
       : {};
-  const builtRow = buildRowFromMapping(firstUpstream, mapping);
+  const built = buildRowFromMappingWithWarnings(firstUpstream, mapping);
 
   const { row, updatedFields } = await updateRow(
     userId,
     config.spreadsheetId,
     config.tabName,
     config.rowIdentifier,
-    builtRow,
+    built.row,
   );
 
   const outputRow = { row, status: "updated" as const, updatedFields };
@@ -370,21 +411,29 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
     rowCount: 1,
     rows: [outputRow],
     sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+    warnings: built.warnings,
   };
 };
 
-const bitrixCreateLeadHandler: Handler = async (step, ctx, _userId) => {
+const bitrixCreateLeadHandler: Handler = async (step, ctx, userId) => {
   const { createLead, getLeadUrl } = await import("~/server/bitrix24/client");
   const config = cfg<BitrixCreateLeadCfg>(step);
-  const result = await createLead({
-    title: config.title,
-    name: config.name,
-    lastName: config.lastName,
-    phone: config.phone,
-    email: config.email,
-    sourceId: config.sourceId,
-    comments: config.comments,
-  });
+  const upstreamRows = ctx.getUpstreamRows(step.position);
+  if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
+    return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
+  }
+  const result = await createLead(
+    {
+      title: config.title,
+      name: config.name,
+      lastName: config.lastName,
+      phone: config.phone,
+      email: config.email,
+      sourceId: config.sourceId,
+      comments: config.comments,
+    },
+    userId,
+  );
   const outputRow = {
     leadId: result.leadId,
     leadUrl: getLeadUrl(result.leadId),
@@ -394,15 +443,22 @@ const bitrixCreateLeadHandler: Handler = async (step, ctx, _userId) => {
   return { rowCount: 1, rows: [outputRow] };
 };
 
-const bitrixUpdateLeadHandler: Handler = async (step, ctx, _userId) => {
+const bitrixUpdateLeadHandler: Handler = async (step, ctx, userId) => {
   const { updateLead } = await import("~/server/bitrix24/client");
   const config = cfg<BitrixUpdateLeadCfg>(step);
-  const result = await updateLead({
-    leadId: config.leadId,
-    title: config.title,
-    statusId: config.statusId,
-    comments: config.comments,
-  });
+  const upstreamRows = ctx.getUpstreamRows(step.position);
+  if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
+    return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
+  }
+  const result = await updateLead(
+    {
+      leadId: config.leadId,
+      title: config.title,
+      statusId: config.statusId,
+      comments: config.comments,
+    },
+    userId,
+  );
   const outputRow = { leadId: result.leadId, updated: result.updated };
   ctx.setOutput(step.position, [outputRow]);
   return { rowCount: 1, rows: [outputRow] };

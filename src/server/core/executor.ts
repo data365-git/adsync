@@ -14,7 +14,9 @@
 import { db } from "~/server/db";
 import { RunContext } from "./run-context";
 import { getHandler } from "./module-handlers";
-import { interpolate } from "./template";
+import { interpolateWithWarnings } from "./template";
+import { notifyOnFailure } from "./notifier";
+import { validateStepConfig } from "./validate-config";
 import type { HandlerResult } from "./module-handlers";
 import type { ScenarioStep } from "@prisma/client";
 import type { InputJsonValue } from "@prisma/client/runtime/library";
@@ -22,6 +24,7 @@ import type { InputJsonValue } from "@prisma/client/runtime/library";
 type ExecuteRunOptions = {
   rerunOf?: string;
   rerunFromPosition?: number;
+  seedOutputs?: Array<[number, unknown[]]>;
   webhookTriggerPayload?: unknown;
 };
 
@@ -57,7 +60,14 @@ export function resolveStepConfig(
   config: unknown,
   upstreamRow: Record<string, unknown>,
 ): unknown {
-  if (!isPlainObject(config)) return config;
+  return resolveStepConfigWithWarnings(config, upstreamRow).config;
+}
+
+export function resolveStepConfigWithWarnings(
+  config: unknown,
+  upstreamRow: Record<string, unknown>,
+): { config: unknown; warnings: string[] } {
+  if (!isPlainObject(config)) return { config, warnings: [] };
 
   // Only interpolate top-level string fields. Nested objects (e.g.
   // `mappedFields: Record<string, string>` on the sheets handlers) are passed
@@ -66,11 +76,17 @@ export function resolveStepConfig(
   // token resolved to "" at the executor pass, and the handler's empty-expr
   // backwards-compat branch then incorrectly copied the upstream column value.
   const resolved: Record<string, unknown> = {};
+  const warnings: string[] = [];
   for (const [key, value] of Object.entries(config)) {
-    resolved[key] =
-      typeof value === "string" ? interpolate(value, upstreamRow) : value;
+    if (typeof value === "string") {
+      const result = interpolateWithWarnings(value, upstreamRow);
+      resolved[key] = result.value;
+      warnings.push(...result.warnings);
+    } else {
+      resolved[key] = value;
+    }
   }
-  return resolved;
+  return { config: resolved, warnings: Array.from(new Set(warnings)) };
 }
 
 export function buildRerunSeedOutputs(
@@ -107,7 +123,7 @@ export function buildStepCompleteLogMeta(
       ? Object.keys(firstRow)
       : [];
 
-  return {
+  const meta = {
     stepId: step.id,
     position: step.position,
     durationMs,
@@ -115,6 +131,10 @@ export function buildStepCompleteLogMeta(
     sampleRows,
     outputSchema,
   };
+  if (result.warnings && result.warnings.length > 0) {
+    return { ...meta, warnings: result.warnings };
+  }
+  return meta;
 }
 
 export function buildStepStartLogMeta(
@@ -177,6 +197,10 @@ export async function executeRun(
   let adRowsWritten = 0;
   let sheetsUrl: string | undefined;
 
+  for (const [position, rows] of options.seedOutputs ?? []) {
+    ctx.setOutput(position, rows);
+  }
+
   if (options.rerunOf && options.rerunFromPosition !== undefined) {
     const sourceLogs = await db.runLog.findMany({
       where: { runId: options.rerunOf },
@@ -210,11 +234,19 @@ export async function executeRun(
         typeof upstreamRows[0] === "object" && upstreamRows[0] !== null
           ? (upstreamRows[0] as Record<string, unknown>)
           : {};
-      const resolvedConfig = resolveStepConfig(step.config, upstreamRow0);
+      const resolved = resolveStepConfigWithWarnings(step.config, upstreamRow0);
+      const resolvedConfig = resolved.config;
       const resolvedStep: ScenarioStep = {
         ...step,
         config: toInputJsonValue(resolvedConfig) as ScenarioStep["config"],
       };
+
+      const validation = validateStepConfig(step.moduleType, resolvedStep.config);
+      if (!validation.ok) {
+        throw new Error(
+          `Step ${step.position} (${step.moduleType}): missing required field '${validation.field}'`,
+        );
+      }
 
       await db.runLog.create({
         data: {
@@ -227,32 +259,40 @@ export async function executeRun(
 
       const handler = getHandler(step.moduleType);
       const result = await handler(resolvedStep, ctx, userId);
+      const resultWithWarnings: HandlerResult = {
+        ...result,
+        warnings: Array.from(
+          new Set([...(result.warnings ?? []), ...resolved.warnings]),
+        ),
+      };
 
       const durationMs = Date.now() - stepStart;
       ctx.setMeta(step.position, {
         durationMs,
-        rowCount: result.rowCount,
-        sheetsUrl: result.sheetsUrl,
+        rowCount: resultWithWarnings.rowCount,
+        sheetsUrl: resultWithWarnings.sheetsUrl,
       });
 
       // Accumulate row counts by module type
       if (step.moduleType === "fb.campaign_insights") {
-        campaignRowsWritten += result.rowCount;
+        campaignRowsWritten += resultWithWarnings.rowCount;
       } else if (step.moduleType === "fb.ad_insights") {
-        adRowsWritten += result.rowCount;
+        adRowsWritten += resultWithWarnings.rowCount;
       }
 
       // Capture sheets URL from any sheets handler
-      if (result.sheetsUrl) {
-        sheetsUrl = result.sheetsUrl;
+      if (resultWithWarnings.sheetsUrl) {
+        sheetsUrl = resultWithWarnings.sheetsUrl;
       }
 
       await db.runLog.create({
         data: {
           runId: run.id,
           level: "INFO",
-          message: `Completed step ${step.position}: ${step.moduleType}`,
-          meta: buildStepCompleteLogMeta(step, result, durationMs),
+          message:
+            resultWithWarnings.message ??
+            `Completed step ${step.position}: ${step.moduleType}`,
+          meta: buildStepCompleteLogMeta(step, resultWithWarnings, durationMs),
         },
       });
     }
@@ -302,6 +342,15 @@ export async function executeRun(
         durationMs: totalDurationMs,
         errorMessage,
       },
+    });
+
+    void notifyOnFailure({
+      userId,
+      runId: run.id,
+      scenarioId: scenario.id,
+      scenarioName: scenario.name,
+      errorMessage,
+      durationMs: totalDurationMs,
     });
 
     await db.scenario.update({

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  static-gates:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: automation
+          POSTGRES_PASSWORD: automation
+          POSTGRES_DB: automation
+        ports: ["5434:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      DATABASE_URL: postgresql://automation:automation@localhost:5434/automation
+      NEXTAUTH_SECRET: ci-fake-secret-for-tests-only-32bytes
+      NEXTAUTH_URL: http://localhost:3000
+      TOKEN_ENC_KEY: "00000000000000000000000000000000000000000000000000000000000000aa"
+      GOOGLE_CLIENT_ID: ci-fake
+      GOOGLE_CLIENT_SECRET: ci-fake
+      GOOGLE_OAUTH_SHEETS_CLIENT_ID: ci-fake
+      GOOGLE_OAUTH_SHEETS_CLIENT_SECRET: ci-fake
+      FACEBOOK_APP_ID: ci-fake
+      FACEBOOK_APP_SECRET: ci-fake
+      FB_GRAPH_API_VERSION: v22.0
+      BITRIX24_WEBHOOK_URL: https://example.com/rest/1/fake/
+      ALLOWLIST_EMAIL: ci@example.com
+      WORKER_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma migrate deploy
+      - run: pnpm prisma generate
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm build

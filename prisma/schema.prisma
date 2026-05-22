@@ -10,15 +10,16 @@ datasource db {
 // ─── NextAuth models ─────────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  image         String?
-  emailVerified DateTime?
-  allowlisted   Boolean   @default(false)
-  timezone      String    @default("Asia/Tashkent")
-  theme         String    @default("system")
-  createdAt     DateTime  @default(now())
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  image           String?
+  emailVerified   DateTime?
+  allowlisted     Boolean   @default(false)
+  timezone        String    @default("Asia/Tashkent")
+  theme           String    @default("system")
+  schedulesPaused Boolean   @default(false)
+  createdAt       DateTime  @default(now())
 
   accounts         Account[]
   sessions         Session[]
@@ -26,6 +27,23 @@ model User {
   adAccounts       AdAccount[]
   scenarios        Scenario[]
   runs             Run[]
+  folders          Folder[]
+  userSettings     UserSettings?
+  notificationLogs NotificationLog[]
+}
+
+model UserSettings {
+  userId                   String  @id
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailOnFailure           Boolean @default(false)
+  genericWebhookUrl        String?
+  quietHoursStart          String?
+  quietHoursEnd            String?
+  schedulesPaused          Boolean @default(false)
+  defaultSheetTemplate     String?
+  weekStartsOn             Int     @default(1)
+  displayName              String?
+  defaultAdAccountBehavior String?
 }
 
 model Account {
@@ -111,6 +129,8 @@ model AdAccount {
   adTabName       String    @default("Ads")
   cronExpression  String
   timezone        String    @default("Asia/Tashkent")
+  isPinned        Boolean   @default(false)
+  lastSyncedAt    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -125,6 +145,22 @@ enum AdLevel {
   AD
 }
 
+model Folder {
+  id        String     @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    Folder?    @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[]   @relation("FolderTree")
+  scenarios Scenario[]
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, parentId, name])
+  @@index([userId, parentId])
+}
+
 model Scenario {
   id            String       @id @default(cuid())
   userId        String
@@ -132,6 +168,7 @@ model Scenario {
   kind          ScenarioKind
   enabled       Boolean      @default(false)
   adAccountId   String?
+  folderId      String?
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   lastRunAt     DateTime?
@@ -140,8 +177,11 @@ model Scenario {
 
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   adAccount AdAccount?     @relation(fields: [adAccountId], references: [id])
+  folder    Folder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
   steps     ScenarioStep[]
   runs      Run[]
+
+  @@index([userId, folderId])
 }
 
 enum ScenarioKind {
@@ -201,6 +241,21 @@ model RunLog {
   ts      DateTime @default(now())
 
   run Run @relation(fields: [runId], references: [id], onDelete: Cascade)
+}
+
+model NotificationLog {
+  id           String   @id @default(cuid())
+  userId       String
+  channel      String
+  runId        String?
+  scenarioId   String?
+  status       String
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 enum LogLevel {

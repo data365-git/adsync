@@ -5,17 +5,19 @@ import { encryptToken, decryptToken } from "~/lib/crypto";
 const FB_VERSION = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
 const APP_ID = process.env.FACEBOOK_APP_ID!;
 const APP_SECRET = process.env.FACEBOOK_APP_SECRET!;
+const APP_CONFIG_ID = process.env.FACEBOOK_CONFIG_ID;
 
 export function getAuthorizationUrl(state: string): string {
   const redirectUri = `${process.env.NEXTAUTH_URL}/api/oauth/facebook/callback`;
   const scopes = "ads_read,read_insights";
-  return (
+  let url =
     `https://www.facebook.com/${FB_VERSION}/dialog/oauth` +
     `?client_id=${APP_ID}` +
     `&redirect_uri=${encodeURIComponent(redirectUri)}` +
     `&scope=${encodeURIComponent(scopes)}` +
-    `&state=${state}`
-  );
+    `&state=${state}`;
+  if (APP_CONFIG_ID) url += `&config_id=${APP_CONFIG_ID}`;
+  return url;
 }
 
 /**

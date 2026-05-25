@@ -55,16 +55,16 @@ export function RunsEmptyState({
       <div>
         <h2 className="text-lg font-semibold text-slate-900">No runs yet</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Trigger a manual run from the Ad Accounts page.
+          Trigger a manual run from a scenario.
         </p>
       </div>
       <Button
         variant="default"
         size="sm"
-        render={<Link href="/ad-accounts" />}
+        render={<Link href="/scenarios" />}
         className="h-9 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2"
       >
-        Go to Ad Accounts
+        Go to Scenarios
       </Button>
     </div>
   );

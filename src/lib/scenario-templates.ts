@@ -36,12 +36,41 @@ function asSteps(
 
 export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
   {
-    id: "tmpl_daily_campaign",
-    name: "Daily campaign metrics → Sheet",
+    id: "tmpl_sheets_to_bitrix",
+    name: "New Sheets row → Bitrix24 lead",
     description:
-      "Pull yesterday's campaign-level metrics every morning and upsert into a Sheets tab.",
+      "Watch a Google Sheets tab for new rows and create a Bitrix24 lead for each.",
     factory: (): TemplateScenario => ({
-      name: "Daily campaign metrics → Sheet",
+      name: "New Sheets row → Bitrix24 lead",
+      kind: "CUSTOM",
+      enabled: false,
+      steps: asSteps([
+        step(1, "trigger.watch.sheets_new_rows", {
+          spreadsheetId: "",
+          tabName: "",
+          watchColumn: "",
+        }),
+        step(2, "bitrix.create_lead", {
+          title: "Lead from Sheets",
+          name: "",
+          lastName: "",
+          phone: "",
+          email: "",
+          sourceId: "WEB",
+          comments: "",
+        }),
+      ]),
+      lastRunAt: null,
+      lastRunStatus: null,
+    }),
+  },
+  {
+    id: "tmpl_scheduled_sheets_append",
+    name: "Daily scheduled Sheets append",
+    description:
+      "Run on a daily schedule and append rows to a Google Sheets tab.",
+    factory: (): TemplateScenario => ({
+      name: "Daily scheduled Sheets append",
       kind: "CUSTOM",
       enabled: false,
       steps: asSteps([
@@ -49,16 +78,17 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
           cronExpression: "0 6 * * *",
           timezone: "Asia/Tashkent",
         }),
-        step(2, "fb.campaign_insights", {
-          fbAccountId: "",
-          dateWindowDays: 1,
-          metrics: ["impressions", "clicks", "spend", "ctr", "cpm"],
-        }),
-        step(3, "sheets.upsert", {
+        step(2, "sheets.find_rows", {
           spreadsheetId: "",
-          tabName: "DailyCampaigns",
-          keyFields: ["date", "campaign_id"],
-          mappedFields: { impressions: "", clicks: "", spend: "", ctr: "", cpm: "" },
+          tabName: "",
+          searchColumn: "",
+          searchValue: "",
+        }),
+        step(3, "bitrix.create_lead", {
+          title: "",
+          name: "",
+          sourceId: "WEB",
+          comments: "",
         }),
       ]),
       lastRunAt: null,
@@ -66,55 +96,26 @@ export const SCENARIO_TEMPLATES: ScenarioTemplate[] = [
     }),
   },
   {
-    id: "tmpl_hourly_ads",
-    name: "Hourly ad performance refresh",
-    description:
-      "Refresh ad-level metrics every 6 hours and upsert into Sheets for live monitoring.",
+    id: "tmpl_manual_sheets_upsert",
+    name: "Manual Sheets upsert",
+    description: "On-demand upsert into a Google Sheets tab.",
     factory: (): TemplateScenario => ({
-      name: "Hourly ad performance refresh",
-      kind: "CUSTOM",
-      enabled: false,
-      steps: asSteps([
-        step(1, "trigger.schedule", {
-          cronExpression: "0 */6 * * *",
-          timezone: "Asia/Tashkent",
-        }),
-        step(2, "fb.ad_insights", {
-          fbAccountId: "",
-          dateWindowDays: 1,
-          metrics: ["impressions", "clicks", "spend", "ctr"],
-        }),
-        step(3, "sheets.upsert", {
-          spreadsheetId: "",
-          tabName: "AdPerformance",
-          keyFields: ["date", "ad_id"],
-          mappedFields: { impressions: "", clicks: "", spend: "", ctr: "" },
-        }),
-      ]),
-      lastRunAt: null,
-      lastRunStatus: null,
-    }),
-  },
-  {
-    id: "tmpl_manual_pull",
-    name: "One-shot manual pull",
-    description:
-      "On-demand campaign snapshot — useful for spot-checks or ad-hoc reporting.",
-    factory: (): TemplateScenario => ({
-      name: "One-shot manual pull",
+      name: "Manual Sheets upsert",
       kind: "CUSTOM",
       enabled: false,
       steps: asSteps([
         step(1, "trigger.manual", {}),
-        step(2, "fb.campaign_insights", {
-          fbAccountId: "",
-          dateWindowDays: 7,
-          metrics: ["impressions", "clicks", "spend", "ctr"],
-        }),
-        step(3, "sheets.append", {
+        step(2, "sheets.find_rows", {
           spreadsheetId: "",
-          tabName: "ManualPulls",
-          mappedFields: { impressions: "", clicks: "", spend: "", ctr: "" },
+          tabName: "",
+          searchColumn: "",
+          searchValue: "",
+        }),
+        step(3, "sheets.upsert", {
+          spreadsheetId: "",
+          tabName: "",
+          keyFields: [],
+          mappedFields: {},
         }),
       ]),
       lastRunAt: null,

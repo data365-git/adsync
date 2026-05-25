@@ -16,16 +16,15 @@ describe("modules.getTemplate", () => {
     const caller = await createModulesCaller();
 
     const result = await caller.getTemplate({
-      templateId: "tmpl_daily_campaign",
+      templateId: "tmpl_sheets_to_bitrix",
     });
 
-    expect(result.id).toBe("tmpl_daily_campaign");
-    expect(result.name).toContain("Daily campaign metrics");
-    expect(result.steps).toHaveLength(3);
+    expect(result.id).toBe("tmpl_sheets_to_bitrix");
+    expect(result.name).toContain("Bitrix24 lead");
+    expect(result.steps).toHaveLength(2);
     expect(result.steps.map((step) => step.moduleType)).toEqual([
-      "trigger.schedule",
-      "fb.campaign_insights",
-      "sheets.upsert",
+      "trigger.watch.sheets_new_rows",
+      "bitrix.create_lead",
     ]);
   });
 

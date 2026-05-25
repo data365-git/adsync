@@ -193,8 +193,8 @@ export async function executeRun(
 
   const startedAt = Date.now();
   const ctx = new RunContext();
-  let campaignRowsWritten = 0;
-  let adRowsWritten = 0;
+  const campaignRowsWritten = 0;
+  const adRowsWritten = 0;
   let sheetsUrl: string | undefined;
 
   for (const [position, rows] of options.seedOutputs ?? []) {
@@ -272,13 +272,6 @@ export async function executeRun(
         rowCount: resultWithWarnings.rowCount,
         sheetsUrl: resultWithWarnings.sheetsUrl,
       });
-
-      // Accumulate row counts by module type
-      if (step.moduleType === "fb.campaign_insights") {
-        campaignRowsWritten += resultWithWarnings.rowCount;
-      } else if (step.moduleType === "fb.ad_insights") {
-        adRowsWritten += resultWithWarnings.rowCount;
-      }
 
       // Capture sheets URL from any sheets handler
       if (resultWithWarnings.sheetsUrl) {

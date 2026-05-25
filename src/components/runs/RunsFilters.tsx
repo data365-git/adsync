@@ -23,13 +23,11 @@ const STATUS_OPTIONS: { value: FilterStatus; label: string }[] = [
 
 type RunsFiltersProps = {
   scenarioIds: string[];
-  adAccountId: string | null;
   status: FilterStatus | null;
   from: Date | null;
   to: Date | null;
   minDurationMs: number | null;
   onScenarioIdsChange: (ids: string[]) => void;
-  onAdAccountIdChange: (id: string | null) => void;
   onStatusChange: (status: FilterStatus | null) => void;
   onFromChange: (date: Date | null) => void;
   onToChange: (date: Date | null) => void;
@@ -47,35 +45,26 @@ function fromInputDateTime(value: string): Date | null {
 
 export function RunsFilters({
   scenarioIds,
-  adAccountId,
   status,
   from,
   to,
   minDurationMs,
   onScenarioIdsChange,
-  onAdAccountIdChange,
   onStatusChange,
   onFromChange,
   onToChange,
   onMinDurationMsChange,
   onClearAll,
 }: RunsFiltersProps) {
-  const { data: adAccounts, isLoading: accountsLoading } =
-    api.adAccounts.list.useQuery();
   const { data: scenarios, isLoading: scenariosLoading } =
     api.scenarios.list.useQuery({ scope: "all" });
 
   const hasActiveFilters =
     scenarioIds.length > 0 ||
-    adAccountId !== null ||
     status !== null ||
     from !== null ||
     to !== null ||
     minDurationMs !== null;
-
-  const accountLabel =
-    adAccounts?.find((account) => account.id === adAccountId)?.label ??
-    "Ad account";
 
   function toggleScenario(id: string) {
     onScenarioIdsChange(
@@ -127,48 +116,6 @@ export function RunsFilters({
                       />
                       <span className="truncate">{scenario.name}</span>
                     </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </PopoverContent>
-        </Popover>
-
-        <Popover>
-          <PopoverTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Filter by ad account"
-                className="h-9 gap-1.5 rounded-md border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 hover:bg-slate-50"
-              />
-            }
-          >
-            {adAccountId ? accountLabel : "Ad account"}
-            <ChevronDown className="size-3.5 text-slate-500" aria-hidden="true" />
-          </PopoverTrigger>
-          <PopoverContent className="w-56 p-1" align="start">
-            {accountsLoading ? (
-              <div className="space-y-2 p-2">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-3/4" />
-              </div>
-            ) : !adAccounts || adAccounts.length === 0 ? (
-              <p className="px-2 py-1.5 text-xs text-slate-500">
-                No ad accounts connected
-              </p>
-            ) : (
-              <ul className="space-y-0.5">
-                {adAccounts.map((account) => (
-                  <li key={account.id}>
-                    <button
-                      type="button"
-                      onClick={() => onAdAccountIdChange(account.id)}
-                      className="min-h-9 w-full rounded-md px-2 py-1.5 text-left text-sm text-slate-700 hover:bg-slate-100"
-                    >
-                      {account.label}
-                    </button>
                   </li>
                 ))}
               </ul>
@@ -255,9 +202,6 @@ export function RunsFilters({
               }
             />
           ))}
-          {adAccountId ? (
-            <FilterChip label={`Account: ${accountLabel}`} onClear={() => onAdAccountIdChange(null)} />
-          ) : null}
           {status ? (
             <FilterChip label={`Status: ${status}`} onClear={() => onStatusChange(null)} />
           ) : null}

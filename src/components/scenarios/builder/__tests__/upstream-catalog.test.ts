@@ -37,13 +37,13 @@ describe("buildUpstreamCatalog", () => {
   it("falls back to module sample output for non-Sheets upstream steps", () => {
     const catalog = buildUpstreamCatalog(
       [
-        { id: "step_1", position: 1, moduleType: "fb.account_insights" },
+        { id: "step_1", position: 1, moduleType: "trigger.schedule" },
         { id: "step_2", position: 2, moduleType: "bitrix.create_lead" },
       ],
       2,
     );
 
-    expect(catalog[0]?.moduleType).toBe("fb.account_insights");
-    expect(catalog[0]?.fields.map((field) => field.key)).toContain("account_id");
+    expect(catalog[0]?.moduleType).toBe("trigger.schedule");
+    expect(catalog[0]?.fields.map((field) => field.key)).toContain("runId");
   });
 });

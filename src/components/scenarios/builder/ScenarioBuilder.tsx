@@ -42,10 +42,6 @@ export function defaultConfigFor(moduleType: ModuleType): Record<string, unknown
       return {};
     case "trigger.webhook":
       return { secret: "" };
-    case "fb.account_insights":
-    case "fb.campaign_insights":
-    case "fb.ad_insights":
-      return { fbAccountId: "", dateWindowDays: 7, metrics: [] };
     case "sheets.append":
       return { spreadsheetId: "", tabName: "", mappedFields: {} };
     case "sheets.upsert":

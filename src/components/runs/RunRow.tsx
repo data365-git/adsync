@@ -42,7 +42,6 @@ interface RunRowProps {
 }
 
 export function RunRow({ run }: RunRowProps) {
-  const accountLabel = run.adAccountLabel ?? run.adAccountFbId ?? run.adAccountId;
   const scenarioName = run.scenarioName ?? run.scenarioId;
   const isQuickSetup = run.scenarioKind === "QUICK_SETUP";
 
@@ -62,7 +61,7 @@ export function RunRow({ run }: RunRowProps) {
   return (
     <TableRow
       className="h-[52px] cursor-pointer border-b border-slate-100 hover:bg-slate-50 focus-within:bg-slate-50"
-      aria-label={`Run ${run.id} - ${accountLabel} - ${TRIGGER_LABEL[run.trigger]} - ${run.status}`}
+      aria-label={`Run ${run.id} - ${scenarioName} - ${TRIGGER_LABEL[run.trigger]} - ${run.status}`}
     >
       <TableCell className="py-3 pl-5 pr-4">
         <TooltipProvider>
@@ -95,12 +94,6 @@ export function RunRow({ run }: RunRowProps) {
             </span>
           ) : null}
         </div>
-      </TableCell>
-
-      <TableCell className="px-4 py-3">
-        <span className="max-w-[10rem] truncate text-sm text-slate-700" title={accountLabel}>
-          {accountLabel}
-        </span>
       </TableCell>
 
       <TableCell className="px-4 py-3">

@@ -1,10 +1,7 @@
-import Link from "next/link";
 import { Zap } from "lucide-react";
 
 /**
- * Informational banner linking to /ad-accounts for Quick Setup scenarios.
- * Deliberately muted — this is navigation aid, not a CTA.
- * bg-muted/50 card with text-muted-foreground keeps it secondary to the custom list.
+ * Informational banner for Quick Setup scenarios.
  */
 export function QuickSetupBanner() {
   return (
@@ -17,14 +14,7 @@ export function QuickSetupBanner() {
           Quick Setup scenarios
         </p>
         <p className="text-xs text-slate-600">
-          Quick Setup scenarios are auto-generated from your{" "}
-          <Link
-            href="/ad-accounts"
-            className="rounded underline underline-offset-2 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none"
-          >
-            Ad Accounts
-          </Link>
-          . Edit them there, or use the filter below to show them in this list.
+          Quick Setup scenarios are pre-configured automations. Use the filter below to show or hide them.
         </p>
       </div>
     </div>

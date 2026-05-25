@@ -73,7 +73,6 @@ export function RunsTable({
           <TableRow className="h-10 border-b border-slate-200 hover:bg-transparent">
             <TableHead className={`${headerClass} pl-5`}>When</TableHead>
             <TableHead className={headerClass}>Scenario</TableHead>
-            <TableHead className={headerClass}>Account</TableHead>
             <TableHead className={headerClass}>Trigger</TableHead>
             <TableHead className={headerClass}>Status</TableHead>
             <TableHead className={`${headerClass} hidden md:table-cell`}>
@@ -103,9 +102,6 @@ export function RunsTable({
                   <Skeleton className="h-5 w-36" />
                 </td>
                 <td className="px-4 py-3">
-                  <Skeleton className="h-5 w-32" />
-                </td>
-                <td className="px-4 py-3">
                   <Skeleton className="h-5 w-20" />
                 </td>
                 <td className="px-4 py-3">
@@ -124,7 +120,7 @@ export function RunsTable({
             ))
           ) : runs.length === 0 ? (
             <tr>
-              <td colSpan={8}>
+              <td colSpan={7}>
                 <RunsEmptyState
                   hasFilters={hasFilters}
                   onClearFilters={onClearFilters}

@@ -6,8 +6,6 @@ import { Provider, ConnectionStatus } from "@prisma/client";
 import { google } from "googleapis";
 
 import { getAuthedClient } from "~/integrations/google/oauth";
-import { listAdAccounts } from "~/integrations/facebook/graph-client";
-import { getFbAccessToken } from "~/integrations/facebook/oauth";
 import { call as bitrixCall } from "~/server/bitrix24/client";
 
 type OAuthConnectionRow = {
@@ -26,7 +24,7 @@ type OAuthConnectionRow = {
 function toFrontendConnection(row: OAuthConnectionRow) {
   const provider = {
     [Provider.GOOGLE_SHEETS]: "google",
-    [Provider.FACEBOOK]: "facebook",
+    [Provider.FACEBOOK]: "facebook" as const, // kept for DB compat — no UI card
     [Provider.BITRIX24]: "bitrix",
   } as const;
 
@@ -52,10 +50,9 @@ function toFrontendConnection(row: OAuthConnectionRow) {
 }
 
 function providerFromInput(
-  provider: "google" | "facebook" | "bitrix",
+  provider: "google" | "bitrix",
 ): Provider {
   if (provider === "google") return Provider.GOOGLE_SHEETS;
-  if (provider === "facebook") return Provider.FACEBOOK;
   return Provider.BITRIX24;
 }
 
@@ -74,7 +71,7 @@ const testCache = new Map<
 
 async function runConnectionTest(
   userId: string,
-  provider: "google" | "facebook" | "bitrix",
+  provider: "google" | "bitrix",
 ): Promise<ConnectionTestResult> {
   const startedAt = Date.now();
 
@@ -93,32 +90,6 @@ async function runConnectionTest(
         message: asUser
           ? `Google Drive responded for ${asUser}.`
           : "Google Drive responded.",
-        latencyMs: Date.now() - startedAt,
-      };
-    }
-
-    if (provider === "facebook") {
-      const token = await getFbAccessToken(userId);
-      const version = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
-      const response = await fetch(
-        `https://graph.facebook.com/${version}/me?fields=id,name&access_token=${token}`,
-      );
-      const payload = (await response.json()) as {
-        id?: string;
-        name?: string;
-        error?: { message?: string };
-      };
-
-      if (!response.ok || !payload.id) {
-        throw new Error(payload.error?.message ?? "Facebook Graph did not return a user.");
-      }
-
-      return {
-        ok: true,
-        asUser: payload.name ?? payload.id,
-        message: payload.name
-          ? `Facebook Graph responded for ${payload.name}.`
-          : "Facebook Graph responded.",
         latencyMs: Date.now() - startedAt,
       };
     }
@@ -150,7 +121,7 @@ export const connectionsRouter = createTRPCRouter({
   }),
 
   connect: authedProcedure
-    .input(z.object({ provider: z.enum(["google", "facebook", "bitrix"]) }))
+    .input(z.object({ provider: z.enum(["google", "bitrix"]) }))
     .mutation(({ input }) => {
       const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
       return { redirectUrl: `${baseUrl}/api/oauth/${input.provider}` };
@@ -196,26 +167,11 @@ export const connectionsRouter = createTRPCRouter({
         return toFrontendConnection(updatedRow!);
       }
 
-      if (row.provider === Provider.FACEBOOK) {
-        if (row.expiresAt && row.expiresAt < new Date()) {
-          await db.oAuthConnection.update({
-            where: { id: input.id },
-            data: { status: ConnectionStatus.EXPIRED },
-          });
-        }
-
-        const updatedRow = await db.oAuthConnection.findUnique({
-          where: { id: input.id },
-        });
-
-        return toFrontendConnection(updatedRow!);
-      }
-
       return toFrontendConnection(row);
     }),
 
   verify: authedProcedure
-    .input(z.object({ provider: z.enum(["google", "facebook", "bitrix"]) }))
+    .input(z.object({ provider: z.enum(["google", "bitrix"]) }))
     .mutation(async ({ ctx, input }) => {
       const providerEnum = providerFromInput(input.provider);
       const conn = await db.oAuthConnection.findUnique({
@@ -238,21 +194,6 @@ export const connectionsRouter = createTRPCRouter({
           const drive = google.drive({ version: "v3", auth });
           await drive.about.get({ fields: "user" });
           ok = true;
-        } else if (input.provider === "facebook") {
-          const token = await getFbAccessToken(ctx.userId);
-          const version = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
-          const response = await fetch(
-            `https://graph.facebook.com/${version}/me?fields=id&access_token=${token}`,
-          );
-          const payload = (await response.json()) as {
-            id?: string;
-            error?: { message?: string };
-          };
-          if (payload.id) {
-            ok = true;
-          } else if (payload.error?.message) {
-            throw new Error(payload.error.message);
-          }
         } else {
           await bitrixCall<unknown[]>("crm.dealcategory.list", { start: 0 });
           ok = true;
@@ -276,7 +217,7 @@ export const connectionsRouter = createTRPCRouter({
     }),
 
   test: authedProcedure
-    .input(z.object({ provider: z.enum(["google", "facebook", "bitrix"]) }))
+    .input(z.object({ provider: z.enum(["google", "bitrix"]) }))
     .mutation(async ({ ctx, input }) => {
       const providerEnum = providerFromInput(input.provider);
       const conn = await db.oAuthConnection.findUnique({
@@ -571,36 +512,4 @@ export const connectionsRouter = createTRPCRouter({
     };
   }),
 
-  /**
-   * List Facebook ad accounts visible to the connected user token.
-   * Delegates to the existing graph-client helper — no new fetch code.
-   */
-  facebookAdAccounts: authedProcedure.query(async ({ ctx }) => {
-    const conn = await db.oAuthConnection.findUnique({
-      where: {
-        userId_provider: { userId: ctx.userId, provider: Provider.FACEBOOK },
-      },
-    });
-    if (conn?.status !== ConnectionStatus.CONNECTED) {
-      return { identifier: null, items: [], truncated: false };
-    }
-
-    // Fetch display name from /me — name was not stored at exchange time
-    const FB_VERSION = process.env.FB_GRAPH_API_VERSION ?? "v22.0";
-    const token = await getFbAccessToken(ctx.userId);
-    const meRes = await fetch(
-      `https://graph.facebook.com/${FB_VERSION}/me?fields=name&access_token=${token}`,
-    );
-    const me = (await meRes.json()) as { name?: string };
-    const displayName = me.name ?? conn.email ?? null;
-    const identifier = displayName ? `Connected as ${displayName}` : null;
-
-    const accounts = await listAdAccounts(ctx.userId);
-    const truncated = accounts.length > 25;
-    const items = accounts
-      .slice(0, 25)
-      .map((a) => ({ id: a.id, name: a.name }));
-
-    return { identifier, items, truncated, totalCount: accounts.length };
-  }),
 });

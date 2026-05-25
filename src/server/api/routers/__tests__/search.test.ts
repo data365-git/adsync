@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const folderFindManyMock = vi.hoisted(() => vi.fn());
 const scenarioFindManyMock = vi.hoisted(() => vi.fn());
-const adAccountFindManyMock = vi.hoisted(() => vi.fn());
 const runFindManyMock = vi.hoisted(() => vi.fn());
 
 vi.mock("~/server/auth", () => ({
@@ -15,7 +14,6 @@ vi.mock("~/server/db", () => ({
   db: {
     folder: { findMany: folderFindManyMock },
     scenario: { findMany: scenarioFindManyMock },
-    adAccount: { findMany: adAccountFindManyMock },
     run: { findMany: runFindManyMock },
   },
 }));
@@ -32,8 +30,6 @@ function rows(count: number) {
     name: `Result ${index}`,
     folderId: null,
     parentId: null,
-    label: `Account ${index}`,
-    fbAccountId: `act_${index}`,
     status: "SUCCESS",
     startedAt: new Date("2026-05-21T00:00:00.000Z"),
     scenario: { name: `Scenario ${index}` },
@@ -45,7 +41,6 @@ describe("search.global", () => {
     vi.clearAllMocks();
     folderFindManyMock.mockResolvedValue([]);
     scenarioFindManyMock.mockResolvedValue([]);
-    adAccountFindManyMock.mockResolvedValue([]);
     runFindManyMock.mockResolvedValue([]);
   });
 
@@ -55,12 +50,10 @@ describe("search.global", () => {
     await expect(caller.global({ q: "   " })).resolves.toEqual({
       scenarios: [],
       folders: [],
-      adAccounts: [],
       recentRuns: [],
     });
     expect(scenarioFindManyMock).not.toHaveBeenCalled();
     expect(folderFindManyMock).not.toHaveBeenCalled();
-    expect(adAccountFindManyMock).not.toHaveBeenCalled();
     expect(runFindManyMock).not.toHaveBeenCalled();
   });
 
@@ -69,7 +62,6 @@ describe("search.global", () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce(rows(11));
     scenarioFindManyMock.mockResolvedValue(rows(11));
-    adAccountFindManyMock.mockResolvedValue(rows(11));
     runFindManyMock.mockResolvedValue(rows(11));
 
     const caller = await createSearchCaller();
@@ -77,12 +69,8 @@ describe("search.global", () => {
 
     expect(result.scenarios).toHaveLength(10);
     expect(result.folders).toHaveLength(10);
-    expect(result.adAccounts).toHaveLength(10);
     expect(result.recentRuns).toHaveLength(10);
     expect(scenarioFindManyMock).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 10 }),
-    );
-    expect(adAccountFindManyMock).toHaveBeenCalledWith(
       expect.objectContaining({ take: 10 }),
     );
     expect(runFindManyMock).toHaveBeenCalledWith(

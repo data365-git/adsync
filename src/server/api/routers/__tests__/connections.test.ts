@@ -100,17 +100,14 @@ describe("connections.test", () => {
   });
 
   it("uses the 60-second cache for duplicate provider tests", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      ok: true,
-      json: vi.fn(async () => ({ id: "fb_1", name: "Meta Owner" })),
-    } as unknown as Response);
     const caller = await createConnectionsCaller();
 
-    const first = await caller.test({ provider: "facebook" });
-    const second = await caller.test({ provider: "facebook" });
+    const first = await caller.test({ provider: "google" });
+    const second = await caller.test({ provider: "google" });
 
     expect(second).toEqual(first);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    // Cache hit: the underlying Drive call only happens once for two test() calls
+    expect(driveAboutGetMock).toHaveBeenCalledTimes(1);
   });
 
   it("returns ok=false with a friendly message for a bad token", async () => {

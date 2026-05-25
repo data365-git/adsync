@@ -502,14 +502,12 @@ export function IntegrationsSettingsPage({
   const query = api.userSettings.get.useQuery();
   const update = api.userSettings.update.useMutation();
   const [draft, setDraft] = React.useState({
-    defaultAdAccountBehavior: "",
     defaultSheetTemplate: "",
   });
 
   React.useEffect(() => {
     if (!query.data) return;
     setDraft({
-      defaultAdAccountBehavior: query.data.defaultAdAccountBehavior ?? "",
       defaultSheetTemplate: query.data.defaultSheetTemplate ?? "",
     });
   }, [query.data]);
@@ -517,7 +515,6 @@ export function IntegrationsSettingsPage({
   const save = React.useCallback(
     (value: typeof draft) =>
       update.mutateAsync({
-        defaultAdAccountBehavior: value.defaultAdAccountBehavior || null,
         defaultSheetTemplate: value.defaultSheetTemplate || null,
       }),
     [update],
@@ -535,18 +532,6 @@ export function IntegrationsSettingsPage({
     >
       <SettingsPanel>
         <div className="grid gap-5">
-          <Field label="Default ad account behavior">
-            <Input
-              value={draft.defaultAdAccountBehavior}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  defaultAdAccountBehavior: event.target.value,
-                }))
-              }
-              className="min-h-11"
-            />
-          </Field>
           <Field label="Default sheet template">
             <Input
               value={draft.defaultSheetTemplate}

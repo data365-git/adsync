@@ -127,10 +127,6 @@ function defaultConfigFor(moduleType: ModuleType): Record<string, unknown> {
       return { cronExpression: "", timezone: "Asia/Tashkent" };
     case "trigger.manual":
       return {};
-    case "fb.account_insights":
-    case "fb.campaign_insights":
-    case "fb.ad_insights":
-      return { fbAccountId: "", dateWindowDays: 7, metrics: [] };
     case "sheets.append":
       return { spreadsheetId: "", tabName: "", mappedFields: {} };
     case "sheets.upsert":

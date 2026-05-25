@@ -13,7 +13,6 @@ const PAGE_SIZE = 10;
 export function RunsClient() {
   const [page, setPage] = React.useState(1);
   const [scenarioIds, setScenarioIds] = React.useState<string[]>([]);
-  const [adAccountId, setAdAccountId] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<FilterStatus | null>(null);
   const [from, setFrom] = React.useState<Date | null>(null);
   const [to, setTo] = React.useState<Date | null>(null);
@@ -23,7 +22,6 @@ export function RunsClient() {
     page,
     pageSize: PAGE_SIZE,
     ...(scenarioIds.length > 0 && { scenarioIds }),
-    ...(adAccountId && { adAccountId }),
     ...(status && { status }),
     ...(from && { from }),
     ...(to && { to }),
@@ -32,7 +30,6 @@ export function RunsClient() {
 
   const hasFilters =
     scenarioIds.length > 0 ||
-    adAccountId !== null ||
     status !== null ||
     from !== null ||
     to !== null ||
@@ -40,7 +37,6 @@ export function RunsClient() {
 
   const clearFilters = () => {
     setScenarioIds([]);
-    setAdAccountId(null);
     setStatus(null);
     setFrom(null);
     setTo(null);
@@ -52,17 +48,12 @@ export function RunsClient() {
     <div className="space-y-4">
       <RunsFilters
         scenarioIds={scenarioIds}
-        adAccountId={adAccountId}
         status={status}
         from={from}
         to={to}
         minDurationMs={minDurationMs}
         onScenarioIdsChange={(ids) => {
           setScenarioIds(ids);
-          setPage(1);
-        }}
-        onAdAccountIdChange={(id) => {
-          setAdAccountId(id);
           setPage(1);
         }}
         onStatusChange={(value) => {

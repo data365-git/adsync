@@ -39,10 +39,6 @@ function isSheetsGroup(g: string): boolean {
   return g === "sheets" || g === "googleSheets";
 }
 
-function isFacebookGroup(g: string): boolean {
-  return g === "facebook";
-}
-
 function isBitrixGroup(g: string): boolean {
   return g === "bitrix24";
 }
@@ -129,14 +125,13 @@ export function ModuleLibraryModal({
     (m) => isTriggerGroup(m.group) && !isWatchTrigger(m.id),
   );
   const watchMods = filtered.filter((m) => isWatchTrigger(m.id));
-  const facebookMods = filtered.filter((m) => isFacebookGroup(m.group));
   const sheetsMods = filtered.filter((m) => isSheetsGroup(m.group));
   const bitrixMods = filtered.filter((m) => isBitrixGroup(m.group));
 
-  // For trigger slot: triggers (incl. watch). For action slot: fb + sheets + bitrix.
+  // For trigger slot: triggers (incl. watch). For action slot: sheets + bitrix.
   const visibleCardLists: typeof filtered[] = isTriggerSlot
     ? [triggerMods, watchMods]
-    : [facebookMods, sheetsMods, bitrixMods];
+    : [sheetsMods, bitrixMods];
 
   const totalCards = visibleCardLists.reduce((sum, list) => sum + list.length, 0);
 
@@ -286,16 +281,8 @@ export function ModuleLibraryModal({
               )}
             </>
           ) : (
-            /* ── Action slot: Facebook + Google Sheets + Bitrix24 ────────────── */
+            /* ── Action slot: Google Sheets + Bitrix24 ────────────── */
             <>
-              {/* Facebook Ads section */}
-              {facebookMods.length > 0 && (
-                <div className="mb-4">
-                  {renderSectionHeader("fb.account_insights", "Facebook Ads")}
-                  {renderCardGrid(facebookMods)}
-                </div>
-              )}
-
               {/* Google Sheets section — includes both 'sheets' and 'googleSheets' groups */}
               {sheetsMods.length > 0 && (
                 <div className="mb-4">

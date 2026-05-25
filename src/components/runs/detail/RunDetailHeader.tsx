@@ -11,7 +11,6 @@ interface RunDetailHeaderProps {
 }
 
 export function RunDetailHeader({ run }: RunDetailHeaderProps) {
-  const accountName = run.adAccountLabel ?? run.adAccountFbId ?? run.adAccountId;
   const shortId = run.id.slice(0, 8);
 
   return (
@@ -50,11 +49,6 @@ export function RunDetailHeader({ run }: RunDetailHeaderProps) {
         </div>
       </div>
 
-      {/* Account subtitle */}
-      <p className="text-sm text-slate-500">
-        Ad account:{" "}
-        <span className="font-medium text-slate-900">{accountName}</span>
-      </p>
     </div>
   );
 }

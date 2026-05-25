@@ -21,14 +21,6 @@ import type { RunContext } from "./run-context";
 import { interpolateWithWarnings } from "./template";
 
 // ── Integration imports ───────────────────────────────────────────────────────
-// Stubs live in this worktree; real implementations merged from Agents B and C.
-import {
-  getAccountInsights,
-  getCampaignInsights,
-  getAdInsights,
-  listAdAccounts,
-} from "~/integrations/facebook/graph-client";
-
 import {
   appendRows,
   findRows,
@@ -122,56 +114,6 @@ const triggerWatchSheetsNewRowsHandler: Handler = async (step, ctx, userId) => {
  */
 export const notImplementedHandler: Handler = async (step, _ctx, _userId) => {
   throw new Error(`MODULE_NOT_IMPLEMENTED: ${step.moduleType}`);
-};
-
-// ── Facebook handlers ─────────────────────────────────────────────────────────
-
-type FbInsightsCfg = {
-  fbAccountId: string;
-  metrics: string[];
-  dateWindowDays: number;
-};
-
-const fbAccountInsightsHandler: Handler = async (step, ctx, userId) => {
-  const config = cfg<FbInsightsCfg>(step);
-  const rows: unknown[] = await getAccountInsights(userId, {
-    fbAccountId: config.fbAccountId,
-    level: "account" as const,
-    metrics: config.metrics,
-    dateWindowDays: config.dateWindowDays,
-  });
-  ctx.setOutput(step.position, rows);
-  return { rowCount: rows.length, rows };
-};
-
-const fbCampaignInsightsHandler: Handler = async (step, ctx, userId) => {
-  const config = cfg<FbInsightsCfg>(step);
-  const rows: unknown[] = await getCampaignInsights(userId, {
-    fbAccountId: config.fbAccountId,
-    level: "campaign" as const,
-    metrics: config.metrics,
-    dateWindowDays: config.dateWindowDays,
-  });
-  ctx.setOutput(step.position, rows);
-  return { rowCount: rows.length, rows };
-};
-
-const fbAdInsightsHandler: Handler = async (step, ctx, userId) => {
-  const config = cfg<FbInsightsCfg>(step);
-  const rows: unknown[] = await getAdInsights(userId, {
-    fbAccountId: config.fbAccountId,
-    level: "ad" as const,
-    metrics: config.metrics,
-    dateWindowDays: config.dateWindowDays,
-  });
-  ctx.setOutput(step.position, rows);
-  return { rowCount: rows.length, rows };
-};
-
-const fbListAdAccountsHandler: Handler = async (step, ctx, userId) => {
-  const rows = await listAdAccounts(userId);
-  ctx.setOutput(step.position, rows);
-  return { rowCount: rows.length, rows };
 };
 
 // ── Google Sheets handlers ────────────────────────────────────────────────────
@@ -473,14 +415,6 @@ const HANDLERS: Record<string, Handler> = {
   "trigger.webhook": triggerWebhookHandler,
   "trigger.watch.sheets_new_rows": triggerWatchSheetsNewRowsHandler,
   "trigger.watch.bitrix_new_lead": triggerWatchHandler,
-
-  // Facebook
-  "fb.account_insights": fbAccountInsightsHandler,
-  "fb.campaign_insights": fbCampaignInsightsHandler,
-  "fb.ad_insights": fbAdInsightsHandler,
-  "fb.list_ad_accounts": fbListAdAccountsHandler,
-  "fb.list_ads": notImplementedHandler,
-  "fb.get_ad": notImplementedHandler,
 
   // Google Sheets
   "sheets.append": sheetsAppendHandler,

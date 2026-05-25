@@ -3,7 +3,6 @@ import {
   Prisma,
   Provider,
   ConnectionStatus,
-  AdLevel,
   ScenarioKind,
   RunTrigger,
   RunStatus,
@@ -12,7 +11,6 @@ import {
 import {
   MOCK_USER,
   MOCK_CONNECTIONS,
-  MOCK_AD_ACCOUNTS,
   MOCK_SCENARIOS,
   MOCK_RUNS,
   MOCK_RUN_LOGS,
@@ -57,34 +55,6 @@ async function main() {
     });
   }
 
-  // 3. AdAccounts
-  for (const a of MOCK_AD_ACCOUNTS) {
-    await db.adAccount.upsert({
-      where: {
-        userId_fbAccountId: {
-          userId: MOCK_USER.id,
-          fbAccountId: a.fbAccountId,
-        },
-      },
-      create: {
-        id: a.id,
-        userId: MOCK_USER.id,
-        fbAccountId: a.fbAccountId,
-        label: a.label,
-        enabled: a.enabled,
-        levels: a.levels.map((l) => l as AdLevel),
-        metrics: a.metrics,
-        dateWindowDays: a.dateWindowDays,
-        spreadsheetId: a.spreadsheetId,
-        campaignTabName: a.campaignTabName,
-        adTabName: a.adTabName,
-        cronExpression: a.cronExpression,
-        timezone: a.timezone,
-      },
-      update: {},
-    });
-  }
-
   // 4. Scenarios + Steps
   for (const s of MOCK_SCENARIOS) {
     await db.scenario.upsert({
@@ -95,7 +65,6 @@ async function main() {
         name: s.name,
         kind: s.kind as ScenarioKind,
         enabled: s.enabled,
-        adAccountId: null,
         lastRunAt: s.lastRunAt,
         lastRunStatus: s.lastRunStatus
           ? (s.lastRunStatus.toUpperCase() as RunStatus)

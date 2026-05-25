@@ -11,7 +11,6 @@ import {
   Link2,
   PlayCircle,
   Settings,
-  WalletCards,
   Zap,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -40,7 +39,6 @@ type RecentItem = {
 
 const pages = [
   { label: "Connections", href: "/connections", icon: Link2 },
-  { label: "Ad Accounts", href: "/ad-accounts", icon: WalletCards },
   { label: "Scenarios", href: "/scenarios", icon: Zap },
   { label: "Runs", href: "/runs", icon: PlayCircle },
   { label: "Settings", href: "/settings", icon: Settings },
@@ -188,32 +186,6 @@ export function CommandPalette() {
                   <CommandItemText
                     label={folder.name}
                     subtitle={folder.parentPath || "Root"}
-                  />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
-
-          {results && results.adAccounts.length > 0 && (
-            <CommandGroup heading="Ad Accounts">
-              {results.adAccounts.map((account) => (
-                <CommandItem
-                  key={account.id}
-                  value={`${account.name} ${account.accountId}`}
-                  onSelect={() =>
-                    go({
-                      id: account.id,
-                      label: account.name,
-                      href: `/ad-accounts/${account.id}`,
-                      type: "adAccount",
-                      subtitle: account.accountId,
-                    })
-                  }
-                >
-                  <WalletCards className="size-4" aria-hidden />
-                  <CommandItemText
-                    label={account.name}
-                    subtitle={account.accountId}
                   />
                 </CommandItem>
               ))}

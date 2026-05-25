@@ -1,9 +1,6 @@
 const REQUIRED_FIELDS: Record<string, string[]> = {
   "trigger.schedule": ["cronExpression", "timezone"],
   "trigger.watch.sheets_new_rows": ["spreadsheetId", "tabName", "watchColumn"],
-  "fb.account_insights": ["fbAccountId", "metrics"],
-  "fb.campaign_insights": ["fbAccountId", "metrics"],
-  "fb.ad_insights": ["fbAccountId", "metrics"],
   "sheets.append": ["spreadsheetId", "tabName", "mappedFields"],
   "sheets.upsert": ["spreadsheetId", "tabName", "keyFields", "mappedFields"],
   "sheets.find_rows": ["spreadsheetId", "tabName"],

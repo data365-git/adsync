@@ -18,20 +18,13 @@ import type { ScenarioStep } from "@prisma/client";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
-// Must mirror ModuleType in src/server/mocks/types.ts. Phase 3 widens the API
-// contract so new modules can be saved through scenarios.create / scenarios.update.
+// Must mirror ModuleType in src/server/mocks/types.ts.
 export const ModuleTypeSchema = z.enum([
   "trigger.schedule",
   "trigger.manual",
   "trigger.webhook",
   "trigger.watch.sheets_new_rows",
   "trigger.watch.bitrix_new_lead",
-  "fb.account_insights",
-  "fb.campaign_insights",
-  "fb.ad_insights",
-  "fb.list_ad_accounts",
-  "fb.list_ads",
-  "fb.get_ad",
   "sheets.append",
   "sheets.upsert",
   "sheets.find_rows",
@@ -94,17 +87,11 @@ function scenarioToFrontend(s: ScenarioWithSteps): MockScenario {
 }
 
 /**
- * Validates that sheets steps reference an upstream FB step.
- * Returns a warning string if mapping looks wrong, or null if OK.
+ * No-op validation placeholder — FB coupling removed; keep call sites working.
  */
 function validateFieldMappings(
-  steps: z.infer<typeof ScenarioStepInput>[],
+  _steps: z.infer<typeof ScenarioStepInput>[],
 ): string | null {
-  const hasFbStep = steps.some((s) => s.moduleType.startsWith("fb."));
-  const hasSheetsStep = steps.some((s) => s.moduleType.startsWith("sheets."));
-  if (hasSheetsStep && !hasFbStep) {
-    return "Sheets step has no upstream Facebook data step — it will write 0 rows.";
-  }
   return null;
 }
 
@@ -227,7 +214,6 @@ export const scenariosRouter = createTRPCRouter({
       z.object({
         name: z.string().min(1).max(120),
         enabled: z.boolean().default(false),
-        adAccountId: z.string().optional(),
         folderId: z.string().nullable().optional(),
         kind: z.enum(["QUICK_SETUP", "CUSTOM"]).default("CUSTOM"),
         steps: z.array(ScenarioStepInput).min(1),
@@ -235,7 +221,6 @@ export const scenariosRouter = createTRPCRouter({
     )
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
-      // Log validation warning but return Scenario directly for UI compat
       validateFieldMappings(input.steps);
       const webhookSecret = isWebhookTrigger(input.steps)
         ? randomBytes(32).toString("hex")
@@ -247,7 +232,6 @@ export const scenariosRouter = createTRPCRouter({
           name: input.name,
           enabled: input.enabled,
           kind: input.kind,
-          adAccountId: input.adAccountId ?? null,
           folderId: input.folderId ?? null,
           webhookSecret,
           steps: {
@@ -567,7 +551,6 @@ export const scenariosRouter = createTRPCRouter({
           name: `${source.name} (copy)`,
           kind: "CUSTOM",
           enabled: false,
-          adAccountId: source.adAccountId,
           folderId: source.folderId,
           steps: {
             create: source.steps.map((s) => ({

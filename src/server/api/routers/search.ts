@@ -47,7 +47,7 @@ export const searchRouter = createTRPCRouter({
     .input(z.object({ q: z.string() }))
     .query(async ({ input, ctx }) => {
       const q = input.q.trim();
-      if (!q) return { scenarios: [], folders: [], adAccounts: [], recentRuns: [] };
+      if (!q) return { scenarios: [], folders: [], recentRuns: [] };
 
       const userId = ctx.userId;
       const terms = termsFor(q);
@@ -58,7 +58,7 @@ export const searchRouter = createTRPCRouter({
         "FAILED",
       ]);
 
-      const [folderRows, scenarios, folders, adAccounts, recentRuns] =
+      const [folderRows, scenarios, folders, recentRuns] =
         await Promise.all([
           db.folder.findMany({
             where: { userId },
@@ -83,20 +83,6 @@ export const searchRouter = createTRPCRouter({
               })),
             },
             select: { id: true, name: true, parentId: true },
-            orderBy: { updatedAt: "desc" },
-            take: 10,
-          }),
-          db.adAccount.findMany({
-            where: {
-              userId,
-              AND: terms.map((term) => ({
-                OR: [
-                  { label: { contains: term, mode: "insensitive" } },
-                  { fbAccountId: { contains: term, mode: "insensitive" } },
-                ],
-              })),
-            },
-            select: { id: true, label: true, fbAccountId: true },
             orderBy: { updatedAt: "desc" },
             take: 10,
           }),
@@ -141,11 +127,6 @@ export const searchRouter = createTRPCRouter({
           id: folder.id,
           name: folder.name,
           parentPath: parentPathFor(folder.parentId, foldersById),
-        })),
-        adAccounts: adAccounts.slice(0, 10).map((account) => ({
-          id: account.id,
-          name: account.label,
-          accountId: account.fbAccountId,
         })),
         recentRuns: recentRuns.slice(0, 10).map((run) => ({
           id: run.id,

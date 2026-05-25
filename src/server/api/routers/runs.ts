@@ -27,7 +27,6 @@ type DbRunWithLabels = {
   scenario: {
     name: string;
     kind: "QUICK_SETUP" | "CUSTOM";
-    adAccount: { label: string; fbAccountId: string } | null;
   } | null;
 };
 
@@ -35,7 +34,6 @@ function normalizeRun(r: DbRunWithLabels): MockRun {
   return {
     id: r.id,
     userId: r.userId,
-    // adAccountId is not on the Phase 2 Run model — keep as '' for type compat
     adAccountId: "",
     scenarioId: r.scenarioId,
     trigger: r.trigger.toLowerCase() as MockRun["trigger"],
@@ -49,8 +47,8 @@ function normalizeRun(r: DbRunWithLabels): MockRun {
     sheetsUrl: r.sheetsUrl,
     scenarioName: r.scenario?.name ?? null,
     scenarioKind: r.scenario?.kind ?? null,
-    adAccountLabel: r.scenario?.adAccount?.label ?? null,
-    adAccountFbId: r.scenario?.adAccount?.fbAccountId ?? null,
+    adAccountLabel: null,
+    adAccountFbId: null,
   };
 }
 
@@ -66,10 +64,8 @@ const FilterStatusSchema = z.enum([
 ]);
 
 const ListInputSchema = z.object({
-  accountIds: z.array(z.string()).optional(),
   statuses: z.array(StatusSchema).optional(),
   scenarioIds: z.array(z.string()).optional(),
-  adAccountId: z.string().optional(),
   status: FilterStatusSchema.optional(),
   from: z.date().optional(),
   to: z.date().optional(),
@@ -274,22 +270,7 @@ export const runsRouter = createTRPCRouter({
       const onlyCancelled =
         statusValues.length === 0 && opts.status === "cancelled";
 
-      // scenarioIds filter via accountIds: look up scenarios for those accounts
-      let scenarioIds = opts.scenarioIds;
-      const accountIds =
-        opts.adAccountId !== undefined
-          ? [opts.adAccountId]
-          : (opts.accountIds ?? []);
-      if (accountIds.length > 0 && !scenarioIds) {
-        const scenarios = await db.scenario.findMany({
-          where: {
-            userId,
-            adAccountId: { in: accountIds },
-          },
-          select: { id: true },
-        });
-        scenarioIds = scenarios.map((s) => s.id);
-      }
+      const scenarioIds = opts.scenarioIds;
 
       const where: Prisma.RunWhereInput = {
         userId,
@@ -319,7 +300,6 @@ export const runsRouter = createTRPCRouter({
               select: {
                 name: true,
                 kind: true,
-                adAccount: { select: { label: true, fbAccountId: true } },
               },
             },
           },
@@ -489,7 +469,6 @@ export const runsRouter = createTRPCRouter({
               steps: { orderBy: { position: "asc" } },
               name: true,
               kind: true,
-              adAccount: { select: { label: true, fbAccountId: true } },
             },
           },
           logs: { orderBy: { ts: "asc" } },

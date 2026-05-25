@@ -11,7 +11,6 @@ import { Skeleton } from "~/components/ui/skeleton";
 import type { OAuthConnection } from "~/server/mocks/types";
 import {
   BitrixConnectionCard,
-  FacebookConnectionCard,
   GoogleConnectionCard,
 } from "~/components/connections/cards";
 
@@ -22,12 +21,6 @@ const ERROR_MESSAGES: Record<string, string> = {
     "OAuth state mismatch (possible session change). Please try again.",
   google_exchange_failed:
     "Failed to complete Google connection. Check server logs for details.",
-  facebook_denied: "You denied access to Facebook. Try again to connect.",
-  facebook_invalid: "Facebook sent an invalid response. Please try again.",
-  facebook_state_mismatch:
-    "OAuth state mismatch (possible session change). Please try again.",
-  facebook_exchange_failed:
-    "Failed to complete Facebook connection. Check server logs for details.",
   bitrix_invalid_code: "Bitrix24 connection failed: invalid authorization code",
   bitrix_upsert_failed:
     "Bitrix24 connection failed: could not save credentials",
@@ -35,7 +28,6 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const SUCCESS_LABELS: Record<string, string> = {
   google: "Google Sheets",
-  facebook: "Facebook Ads",
   bitrix: "Bitrix24",
 };
 
@@ -69,10 +61,9 @@ function CardSkeleton() {
 }
 
 const PROVIDERS: {
-  provider: "google" | "facebook" | "bitrix";
+  provider: "google" | "bitrix";
 }[] = [
   { provider: "google" },
-  { provider: "facebook" },
   { provider: "bitrix" },
 ];
 
@@ -234,7 +225,7 @@ export function ConnectionsClient() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">Connections</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Manage your Google Sheets, Facebook Ads, and Bitrix24 integrations.
+          Manage your Google Sheets and Bitrix24 integrations.
         </p>
       </div>
 
@@ -286,25 +277,6 @@ export function ConnectionsClient() {
               provider === "google" ? (
                 <GoogleConnectionCard
                   key={existing ? existing.id : "google-disconnected"}
-                  connection={
-                    existing ?? {
-                      id: "",
-                      userId: "",
-                      provider,
-                      status: "disconnected",
-                      email: null,
-                      scope: null,
-                      expiresAt: null,
-                      connectedAt: null,
-                      issuedAt: null,
-                      lastVerifiedAt: null,
-                      updatedAt: null,
-                    }
-                  }
-                />
-              ) : provider === "facebook" ? (
-                <FacebookConnectionCard
-                  key={existing ? existing.id : "facebook-disconnected"}
                   connection={
                     existing ?? {
                       id: "",

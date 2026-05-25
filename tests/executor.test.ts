@@ -48,7 +48,6 @@ vi.mock("~/server/db", () => ({
 // ── Import module-handlers after mocks are in place ───────────────────────────
 
 import { getHandler } from "~/server/core/module-handlers";
-import { getCampaignInsights } from "~/integrations/facebook/graph-client";
 import { appendRows } from "~/integrations/google/sheets-client";
 
 // ── Helper to build a minimal ScenarioStep ────────────────────────────────────
@@ -103,36 +102,6 @@ describe("trigger.manual handler", () => {
     const ctx = new RunContext();
     const result = await handler(makeStep(1, "trigger.manual"), ctx, "user_1");
     expect(result).toEqual({ rowCount: 0 });
-  });
-});
-
-describe("fb.campaign_insights handler", () => {
-  beforeEach(() => {
-    vi.mocked(getCampaignInsights).mockResolvedValue([
-      { campaign_id: "c1", impressions: 100 },
-      { campaign_id: "c2", impressions: 200 },
-    ]);
-  });
-
-  it("calls getCampaignInsights and stores rows in context", async () => {
-    const handler = getHandler("fb.campaign_insights");
-    const ctx = new RunContext();
-    const step = makeStep(2, "fb.campaign_insights", {
-      fbAccountId: "act_123",
-      metrics: ["impressions"],
-      dateWindowDays: 7,
-    });
-
-    const result = await handler(step, ctx, "user_1");
-
-    expect(getCampaignInsights).toHaveBeenCalledWith("user_1", {
-      fbAccountId: "act_123",
-      level: "campaign",
-      metrics: ["impressions"],
-      dateWindowDays: 7,
-    });
-    expect(result.rowCount).toBe(2);
-    expect(ctx.getOutput(2)).toHaveLength(2);
   });
 });
 

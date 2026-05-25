@@ -6,7 +6,6 @@ const protectedPrefixes = [
   "/connections",
   "/scenarios",
   "/runs",
-  "/ad-accounts",
   "/settings",
 ];
 

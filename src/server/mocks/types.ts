@@ -85,14 +85,6 @@ export type ModuleType =
   | "trigger.webhook"
   | "trigger.watch.sheets_new_rows"
   | "trigger.watch.bitrix_new_lead"
-  // Legacy — superseded by fb.ad_insights in Phase 3. Kept in the union
-  // until Phase 4 cleans up the case branches across the executor + UI.
-  | "fb.account_insights"
-  | "fb.campaign_insights"
-  | "fb.ad_insights"
-  | "fb.list_ad_accounts"
-  | "fb.list_ads"
-  | "fb.get_ad"
   | "sheets.append"
   | "sheets.upsert"
   | "sheets.find_rows"

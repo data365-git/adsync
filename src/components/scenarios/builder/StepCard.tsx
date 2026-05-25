@@ -6,12 +6,6 @@ import { cn } from "~/lib/utils";
 import { ModuleConfigShell } from "./modules/ModuleConfigShell";
 import { ScheduleConfig } from "./modules/ScheduleConfig";
 import { ManualConfig } from "./modules/ManualConfig";
-import { FbAccountInsightsConfig } from "./modules/FbAccountInsightsConfig";
-import { FbCampaignInsightsConfig } from "./modules/FbCampaignInsightsConfig";
-import { FbAdInsightsConfig } from "./modules/FbAdInsightsConfig";
-import { FbListAdAccountsConfig } from "./modules/FbListAdAccountsConfig";
-import { FbListAdsConfig } from "./modules/FbListAdsConfig";
-import { FbGetAdConfig } from "./modules/FbGetAdConfig";
 import { SheetsAppendConfig } from "./modules/SheetsAppendConfig";
 import { SheetsUpsertConfig } from "./modules/SheetsUpsertConfig";
 import { SheetsFindRowsConfig } from "./modules/SheetsFindRowsConfig";
@@ -67,25 +61,6 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   ),
   "trigger.watch.bitrix_new_lead": ({ config, onChange, errors }) => (
     <WatchBitrixNewLeadConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  // Legacy — same config shape as fb.ad_insights (fbAccountId/dateWindowDays/metrics)
-  "fb.account_insights": ({ config, onChange, errors }) => (
-    <FbAccountInsightsConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  "fb.campaign_insights": ({ config, onChange, errors }) => (
-    <FbCampaignInsightsConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  "fb.ad_insights": ({ config, onChange, errors }) => (
-    <FbAdInsightsConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  "fb.list_ad_accounts": ({ config, onChange, errors }) => (
-    <FbListAdAccountsConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  "fb.list_ads": ({ config, onChange, errors }) => (
-    <FbListAdsConfig config={config} onChange={onChange} errors={errors} />
-  ),
-  "fb.get_ad": ({ config, onChange, errors }) => (
-    <FbGetAdConfig config={config} onChange={onChange} errors={errors} />
   ),
   "sheets.append": ({ config, onChange, errors, prevStepModuleType }) => (
     <SheetsAppendConfig
@@ -183,11 +158,6 @@ function validateStepConfig(
     case "trigger.watch.bitrix_new_lead":
       // No UI-required fields; worker is the data source.
       break;
-    case "fb.list_ad_accounts":
-      // No required fields - lists all ad accounts for the connected user.
-      break;
-    case "fb.list_ads":
-    case "fb.get_ad":
     case "sheets.delete_row":
     case "sheets.get_row":
     case "sheets.create_tab":
@@ -207,21 +177,6 @@ function validateStepConfig(
       }
       if (!config.watchColumn || (typeof config.watchColumn === "string" && !config.watchColumn.trim())) {
         errors.watchColumn = "Select a watch column — used to detect new rows uniquely.";
-      }
-      break;
-    }
-    case "fb.account_insights":
-    case "fb.campaign_insights":
-    case "fb.ad_insights": {
-      if (!config.fbAccountId || (typeof config.fbAccountId === "string" && !config.fbAccountId.trim())) {
-        errors.fbAccountId = "Select an ad account to continue — this determines which data is pulled.";
-      }
-      if (!config.dateWindowDays || (typeof config.dateWindowDays === "number" && config.dateWindowDays < 1)) {
-        errors.dateWindowDays = "Date window must be at least 1 day — Facebook returns no rows for a zero-day pull.";
-      }
-      const metrics = config.metrics;
-      if (!Array.isArray(metrics) || metrics.length === 0) {
-        errors.metrics = "Select at least one metric — an empty pull has no columns to write to Sheets.";
       }
       break;
     }
@@ -344,33 +299,6 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
     case "trigger.webhook":
       return "Triggered via HTTP POST";
 
-    case "fb.account_insights":
-    case "fb.campaign_insights":
-    case "fb.ad_insights": {
-      const fbAccountId = typeof config.fbAccountId === "string" ? config.fbAccountId : "";
-      const dateWindow = typeof config.dateWindowDays === "number" ? config.dateWindowDays : null;
-      const metrics = Array.isArray(config.metrics) ? config.metrics : [];
-      const metricsCount = metrics.length;
-
-      if (!fbAccountId && dateWindow === null && metricsCount === 0) return "Not configured";
-
-      const accountName = fbAccountId || "No account";
-      const windowStr = dateWindow !== null ? `last ${dateWindow} days` : "no window";
-      const metricsStr = `${metricsCount} metric${metricsCount !== 1 ? "s" : ""}`;
-
-      let summary = `${accountName} · ${windowStr} · ${metricsStr}`;
-
-      if (
-        (moduleType === "fb.campaign_insights" || moduleType === "fb.ad_insights") &&
-        typeof config.campaignFilter === "string" &&
-        config.campaignFilter.trim()
-      ) {
-        summary += " · Campaign filter set";
-      }
-
-      return summary;
-    }
-
     case "sheets.append": {
       const spreadsheetId = typeof config.spreadsheetId === "string" ? config.spreadsheetId : "";
       const tabName = typeof config.tabName === "string" ? config.tabName : null;
@@ -418,21 +346,6 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
       const watchColumn = typeof config.watchColumn === "string" ? config.watchColumn : "";
       if (!spreadsheetId && !tabName) return "Not configured";
       return `${tabName || "—"} · watch column: ${watchColumn || "—"}`;
-    }
-
-    case "fb.list_ad_accounts":
-      return "List all accessible ad accounts";
-
-    case "fb.list_ads": {
-      const fbAccountId = typeof config.fbAccountId === "string" ? config.fbAccountId : "";
-      if (!fbAccountId) return "Not configured";
-      const status = typeof config.status === "string" && config.status ? config.status : "all";
-      return `${fbAccountId} · ${status}`;
-    }
-
-    case "fb.get_ad": {
-      const adId = typeof config.adId === "string" ? config.adId : "";
-      return adId ? `Ad ID: ${adId}` : "Not configured";
     }
 
     case "sheets.find_rows": {

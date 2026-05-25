@@ -39,9 +39,8 @@ async function seedScenario(userId: string, spreadsheetId: string) {
       steps: {
         create: [
           { position: 1, moduleType: "trigger.manual", config: {} },
-          { position: 2, moduleType: "fb.list_ad_accounts", config: {} },
           {
-            position: 3,
+            position: 2,
             moduleType: "sheets.find_rows",
             config: {
               spreadsheetId,
@@ -51,7 +50,7 @@ async function seedScenario(userId: string, spreadsheetId: string) {
             },
           },
           {
-            position: 4,
+            position: 3,
             moduleType: "sheets.update_row",
             config: {
               spreadsheetId,
@@ -61,7 +60,7 @@ async function seedScenario(userId: string, spreadsheetId: string) {
             },
           },
           {
-            position: 5,
+            position: 4,
             moduleType: "bitrix.create_lead",
             config: {
               title: "Smoke test - Alice",

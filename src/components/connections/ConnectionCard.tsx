@@ -313,12 +313,12 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
 
   function handleConnect() {
     setIsConnecting(true);
-    connectMutation.mutate({ provider: connection.provider });
+    connectMutation.mutate({ provider: connection.provider as "google" | "bitrix" });
   }
 
   function handleReconnect() {
     setIsRefreshing(true);
-    connectMutation.mutate({ provider: connection.provider });
+    connectMutation.mutate({ provider: connection.provider as "google" | "bitrix" });
   }
 
   function handleDisconnect() {
@@ -327,11 +327,11 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
   }
 
   function handleVerify() {
-    verifyMutation.mutate({ provider: connection.provider });
+    verifyMutation.mutate({ provider: connection.provider as "google" | "bitrix" });
   }
 
   function handleTest() {
-    testMutation.mutate({ provider: connection.provider });
+    testMutation.mutate({ provider: connection.provider as "google" | "bitrix" });
   }
 
   const baseEvents = useMemo<ActivityEvent[]>(() => {

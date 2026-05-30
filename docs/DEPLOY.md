@@ -101,7 +101,8 @@ After you have the public URL, go register the callbacks with each provider:
 | Google (login) | https://console.cloud.google.com → Credentials → your OAuth client → "Authorized redirect URIs" | `https://<domain>/api/auth/callback/google` |
 | Google (Sheets) | same OAuth client (or a separate one) | `https://<domain>/api/oauth/google/callback` |
 | Facebook | https://developers.facebook.com → your app → Facebook Login → Settings → "Valid OAuth Redirect URIs" | `https://<domain>/api/oauth/facebook/callback` |
-| Bitrix24 | Phase 4 — n/a until real OAuth is wired | — |
+| Bitrix24 (OAuth app) | Bitrix24 dev → your app → "Redirect URI" | `https://<domain>/api/oauth/bitrix/callback` |
+| Bitrix24 (webhook) | No callback needed — users paste an inbound REST webhook URL in `/connections` | — |
 
 ---
 
@@ -171,7 +172,8 @@ Optional (only needed for the corresponding feature):
 | `FACEBOOK_APP_REVIEW_PENDING` | Cosmetic banner while the FB app is in review |
 | `WORKER_ENABLED` | Must be `"true"` on the worker service, `"false"` on web |
 | `WORKER_TICK_INTERVAL_MS` | How often the worker ticks (default 60000) |
-| `BITRIX24_WEBHOOK_URL` | Bitrix24 sync feature |
+| `BITRIX24_CLIENT_ID` / `BITRIX24_CLIENT_SECRET` | Bitrix24 **OAuth** app — required for the "Connect" (OAuth) flow on `/connections`. Read straight from `process.env`, so the **build does NOT fail if missing** — the connect just errors at runtime with "BITRIX24_CLIENT_ID and BITRIX24_CLIENT_SECRET must be set". Not needed if users connect via the in-app **webhook** flow instead. |
+| `BITRIX24_WEBHOOK_URL` | Legacy **owner-only** Sheets↔Bitrix sync. NOT used by per-user webhook connections (those are pasted in-app and stored per user). |
 | `GOOGLE_SHEETS_ID` + `GOOGLE_SHEETS_TAB_*` | Sheets-to-Bitrix sync source |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` + `GOOGLE_SERVICE_ACCOUNT_KEY` | Sheets API service account |
 | `SHEETS_POLL_INTERVAL_MS` | Sheets polling cadence (default 10000) |

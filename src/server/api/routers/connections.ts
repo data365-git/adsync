@@ -94,11 +94,28 @@ async function runConnectionTest(
       };
     }
 
-    await bitrixCall<unknown[]>("crm.dealcategory.list", { start: 0 });
+    // Use the user's first connected portal — never the global webhook.
+    const portal = await db.bitrixPortal.findFirst({
+      where: { userId, status: { not: ConnectionStatus.DISCONNECTED } },
+      orderBy: { connectedAt: "desc" },
+      select: { id: true, domain: true },
+    });
+    if (!portal) {
+      return {
+        ok: false,
+        message: "No Bitrix24 portal connected. Connect a portal first.",
+        latencyMs: Date.now() - startedAt,
+      };
+    }
+    await bitrixCall<unknown[]>(
+      "crm.dealcategory.list",
+      { start: 0 },
+      { portalId: portal.id },
+    );
 
     return {
       ok: true,
-      message: "Bitrix24 responded.",
+      message: `Bitrix24 portal ${portal.domain} responded.`,
       latencyMs: Date.now() - startedAt,
     };
   } catch (error) {
@@ -195,8 +212,23 @@ export const connectionsRouter = createTRPCRouter({
           await drive.about.get({ fields: "user" });
           ok = true;
         } else {
-          await bitrixCall<unknown[]>("crm.dealcategory.list", { start: 0 });
-          ok = true;
+          // Use the user's first connected portal — never the global webhook.
+          const portal = await db.bitrixPortal.findFirst({
+            where: {
+              userId: ctx.userId,
+              status: { not: ConnectionStatus.DISCONNECTED },
+            },
+            orderBy: { connectedAt: "desc" },
+            select: { id: true },
+          });
+          if (portal) {
+            await bitrixCall<unknown[]>(
+              "crm.dealcategory.list",
+              { start: 0 },
+              { portalId: portal.id },
+            );
+            ok = true;
+          }
         }
       } catch {
         ok = false;
@@ -466,50 +498,152 @@ export const connectionsRouter = createTRPCRouter({
     }),
 
   /**
-   * List Bitrix24 deal categories (pipelines) from the configured webhook.
+   * List Bitrix24 deal categories (pipelines) for the given connected portal.
    * The lead pipeline is always singular in Bitrix24 — we return it as a fixed entry
    * and append the deal categories from crm.dealcategory.list.
    */
-  bitrixPipelines: authedProcedure.query(async () => {
-    const webhookUrl = process.env.BITRIX24_WEBHOOK_URL ?? "";
-    if (!webhookUrl) {
-      return { identifier: null, items: [], truncated: false };
-    }
+  bitrixPipelines: authedProcedure
+    .input(z.object({ portalId: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const portal = await db.bitrixPortal.findUnique({
+        where: { id: input.portalId },
+        select: { userId: true, domain: true },
+      });
+      if (portal?.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portal not found" });
+      }
 
-    // Parse portal host and user ID from webhook URL.
-    // Webhook format: https://<portal>.bitrix24.com/rest/<userId>/<token>/
-    let identifier: string | null = null;
-    try {
-      const parsed = new URL(webhookUrl);
-      const host = parsed.hostname; // e.g. yourco.bitrix24.com
-      const parts = parsed.pathname.split("/").filter(Boolean);
-      // pathname: /rest/<userId>/<token>
-      const userId = parts[1] ?? null;
-      identifier = userId
-        ? `Portal: ${host} · User #${userId}`
-        : `Portal: ${host}`;
-    } catch {
-      // malformed URL — skip identifier
-    }
+      const identifier = `Portal: ${portal.domain}`;
 
-    type DealCategory = { ID: string; NAME: string };
-    const categories = await bitrixCall<DealCategory[]>(
-      "crm.dealcategory.list",
-      {},
-    );
+      type DealCategory = { ID: string; NAME: string };
+      const categories = await bitrixCall<DealCategory[]>(
+        "crm.dealcategory.list",
+        {},
+        { portalId: input.portalId },
+      );
 
-    const items: { id: string; name: string }[] = [
-      { id: "lead", name: "Leads (default pipeline)" },
-      ...(categories ?? []).map((c) => ({ id: c.ID, name: c.NAME })),
-    ];
+      const items: { id: string; name: string }[] = [
+        { id: "lead", name: "Leads (default pipeline)" },
+        ...(categories ?? []).map((c) => ({ id: c.ID, name: c.NAME })),
+      ];
 
-    const truncated = items.length > 25;
-    return {
-      identifier,
-      items: items.slice(0, 25),
-      truncated,
-      totalCount: items.length,
-    };
+      const truncated = items.length > 25;
+      return {
+        identifier,
+        items: items.slice(0, 25),
+        truncated,
+        totalCount: items.length,
+      };
+    }),
+
+  /**
+   * Lightweight Bitrix24 destination info for the given connected portal —
+   * the portal a lead/deal will actually be created in. No API call, no
+   * token exposed; safe to render in step config so the user can see where
+   * their records land. `crmLeadsUrl` deep-links to the portal's lead list.
+   */
+  bitrixDestination: authedProcedure
+    .input(z.object({ portalId: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const portal = await db.bitrixPortal.findUnique({
+        where: { id: input.portalId },
+        select: { userId: true, domain: true, clientEndpoint: true },
+      });
+      if (portal?.userId !== ctx.userId) {
+        return { portal: null, origin: null, crmLeadsUrl: null };
+      }
+      try {
+        const origin = new URL(portal.clientEndpoint).origin;
+        return {
+          portal: portal.domain,
+          origin,
+          crmLeadsUrl: `${origin}/crm/lead/list/`,
+        };
+      } catch {
+        return { portal: portal.domain, origin: null, crmLeadsUrl: null };
+      }
+    }),
+
+  /**
+   * List the Bitrix24 portals this user has connected via OAuth. Used by the
+   * Connections page and the portal picker in the Create-Lead step.
+   */
+  listBitrixPortals: authedProcedure.query(async ({ ctx }) => {
+    return db.bitrixPortal.findMany({
+      where: {
+        userId: ctx.userId,
+        status: { not: ConnectionStatus.DISCONNECTED },
+      },
+      orderBy: { connectedAt: "desc" },
+      select: {
+        id: true,
+        domain: true,
+        status: true,
+        connectedAt: true,
+        expiresAt: true,
+      },
+    });
   }),
+
+  /** Disconnect a connected Bitrix24 portal (soft — keeps the row, flips status). */
+  disconnectBitrixPortal: authedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const portal = await db.bitrixPortal.findUnique({
+        where: { id: input.id },
+        select: { userId: true },
+      });
+      if (portal?.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portal not found" });
+      }
+      await db.bitrixPortal.update({
+        where: { id: input.id },
+        data: { status: ConnectionStatus.DISCONNECTED },
+      });
+      return { id: input.id };
+    }),
+
+  /** Deal pipelines (categories) for a connected portal — for the Create Deal picker. */
+  listBitrixDealCategories: authedProcedure
+    .input(z.object({ portalId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const portal = await db.bitrixPortal.findUnique({
+        where: { id: input.portalId },
+        select: { userId: true },
+      });
+      if (portal?.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portal not found" });
+      }
+      type Cat = { ID: string; NAME: string };
+      const cats = await bitrixCall<Cat[]>(
+        "crm.dealcategory.list",
+        { order: { SORT: "ASC" }, select: ["ID", "NAME"] },
+        { portalId: input.portalId },
+      );
+      return [
+        { id: "0", name: "General (default)" },
+        ...(cats ?? []).map((c) => ({ id: String(c.ID), name: c.NAME })),
+      ];
+    }),
+
+  /** Stages within a deal pipeline — for the Create Deal stage picker. */
+  listBitrixDealStages: authedProcedure
+    .input(z.object({ portalId: z.string(), categoryId: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const portal = await db.bitrixPortal.findUnique({
+        where: { id: input.portalId },
+        select: { userId: true },
+      });
+      if (portal?.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portal not found" });
+      }
+      type Stage = { STATUS_ID: string; NAME: string };
+      const stages = await bitrixCall<Stage[]>(
+        "crm.dealcategory.stage.list",
+        { id: Number(input.categoryId) || 0 },
+        { portalId: input.portalId },
+      );
+      return (stages ?? []).map((s) => ({ statusId: s.STATUS_ID, name: s.NAME }));
+    }),
 
 });

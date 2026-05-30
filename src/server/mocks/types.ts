@@ -94,6 +94,7 @@ export type ModuleType =
   | "sheets.create_tab"
   | "bitrix.create_lead"
   | "bitrix.update_lead"
+  | "bitrix.delete_lead"
   | "bitrix.find_leads"
   | "bitrix.create_deal"
   | "bitrix.update_deal";

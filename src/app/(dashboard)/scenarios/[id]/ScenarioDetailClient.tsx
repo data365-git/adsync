@@ -141,6 +141,8 @@ function defaultConfigFor(moduleType: ModuleType): Record<string, unknown> {
       return { title: "", name: "", lastName: "", phone: "", email: "", sourceId: "", comments: "" };
     case "bitrix.update_lead":
       return { leadId: "", title: "", statusId: "", comments: "" };
+    case "bitrix.delete_lead":
+      return { leadId: "" };
     case "bitrix.create_deal":
       return { portalId: "", title: "", categoryId: "", stageId: "" };
     default:

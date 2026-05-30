@@ -232,6 +232,11 @@ type BitrixUpdateLeadCfg = {
   portalId?: string;
 };
 
+type BitrixDeleteLeadCfg = {
+  leadId: string;
+  portalId?: string;
+};
+
 type BitrixCreateDealCfg = {
   title: string;
   categoryId?: string;
@@ -448,6 +453,31 @@ const bitrixUpdateLeadHandler: Handler = async (step, ctx, userId) => {
   return { rowCount: 1, rows: [outputRow] };
 };
 
+const bitrixDeleteLeadHandler: Handler = async (step, ctx, userId) => {
+  const { deleteLead } = await import("~/server/bitrix24/client");
+  const config = cfg<BitrixDeleteLeadCfg>(step);
+  const upstreamRows = ctx.getUpstreamRows(step.position);
+  if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
+    return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
+  }
+  const portalId =
+    typeof config.portalId === "string" && config.portalId
+      ? config.portalId
+      : undefined;
+  if (!portalId) {
+    throw new Error(
+      "MISSING_PORTAL_ID: bitrix.delete_lead requires a connected Bitrix24 portal. " +
+        "Open the step config and select a portal.",
+    );
+  }
+  const result = await deleteLead({ leadId: config.leadId }, userId, {
+    portalId,
+  });
+  const outputRow = { leadId: result.leadId, deleted: result.deleted };
+  ctx.setOutput(step.position, [outputRow]);
+  return { rowCount: 1, rows: [outputRow] };
+};
+
 const bitrixCreateDealHandler: Handler = async (step, ctx, userId) => {
   const { createDeal } = await import("~/server/bitrix24/client");
   const config = cfg<BitrixCreateDealCfg>(step);
@@ -515,6 +545,7 @@ const HANDLERS: Record<string, Handler> = {
   // Bitrix24
   "bitrix.create_lead": bitrixCreateLeadHandler,
   "bitrix.update_lead": bitrixUpdateLeadHandler,
+  "bitrix.delete_lead": bitrixDeleteLeadHandler,
   "bitrix.find_leads": notImplementedHandler,
   "bitrix.create_deal": bitrixCreateDealHandler,
   "bitrix.update_deal": notImplementedHandler,

@@ -7,6 +7,7 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   "sheets.update_row": ["spreadsheetId", "tabName", "rowIdentifier", "mappedFields"],
   "bitrix.create_lead": ["portalId", "title", "name", "sourceId"],
   "bitrix.update_lead": ["portalId", "leadId"],
+  "bitrix.delete_lead": ["portalId", "leadId"],
   "bitrix.create_deal": ["portalId", "title", "categoryId", "stageId"],
 };
 

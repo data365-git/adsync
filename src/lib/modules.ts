@@ -616,6 +616,24 @@ const PHASE_3_MODULES: ModuleDefinition[] = [
     sampleOutput: [{ leadId: "lead_001", updated: true }],
   },
   {
+    id: "bitrix.delete_lead",
+    name: "Delete Lead",
+    shortName: "Delete Lead",
+    description: "Permanently deletes a lead in Bitrix24 CRM by ID.",
+    group: "bitrix24",
+    outputsArray: false,
+    configSchema: [
+      {
+        key: "leadId",
+        label: "Lead ID",
+        type: "text",
+        required: true,
+        help: "The numeric ID of the lead to delete",
+      },
+    ],
+    sampleOutput: [{ leadId: "lead_001", deleted: true }],
+  },
+  {
     id: "bitrix.find_leads",
     name: "Find Leads",
     shortName: "Find Leads",

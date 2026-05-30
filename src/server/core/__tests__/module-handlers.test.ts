@@ -715,3 +715,77 @@ describe("bitrixUpdateLeadHandler", () => {
     await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/ACCESS_DENIED/);
   });
 });
+
+describe("bitrixDeleteLeadHandler", () => {
+  it("deletes a lead via the selected portal", async () => {
+    vi.resetModules();
+    const deleteLeadSpy = vi.fn(async () => ({
+      leadId: "4242",
+      deleted: true as const,
+    }));
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(),
+      getLeadUrl: vi.fn(),
+      updateLead: vi.fn(),
+      deleteLead: deleteLeadSpy,
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.delete_lead");
+
+    const fakeStep = {
+      id: "step_del_lead",
+      moduleType: "bitrix.delete_lead",
+      config: { portalId: "portal_abc", leadId: "4242" },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result.rowCount).toBe(1);
+    expect(result.rows).toEqual([
+      expect.objectContaining({ leadId: "4242", deleted: true }),
+    ]);
+    expect(deleteLeadSpy).toHaveBeenCalledWith({ leadId: "4242" }, "u", {
+      portalId: "portal_abc",
+    });
+  });
+
+  it("throws MISSING_PORTAL_ID when no portalId is configured", async () => {
+    vi.resetModules();
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(),
+      getLeadUrl: vi.fn(),
+      updateLead: vi.fn(),
+      deleteLead: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.delete_lead");
+
+    const fakeStep = {
+      id: "step_del_lead",
+      moduleType: "bitrix.delete_lead",
+      config: { leadId: "4242" },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/MISSING_PORTAL_ID/);
+  });
+});

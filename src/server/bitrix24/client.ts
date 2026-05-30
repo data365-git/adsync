@@ -263,6 +263,20 @@ export async function updateLead(
   return { leadId: input.leadId, updated: true };
 }
 
+export type DeleteLeadInput = {
+  leadId: string;
+};
+
+export async function deleteLead(
+  input: DeleteLeadInput,
+  userId?: string,
+  opts?: BitrixCallOpts,
+): Promise<{ leadId: string; deleted: true }> {
+  if (!opts?.portalId) await ensureBitrixTokenFresh(userId);
+  await call("crm.lead.delete", { id: input.leadId }, opts);
+  return { leadId: input.leadId, deleted: true };
+}
+
 export type CreateDealInput = {
   title: string;
   /** Pipeline (category) id. "0"/absent ⇒ the default General pipeline. */

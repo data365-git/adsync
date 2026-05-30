@@ -15,6 +15,7 @@ import { SheetsGetRowConfig } from "./modules/SheetsGetRowConfig";
 import { SheetsCreateTabConfig } from "./modules/SheetsCreateTabConfig";
 import { BitrixCreateLeadConfig } from "./modules/BitrixCreateLeadConfig";
 import { BitrixUpdateLeadConfig } from "./modules/BitrixUpdateLeadConfig";
+import { BitrixDeleteLeadConfig } from "./modules/BitrixDeleteLeadConfig";
 import { BitrixFindLeadsConfig } from "./modules/BitrixFindLeadsConfig";
 import { BitrixCreateDealConfig } from "./modules/BitrixCreateDealConfig";
 import { BitrixUpdateDealConfig } from "./modules/BitrixUpdateDealConfig";
@@ -109,6 +110,15 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   ),
   "bitrix.update_lead": ({ config, onChange, errors, prevStepOutputColumns, panelVisible }) => (
     <BitrixUpdateLeadConfig
+      config={config}
+      onChange={onChange}
+      errors={errors}
+      prevStepOutputColumns={prevStepOutputColumns}
+      panelVisible={panelVisible}
+    />
+  ),
+  "bitrix.delete_lead": ({ config, onChange, errors, prevStepOutputColumns, panelVisible }) => (
+    <BitrixDeleteLeadConfig
       config={config}
       onChange={onChange}
       errors={errors}
@@ -266,6 +276,12 @@ function validateStepConfig(
       }
       break;
     }
+    case "bitrix.delete_lead": {
+      if (!config.leadId || (typeof config.leadId === "string" && !config.leadId.trim())) {
+        errors.leadId = "Lead ID is required (literal number or token like {{leadId}}).";
+      }
+      break;
+    }
     case "sheets.update_row": {
       if (!config.spreadsheetId || (typeof config.spreadsheetId === "string" && !config.spreadsheetId.trim())) {
         errors.spreadsheetId = "A spreadsheet ID is required.";
@@ -403,6 +419,11 @@ function summarizeStep(moduleType: ModuleType, config: Record<string, unknown>):
     case "bitrix.update_lead": {
       const leadId = typeof config.leadId === "string" ? config.leadId : "";
       return leadId ? `Update lead #${leadId}` : "Not configured";
+    }
+
+    case "bitrix.delete_lead": {
+      const leadId = typeof config.leadId === "string" ? config.leadId : "";
+      return leadId ? `Delete lead #${leadId}` : "Not configured";
     }
 
     case "bitrix.find_leads": {

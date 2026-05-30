@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, authedProcedure } from "~/server/api/trpc";
 import { db } from "~/server/db";
 import {
@@ -6,11 +7,27 @@ import {
   retryFailedJobs,
 } from "~/server/sync/orchestrator";
 
+// The Lead/Deal/Contact/SyncJob/SyncLog models have no userId — they are
+// shared across all users. This router must only be enabled for the single
+// owner deployment via LEGACY_SYNC_ENABLED=true. In multi-user mode these
+// procedures would expose or modify every user's data.
+function requireLegacySync(): void {
+  if (process.env.LEGACY_SYNC_ENABLED !== "true") {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "Legacy Sheets→Bitrix24 sync is disabled. Set LEGACY_SYNC_ENABLED=true to enable it (single-user/owner deployments only).",
+    });
+  }
+}
+
 export const syncRouter = createTRPCRouter({
   /**
    * Return queue depth, last sync timestamp, and error rate for the monitoring dashboard.
+   * Only available when LEGACY_SYNC_ENABLED=true.
    */
   status: authedProcedure.query(async () => {
+    requireLegacySync();
     const [pending, failed, done, lastLog, totalAttempts, errorCount] =
       await Promise.all([
         db.syncJob.count({ where: { status: "pending" } }),
@@ -33,10 +50,12 @@ export const syncRouter = createTRPCRouter({
   /**
    * Enqueue a full re-sync for every record of the given entity type.
    * Safe to call repeatedly — the sync functions are idempotent.
+   * Only available when LEGACY_SYNC_ENABLED=true.
    */
   triggerManual: authedProcedure
     .input(z.object({ entity: z.enum(["Lead", "Deal", "Contact"]) }))
     .mutation(async ({ input }) => {
+      requireLegacySync();
       type Row = { id: string };
       let rows: Row[];
 
@@ -68,8 +87,10 @@ export const syncRouter = createTRPCRouter({
 
   /**
    * Re-queue all failed jobs that are within the retry budget.
+   * Only available when LEGACY_SYNC_ENABLED=true.
    */
   retryFailed: authedProcedure.mutation(async () => {
+    requireLegacySync();
     const requeued = await retryFailedJobs();
     const { processed, failed } = await drainSyncJobs();
     return { requeued, processed, failed };

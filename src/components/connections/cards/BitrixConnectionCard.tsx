@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   ChevronDown,
-  Loader2,
   MoreHorizontal,
   RefreshCwIcon,
   TestTube2,
@@ -490,22 +489,10 @@ export function BitrixConnectionCard({
             />
           </>
         ) : (
-          <Button
-            type="button"
-            size="lg"
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className={`${primaryButtonClass} flex-1`}
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                Connecting...
-              </>
-            ) : (
-              "Connect"
-            )}
-          </Button>
+          <p className="text-xs text-slate-500">
+            Connect a Bitrix24 portal using the webhook field above. Each user
+            connects their own portal — no shared app.
+          </p>
         )}
       </div>
     </article>

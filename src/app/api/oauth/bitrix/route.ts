@@ -41,7 +41,21 @@ export async function GET(req: NextRequest) {
   }
 
   const state = `${session.user.id}:${randomBytes(16).toString("hex")}`;
-  const res = NextResponse.redirect(getAuthorizationUrl(portal, state));
+  let authUrl: string;
+  try {
+    authUrl = getAuthorizationUrl(portal, state);
+  } catch {
+    // OAuth app not configured (BITRIX24_CLIENT_ID/SECRET unset). Degrade
+    // gracefully instead of throwing — multi-user connects via webhook, so a
+    // missing OAuth app must never take down the route / fail the deploy.
+    return NextResponse.redirect(
+      new URL(
+        "/connections?error=bitrix_not_configured",
+        process.env.NEXTAUTH_URL ?? req.url,
+      ),
+    );
+  }
+  const res = NextResponse.redirect(authUrl);
 
   // Remember where to send the user back after consent (e.g. the scenario
   // builder they started from). Only same-origin paths are honored.

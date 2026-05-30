@@ -82,7 +82,7 @@ describe("connectWebhook", () => {
     );
     expect(res.domain).toBe("acme.bitrix24.com");
     expect(upsertMock).toHaveBeenCalledOnce();
-    const arg = upsertMock.mock.calls[0]![0] as unknown as {
+    const arg = upsertMock.mock.calls[0]![0] as {
       where: { userId_memberId: { memberId: string } };
       create: { kind: string; webhookUrl: string; domain: string };
     };

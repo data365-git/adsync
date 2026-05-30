@@ -30,8 +30,6 @@ import { ConnectionStatus } from "~/components/connections/ConnectionStatus";
 import { DisconnectDialog } from "~/components/connections/DisconnectDialog";
 import { BitrixConnectionCard } from "~/components/connections/cards/BitrixConnectionCard";
 
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
-
 type FrontendConnection = OAuthConnection & {
   scope?: string | null;
   issuedAt?: Date | null;
@@ -69,15 +67,6 @@ const primaryButtonClass =
 const ghostButtonClass =
   "h-9 rounded-md px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2";
 
-function isExpiringWithin3Days(
-  expiresAt: Date | null,
-  nowMs: number | null,
-): boolean {
-  if (!expiresAt) return false;
-  if (nowMs === null) return false;
-  return expiresAt.getTime() - nowMs <= THREE_DAYS_MS;
-}
-
 function splitScopes(scope: string | null | undefined): string[] {
   if (!scope) return [];
   return scope
@@ -89,31 +78,6 @@ function splitScopes(scope: string | null | undefined): string[] {
 function formatRelative(prefix: string, date: Date | null | undefined) {
   if (!date) return "never";
   return `${prefix} ${formatDistanceToNow(date)} ago`;
-}
-
-function getExpiryProgress(
-  issuedAt: Date | null | undefined,
-  expiresAt: Date | null,
-  nowMs: number | null,
-) {
-  if (!expiresAt) return null;
-  if (nowMs === null) return null;
-
-  const issuedMs = issuedAt?.getTime() ?? nowMs;
-  const expiresMs = expiresAt.getTime();
-  const totalMs = Math.max(expiresMs - issuedMs, 1);
-  const elapsedMs = nowMs - issuedMs;
-  const remainingMs = expiresMs - nowMs;
-
-  return {
-    percent: Math.min(Math.max((elapsedMs / totalMs) * 100, 0), 100),
-    fillClassName:
-      remainingMs <= 0
-        ? "bg-red-500"
-        : remainingMs <= THREE_DAYS_MS
-          ? "bg-amber-500"
-          : "bg-sky-600",
-  };
 }
 
 function ProviderLogo({ provider }: { provider: Provider }) {
@@ -220,23 +184,15 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(false);
   const [testEvents, setTestEvents] = useState<ActivityEvent[]>([]);
-  const [nowMs, setNowMs] = useState<number | null>(null);
-
   const utils = api.useUtils();
   const providerLabel = PROVIDER_LABEL[connection.provider];
   const effectiveStatus = optimisticStatus ?? connection.status;
   const isConnected = effectiveStatus === "connected";
   const isExpired = effectiveStatus === "expired";
   const scopes = useMemo(() => splitScopes(connection.scope), [connection.scope]);
-  const issuedAt = connection.issuedAt ?? connection.connectedAt;
-  const expiry = getExpiryProgress(issuedAt, connection.expiresAt, nowMs);
-  const showExpiryWarning =
-    isExpired ||
-    (isConnected && isExpiringWithin3Days(connection.expiresAt, nowMs));
 
   useEffect(() => {
     setIsMounted(true);
-    setNowMs(Date.now());
   }, []);
 
   const connectMutation = api.connections.connect.useMutation({
@@ -404,24 +360,19 @@ export function ConnectionCard({ connection }: ConnectionCardProps) {
             {isMounted ? relativeLabel : "refreshed"}
           </p>
 
-          {expiry && (
-            <div aria-label="Token expiry progress">
-              <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={cn("h-full rounded-full", expiry.fillClassName)}
-                  style={{ width: `${expiry.percent}%` }}
-                />
-              </div>
-              {showExpiryWarning && (
-                <button
-                  type="button"
-                  onClick={handleReconnect}
-                  disabled={isAnyLoading}
-                  className="mt-2 text-xs font-medium text-amber-700 underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
-                >
-                  Reconnect
-                </button>
-              )}
+          {isExpired && (
+            <div>
+              <p className="text-xs font-medium text-amber-700">
+                Token expired — please reconnect to restore access.
+              </p>
+              <button
+                type="button"
+                onClick={handleReconnect}
+                disabled={isAnyLoading}
+                className="mt-1.5 text-xs font-medium text-amber-700 underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+              >
+                Reconnect
+              </button>
             </div>
           )}
         </div>

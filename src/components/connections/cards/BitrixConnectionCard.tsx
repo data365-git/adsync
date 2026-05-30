@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import {
   ChevronDown,
@@ -24,8 +24,6 @@ import { DisconnectDialog } from "~/components/connections/DisconnectDialog";
 import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
 import { toast } from "sonner";
-
-const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
 type FrontendConnection = OAuthConnection & {
   scope?: string | null;
@@ -66,31 +64,6 @@ function splitScopes(scope: string | null | undefined): string[] {
     .split(/[,\s]+/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function getExpiryProgress(
-  connection: FrontendConnection | null,
-  nowMs: number | null,
-) {
-  if (!connection?.expiresAt) return null;
-  if (nowMs === null) return null;
-
-  const issuedMs =
-    (connection.issuedAt ?? connection.connectedAt)?.getTime() ?? nowMs;
-  const expiresMs = connection.expiresAt.getTime();
-  const totalMs = Math.max(expiresMs - issuedMs, 1);
-  const remainingMs = expiresMs - nowMs;
-
-  return {
-    percent: Math.min(Math.max(((nowMs - issuedMs) / totalMs) * 100, 0), 100),
-    fillClassName:
-      remainingMs <= 0
-        ? "bg-red-500"
-        : remainingMs <= THREE_DAYS_MS
-          ? "bg-amber-500"
-          : "bg-sky-600",
-    shouldReconnect: remainingMs <= THREE_DAYS_MS,
-  };
 }
 
 function ScopeChips({ scopes }: { scopes: string[] }) {
@@ -343,10 +316,8 @@ export function BitrixConnectionCard({
   const [isConnecting, setIsConnecting] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
   const [eventsOpen, setEventsOpen] = useState(false);
-  const [nowMs, setNowMs] = useState<number | null>(null);
 
   const scopes = useMemo(() => splitScopes(connection?.scope), [connection?.scope]);
-  const expiry = getExpiryProgress(connection, nowMs);
   const isConnected = status === "connected";
   const isExpired = status === "expired";
   const bitrixHealth = api.connections.bitrixHealth.useQuery(undefined, {
@@ -371,10 +342,6 @@ export function BitrixConnectionCard({
     setIsConnecting(true);
     onConnect();
   }
-
-  useEffect(() => {
-    setNowMs(Date.now());
-  }, []);
 
   return (
     <article
@@ -413,24 +380,19 @@ export function BitrixConnectionCard({
             {lastRefreshLabel ?? "never"}
           </p>
 
-          {expiry && (
-            <div aria-label="Token expiry progress">
-              <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className={cn("h-full rounded-full", expiry.fillClassName)}
-                  style={{ width: `${expiry.percent}%` }}
-                />
-              </div>
-              {(isExpired || expiry.shouldReconnect) && (
-                <button
-                  type="button"
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="mt-2 text-xs font-medium text-amber-700 underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
-                >
-                  Reconnect
-                </button>
-              )}
+          {isExpired && (
+            <div>
+              <p className="text-xs font-medium text-amber-700">
+                Token expired — please reconnect to restore access.
+              </p>
+              <button
+                type="button"
+                onClick={handleConnect}
+                disabled={isConnecting}
+                className="mt-1.5 text-xs font-medium text-amber-700 underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+              >
+                Reconnect
+              </button>
             </div>
           )}
         </div>

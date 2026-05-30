@@ -89,30 +89,36 @@ export async function tick(): Promise<void> {
     console.error("[worker] Scenario scheduler error:", err);
   }
 
-  // ── 2. Poll Google Sheets → upsert Postgres → enqueue SyncJobs ───────────
-  try {
-    await pollAll();
-  } catch (err) {
-    console.error("[worker] Sheets poll error:", err);
-  }
-
-  // ── 3. Drain pending SyncJobs → push to Bitrix24 ─────────────────────────
-  try {
-    const { processed, failed } = await drainSyncJobs();
-    if (processed > 0 || failed > 0) {
-      console.log(`[worker] SyncJob drain: processed=${processed} failed=${failed}`);
+  // ── 2–4. Legacy Sheets→Bitrix24 sync pipeline ────────────────────────────
+  // This pipeline is single-user (GOOGLE_SHEETS_ID + BITRIX24_WEBHOOK_URL env
+  // vars) and writes to un-scoped Lead/Deal/Contact tables. It must NOT run
+  // for multi-user deployments. Opt-in explicitly with LEGACY_SYNC_ENABLED=true.
+  if (process.env.LEGACY_SYNC_ENABLED === "true") {
+    // ── 2. Poll Google Sheets → upsert Postgres → enqueue SyncJobs ─────────
+    try {
+      await pollAll();
+    } catch (err) {
+      console.error("[worker] Sheets poll error:", err);
     }
-  } catch (err) {
-    console.error("[worker] SyncJob drain error:", err);
-  }
 
-  // ── 4. Re-queue failed jobs that are past their backoff window ────────────
-  try {
-    const retried = await retryFailedJobs();
-    if (retried > 0) {
-      console.log(`[worker] Retried ${retried} failed SyncJobs`);
+    // ── 3. Drain pending SyncJobs → push to Bitrix24 ───────────────────────
+    try {
+      const { processed, failed } = await drainSyncJobs();
+      if (processed > 0 || failed > 0) {
+        console.log(`[worker] SyncJob drain: processed=${processed} failed=${failed}`);
+      }
+    } catch (err) {
+      console.error("[worker] SyncJob drain error:", err);
     }
-  } catch (err) {
-    console.error("[worker] SyncJob retry error:", err);
+
+    // ── 4. Re-queue failed jobs that are past their backoff window ──────────
+    try {
+      const retried = await retryFailedJobs();
+      if (retried > 0) {
+        console.log(`[worker] Retried ${retried} failed SyncJobs`);
+      }
+    } catch (err) {
+      console.error("[worker] SyncJob retry error:", err);
+    }
   }
 }

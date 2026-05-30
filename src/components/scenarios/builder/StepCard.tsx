@@ -162,10 +162,21 @@ function validateStepConfig(
     case "sheets.get_row":
     case "sheets.create_tab":
     case "bitrix.find_leads":
-    case "bitrix.create_deal":
     case "bitrix.update_deal": {
       errors._form =
         "This module isn't ready yet — pick a different one. (Tracked in docs/MODULE_AUDIT.md.)";
+      break;
+    }
+    case "bitrix.create_deal": {
+      if (!config.title || (typeof config.title === "string" && !config.title.trim())) {
+        errors.title = "Deal title is required (literal or token).";
+      }
+      if (!config.categoryId || (typeof config.categoryId === "string" && !config.categoryId.trim())) {
+        errors.categoryId = "Pick a pipeline.";
+      }
+      if (!config.stageId || (typeof config.stageId === "string" && !config.stageId.trim())) {
+        errors.stageId = "Pick a stage.";
+      }
       break;
     }
     case "trigger.watch.sheets_new_rows": {

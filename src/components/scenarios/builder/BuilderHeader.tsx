@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { api } from "~/trpc/react";
+import { toast } from "sonner";
 import type { DraftStep } from "./StepCard";
 import type { Run } from "~/server/mocks/types";
 
@@ -35,6 +36,13 @@ interface BuilderHeaderProps {
   isTesting: boolean;
   isDirty: boolean;
   missingFieldsTooltip: string | null;
+  /**
+   * Raw "required fields missing" message, independent of whether errors are
+   * being shown yet. When set, Run and Enable are blocked. null when runnable.
+   */
+  validationError?: string | null;
+  /** Reveal per-field errors on the step cards (parent flips showErrors). */
+  onRevealErrors?: () => void;
   onNameChange: (name: string) => void;
   onEnabledToggle: (enabled: boolean) => void;
   onSave: () => void;
@@ -69,6 +77,8 @@ export function BuilderHeader({
   isTesting,
   isDirty,
   missingFieldsTooltip,
+  validationError = null,
+  onRevealErrors,
   onNameChange,
   onEnabledToggle,
   onSave,
@@ -98,9 +108,37 @@ export function BuilderHeader({
       await new Promise<void>((resolve) => setTimeout(resolve, 600));
       onRunComplete?.(run.id);
       setIsRunningNow(false);
-    } catch {
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Run failed. Please try again.";
+      toast.error(msg);
       setIsRunningNow(false);
     }
+  }
+
+  // Blocked because a step is missing a required field. Reveal the per-field
+  // errors + toast instead of running / enabling.
+  function rejectIncomplete() {
+    onRevealErrors?.();
+    toast.error(validationError ?? "Some steps are missing required fields.");
+  }
+
+  function handleRunClick() {
+    if (validationError) {
+      rejectIncomplete();
+      return;
+    }
+    if (scenarioId) void handleRunNow();
+    else onTest();
+  }
+
+  function handleEnabledToggle(next: boolean) {
+    // Always allow turning off; block turning on while incomplete.
+    if (next && validationError) {
+      rejectIncomplete();
+      return;
+    }
+    onEnabledToggle(next);
   }
 
   function startEdit() {
@@ -180,10 +218,17 @@ export function BuilderHeader({
           lastSavedAt={lastSavedAt}
         />
 
-        <div className="flex items-center gap-1.5">
+        <div
+          className="flex items-center gap-1.5"
+          title={
+            !enabled && validationError
+              ? `${validationError} — can't enable until fixed.`
+              : undefined
+          }
+        >
           <Switch
             checked={enabled}
-            onCheckedChange={onEnabledToggle}
+            onCheckedChange={handleEnabledToggle}
             size="sm"
             aria-label={enabled ? "Scenario enabled" : "Scenario disabled"}
           />
@@ -196,13 +241,16 @@ export function BuilderHeader({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => {
-            if (scenarioId) void handleRunNow();
-            else onTest();
-          }}
+          onClick={handleRunClick}
           disabled={runOnceDisabled}
+          aria-disabled={!!validationError}
+          title={validationError ?? undefined}
           aria-label="Run once"
-          className="min-w-28 justify-center"
+          className={cn(
+            "min-w-28 justify-center",
+            validationError &&
+              "border-amber-400 text-amber-700 dark:border-amber-500/60 dark:text-amber-400",
+          )}
         >
           {runOnceDisabled ? (
             <>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { InfoIcon } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "~/trpc/react";
 import { cn } from "~/lib/utils";
 import { getModule } from "~/lib/modules";
@@ -56,6 +57,8 @@ export function defaultConfigFor(moduleType: ModuleType): Record<string, unknown
       return { title: "", name: "", lastName: "", phone: "", email: "", sourceId: "", comments: "" };
     case "bitrix.update_lead":
       return { leadId: "", title: "", statusId: "", comments: "" };
+    case "bitrix.create_deal":
+      return { portalId: "", title: "", categoryId: "", stageId: "" };
     default:
       // Phase 3 module config defaults are populated by their individual
       // config form components in Stage 1'. Empty object is a safe baseline.
@@ -174,7 +177,9 @@ export function ScenarioBuilder({
     ];
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [name, setName] = React.useState(initialName ?? "Untitled scenario");
+  const [name, setName] = React.useState(
+    initialName?.trim() ? initialName : "Untitled scenario",
+  );
   const [enabled, setEnabled] = React.useState(false);
   const [steps, setSteps] = React.useState<DraftStep[]>(startingSteps);
 
@@ -357,9 +362,13 @@ export function ScenarioBuilder({
     setShowErrors(true);
     if (missingFieldsTooltip) return;
     setSaveError(null);
+    // Guard against an empty name (e.g. "Start from scratch" seeds it blank) —
+    // the create mutation requires min(1). Fall back to a sensible default.
+    const safeName = name.trim() || "Untitled scenario";
+    if (safeName !== name) setName(safeName);
     try {
       const result = await createMutation.mutateAsync({
-        name,
+        name: safeName,
         enabled,
         folderId: initialFolderId,
         steps: steps.map((s) => ({
@@ -376,14 +385,24 @@ export function ScenarioBuilder({
   }
 
   async function handleTest() {
+    // Block test runs on incomplete scenarios — reveal field errors instead.
+    if (missingFieldsTooltip) {
+      setShowErrors(true);
+      toast.error(missingFieldsTooltip);
+      return;
+    }
     setShowTestPanel(true);
     setTestResults([]);
     try {
       // Use a known scenario id for the mock test run
       const results = await testRunMutation.mutateAsync({ id: "scn_custom_01" });
       setTestResults(results);
-    } catch {
-      setTestResults([]);
+    } catch (err) {
+      setShowTestPanel(false);
+      setShowErrors(true);
+      toast.error(
+        err instanceof Error ? err.message : "Test run failed. Please try again.",
+      );
     }
   }
 
@@ -440,6 +459,8 @@ export function ScenarioBuilder({
         isTesting={isTesting}
         isDirty={isDirty}
         missingFieldsTooltip={showErrors ? missingFieldsTooltip : null}
+        validationError={missingFieldsTooltip}
+        onRevealErrors={() => setShowErrors(true)}
         onNameChange={setName}
         onEnabledToggle={setEnabled}
         onSave={() => void handleSave()}

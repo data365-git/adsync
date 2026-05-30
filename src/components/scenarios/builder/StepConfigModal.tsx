@@ -218,11 +218,21 @@ export function StepConfigModal({
     : {};
   const validationErrors = validateStepConfig(step.moduleType, step.config);
   const isTriggerStep = step.position === 1;
+  // Any step can be tested individually — testRunStep runs the chain from
+  // step 1 up to this one and returns this step's output. Triggers included:
+  // e.g. a Watch-Sheets trigger reads the tab live (read-only, no side effects)
+  // so you can confirm it actually pulls rows.
   const testDisabled =
-    isTriggerStep ||
     !scenarioId ||
     Object.keys(validationErrors).length > 0 ||
     testStepMutation.isPending;
+  // Visible, human-readable reason the test button is unavailable (order
+  // matters — most specific blocker first).
+  const testDisabledReason = !scenarioId
+    ? "Save the scenario first, then you can test individual steps."
+    : Object.keys(validationErrors).length > 0
+      ? "Fill in the required fields above to test this step."
+      : null;
   const isBitrixStep = step.moduleType.startsWith("bitrix.");
   const stepId = step.id;
   function handleTestStep() {
@@ -398,7 +408,12 @@ export function StepConfigModal({
 
         {/* Footer — Done closes the modal. Autosave persists the config in the background. */}
         <div className="border-border bg-muted/30 flex items-center justify-between gap-3 border-t px-6 py-3 text-xs text-muted-foreground">
-          <span>Changes are saved automatically.</span>
+          <span>
+            {testDisabledReason ??
+              (scenarioId
+                ? "Changes are saved automatically."
+                : "Save the scenario to keep your changes.")}
+          </span>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -406,13 +421,7 @@ export function StepConfigModal({
               variant="outline"
               disabled={testDisabled}
               onClick={handleTestStep}
-              title={
-                !scenarioId
-                  ? "Save the scenario before testing a step."
-                  : isTriggerStep
-                    ? "Use Run once to test trigger steps."
-                    : undefined
-              }
+              title={testDisabledReason ?? undefined}
             >
               {testStepMutation.isPending ? "Testing..." : "Test this step"}
             </Button>

@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { FieldMapper } from "./FieldMapper";
+import { BitrixPortalSelector } from "./BitrixPortalSelector";
 
 interface BitrixCreateLeadConfigProps {
   config: Record<string, unknown>;
@@ -34,9 +35,17 @@ export function BitrixCreateLeadConfig({
   const email = typeof config.email === "string" ? config.email : "";
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
   const comments = typeof config.comments === "string" ? config.comments : "";
+  const portalId = typeof config.portalId === "string" ? config.portalId : "";
 
   return (
     <div className="space-y-4">
+      <BitrixPortalSelector
+        value={portalId}
+        onChange={(value) => onChange({ ...config, portalId: value })}
+        error={errors?.portalId}
+        id="bitrix-lead-portal"
+      />
+
       <FieldMapper
         label="Lead title"
         value={title}
@@ -54,7 +63,7 @@ export function BitrixCreateLeadConfig({
           value={name}
           onChange={(value) => onChange({ ...config, name: value })}
           upstreamColumns={prevStepOutputColumns}
-        panelVisible={panelVisible}
+          panelVisible={panelVisible}
           placeholder="Alice"
           required
           error={errors?.name}
@@ -64,7 +73,7 @@ export function BitrixCreateLeadConfig({
           value={lastName}
           onChange={(value) => onChange({ ...config, lastName: value })}
           upstreamColumns={prevStepOutputColumns}
-        panelVisible={panelVisible}
+          panelVisible={panelVisible}
           placeholder="Smith"
         />
       </div>
@@ -75,7 +84,7 @@ export function BitrixCreateLeadConfig({
           value={phone}
           onChange={(value) => onChange({ ...config, phone: value })}
           upstreamColumns={prevStepOutputColumns}
-        panelVisible={panelVisible}
+          panelVisible={panelVisible}
           placeholder="+1 555 000 0000"
         />
         <FieldMapper
@@ -83,7 +92,7 @@ export function BitrixCreateLeadConfig({
           value={email}
           onChange={(value) => onChange({ ...config, email: value })}
           upstreamColumns={prevStepOutputColumns}
-        panelVisible={panelVisible}
+          panelVisible={panelVisible}
           placeholder="alice@example.com"
         />
       </div>

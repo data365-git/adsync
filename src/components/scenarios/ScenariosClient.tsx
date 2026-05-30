@@ -214,6 +214,11 @@ export function ScenariosClient({
       toast.success(
         `${res.count} scenario${res.count === 1 ? "" : "s"} updated`,
       );
+      if (res.skipped > 0) {
+        toast.warning(
+          `${res.skipped} skipped — finish their required fields before enabling.`,
+        );
+      }
       void utils.scenarios.list.invalidate();
       clearSelection();
     },

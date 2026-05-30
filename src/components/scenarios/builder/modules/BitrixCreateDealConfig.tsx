@@ -3,6 +3,15 @@
 import * as React from "react";
 import { Label } from "~/components/ui/label";
 import { Input } from "~/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { api } from "~/trpc/react";
+import { BitrixPortalSelector } from "./BitrixPortalSelector";
 
 interface BitrixCreateDealConfigProps {
   config: Record<string, unknown>;
@@ -15,102 +24,140 @@ export function BitrixCreateDealConfig({
   onChange,
   errors,
 }: BitrixCreateDealConfigProps) {
+  const portalId = typeof config.portalId === "string" ? config.portalId : "";
   const title = typeof config.title === "string" ? config.title : "";
   const categoryId = typeof config.categoryId === "string" ? config.categoryId : "";
   const stageId = typeof config.stageId === "string" ? config.stageId : "";
-  const opportunity = typeof config.opportunity === "number" ? config.opportunity : "";
+  const opportunity =
+    typeof config.opportunity === "number" ? config.opportunity : "";
   const currency = typeof config.currency === "string" ? config.currency : "";
-  const contactId = typeof config.contactId === "string" ? config.contactId : "";
+
+  const categoriesQ = api.connections.listBitrixDealCategories.useQuery(
+    { portalId },
+    { enabled: portalId.length > 0, staleTime: 60_000 },
+  );
+  const stagesQ = api.connections.listBitrixDealStages.useQuery(
+    { portalId, categoryId },
+    { enabled: portalId.length > 0 && categoryId.length > 0, staleTime: 60_000 },
+  );
 
   return (
     <div className="space-y-4">
-      {/* Title — full width */}
+      <BitrixPortalSelector
+        value={portalId}
+        onChange={(v) =>
+          onChange({ ...config, portalId: v, categoryId: "", stageId: "" })
+        }
+        error={errors?.portalId}
+        id="bitrix-deal-portal"
+      />
+
+      {/* Title */}
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-deal-title">
           Deal title
           <span className="ml-1 text-destructive" aria-hidden="true">*</span>
         </Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Title for the new deal
-        </p>
         <Input
           id="bitrix-deal-title"
           type="text"
-          placeholder="Enterprise deal — Acme Corp"
+          placeholder="Lead from {{name}}"
           value={title}
           onChange={(e) => onChange({ ...config, title: e.target.value })}
-          aria-required="true"
           aria-invalid={!!errors?.title}
         />
         {errors?.title && (
-          <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
-            <span aria-hidden="true">&#x26A0;</span>
+          <p role="alert" className="text-xs text-destructive">
             {errors.title}
           </p>
         )}
       </div>
 
-      {/* Pipeline ID + Stage ID in 2-column grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Pipeline + Stage — pulled live from the selected portal */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-deal-category">
-            Pipeline ID
+            Pipeline
             <span className="ml-1 text-destructive" aria-hidden="true">*</span>
           </Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Bitrix24 pipeline (category) ID — found in CRM settings
-          </p>
-          <Input
-            id="bitrix-deal-category"
-            type="text"
-            placeholder="1"
+          <Select
             value={categoryId}
-            onChange={(e) => onChange({ ...config, categoryId: e.target.value })}
-            aria-required="true"
-            aria-invalid={!!errors?.categoryId}
-          />
+            disabled={!portalId || categoriesQ.isLoading}
+            onValueChange={(v) => {
+              if (v) onChange({ ...config, categoryId: v, stageId: "" });
+            }}
+          >
+            <SelectTrigger id="bitrix-deal-category" className="w-full" aria-invalid={!!errors?.categoryId}>
+              <SelectValue
+                placeholder={
+                  !portalId
+                    ? "Pick a portal first"
+                    : categoriesQ.isLoading
+                      ? "Loading…"
+                      : "Select pipeline"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {categoriesQ.data?.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors?.categoryId && (
-            <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
-              <span aria-hidden="true">&#x26A0;</span>
+            <p role="alert" className="text-xs text-destructive">
               {errors.categoryId}
             </p>
           )}
         </div>
+
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-deal-stage">
-            Stage ID
+            Stage
             <span className="ml-1 text-destructive" aria-hidden="true">*</span>
           </Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Stage within the pipeline (e.g. &quot;C1:NEW&quot;)
-          </p>
-          <Input
-            id="bitrix-deal-stage"
-            type="text"
-            placeholder="C1:NEW"
+          <Select
             value={stageId}
-            onChange={(e) => onChange({ ...config, stageId: e.target.value })}
-            aria-required="true"
-            aria-invalid={!!errors?.stageId}
-          />
+            disabled={!categoryId || stagesQ.isLoading}
+            onValueChange={(v) => {
+              if (v) onChange({ ...config, stageId: v });
+            }}
+          >
+            <SelectTrigger id="bitrix-deal-stage" className="w-full" aria-invalid={!!errors?.stageId}>
+              <SelectValue
+                placeholder={
+                  !categoryId
+                    ? "Pick a pipeline first"
+                    : stagesQ.isLoading
+                      ? "Loading…"
+                      : "Select stage"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {stagesQ.data?.map((s) => (
+                <SelectItem key={s.statusId} value={s.statusId}>
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {errors?.stageId && (
-            <p role="alert" aria-live="polite" className="flex items-center gap-1.5 text-xs text-destructive">
-              <span aria-hidden="true">&#x26A0;</span>
+            <p role="alert" className="text-xs text-destructive">
               {errors.stageId}
             </p>
           )}
         </div>
       </div>
 
-      {/* Deal amount + Currency in 2-column grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Amount + currency (optional) */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="bitrix-deal-opportunity">Deal amount</Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Monetary value of the deal
-          </p>
+          <Label htmlFor="bitrix-deal-amount">Deal amount</Label>
           <Input
-            id="bitrix-deal-opportunity"
+            id="bitrix-deal-amount"
             type="number"
             min={0}
             step="0.01"
@@ -121,40 +168,26 @@ export function BitrixCreateDealConfig({
               if (!isNaN(val)) {
                 onChange({ ...config, opportunity: val });
               } else {
-                onChange(Object.fromEntries(Object.entries(config).filter(([k]) => k !== "opportunity")));
+                onChange(
+                  Object.fromEntries(
+                    Object.entries(config).filter(([k]) => k !== "opportunity"),
+                  ),
+                );
               }
             }}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bitrix-deal-currency">Currency</Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            ISO 4217 code (e.g. &quot;USD&quot;). Defaults to account currency.
-          </p>
           <Input
             id="bitrix-deal-currency"
             type="text"
-            placeholder="USD"
             maxLength={3}
+            placeholder="USD"
             value={currency}
             onChange={(e) => onChange({ ...config, currency: e.target.value })}
           />
         </div>
-      </div>
-
-      {/* Contact ID — full width */}
-      <div className="space-y-1.5">
-        <Label htmlFor="bitrix-deal-contact">Contact ID</Label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Optional — link to existing Bitrix24 contact by ID
-        </p>
-        <Input
-          id="bitrix-deal-contact"
-          type="text"
-          placeholder="contact_001"
-          value={contactId}
-          onChange={(e) => onChange({ ...config, contactId: e.target.value })}
-        />
       </div>
     </div>
   );

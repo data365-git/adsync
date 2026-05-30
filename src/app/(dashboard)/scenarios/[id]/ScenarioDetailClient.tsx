@@ -141,6 +141,8 @@ function defaultConfigFor(moduleType: ModuleType): Record<string, unknown> {
       return { title: "", name: "", lastName: "", phone: "", email: "", sourceId: "", comments: "" };
     case "bitrix.update_lead":
       return { leadId: "", title: "", statusId: "", comments: "" };
+    case "bitrix.create_deal":
+      return { portalId: "", title: "", categoryId: "", stageId: "" };
     default:
       // Phase 3 module config defaults are populated by their individual
       // config form components in Stage 1'.
@@ -445,13 +447,23 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
   }, [isDirty, missingFieldsTooltip, name, enabled, steps]);
 
   async function handleTest() {
+    // Block test runs on incomplete scenarios — reveal field errors instead.
+    if (missingFieldsTooltip) {
+      setShowErrors(true);
+      toast.error(missingFieldsTooltip);
+      return;
+    }
     setShowTestPanel(true);
     setTestResults([]);
     try {
       const results = await testRunMutation.mutateAsync({ id: scenario.id });
       setTestResults(results);
-    } catch {
-      setTestResults([]);
+    } catch (err) {
+      setShowTestPanel(false);
+      setShowErrors(true);
+      toast.error(
+        err instanceof Error ? err.message : "Test run failed. Please try again.",
+      );
     }
   }
 
@@ -607,6 +619,8 @@ function ScenarioBuilderWithTabs({ scenario, scenarioRuns }: ScenarioBuilderWith
         isTesting={isTesting}
         isDirty={isDirty}
         missingFieldsTooltip={showErrors ? missingFieldsTooltip : null}
+        validationError={missingFieldsTooltip}
+        onRevealErrors={() => setShowErrors(true)}
         onNameChange={setName}
         onEnabledToggle={setEnabled}
         onSave={() => void handleSave()}

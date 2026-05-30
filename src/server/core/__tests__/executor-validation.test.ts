@@ -112,7 +112,8 @@ describe("executeRun validation and logs", () => {
   it("marks invalid config FAILED with a descriptive errorMessage", async () => {
     setScenario([
       step(1, "trigger.manual", {}),
-      step(2, "bitrix.create_lead", { name: "Alice", sourceId: "WEB" }),
+      // portalId present, title intentionally missing — verifies title is validated
+      step(2, "bitrix.create_lead", { portalId: "portal_abc", name: "Alice", sourceId: "WEB" }),
     ]);
     const executor = await loadExecutor();
 
@@ -146,10 +147,33 @@ describe("executeRun validation and logs", () => {
     expect(skippedLog?.meta).toMatchObject({ rowCount: 0 });
   });
 
+  it("does not fail a configured action step that has 0 upstream rows", async () => {
+    // Bitrix step IS configured (portalId + title literal, name token, source) but the
+    // upstream produced no rows — the token resolves to "" against an empty
+    // row. This must NOT be treated as a missing-field failure; the action
+    // skips gracefully. Regression for the watch-sheets → create-lead case
+    // where the sheet has no new rows.
+    setScenario([
+      step(1, "sheets.find_rows", { spreadsheetId: "sheet", tabName: "Sheet1" }),
+      step(2, "bitrix.create_lead", {
+        portalId: "portal_abc",
+        title: "Test",
+        name: "{{impressions}}",
+        sourceId: "EMAIL",
+      }),
+    ]);
+    const executor = await loadExecutor();
+
+    await executor.executeRun("scenario_test", "MANUAL", "user_test");
+
+    expect(state.runUpdates.at(-1)).toMatchObject({ status: "SUCCESS" });
+  });
+
   it("adds unknown-token mapping warnings to the run log", async () => {
     setScenario([
       step(1, "trigger.webhook", {}),
       step(2, "bitrix.create_lead", {
+        portalId: "portal_abc",
         title: "Lead from {{foo}}",
         name: "Alice",
         sourceId: "WEB",

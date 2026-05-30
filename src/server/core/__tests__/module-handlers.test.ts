@@ -27,7 +27,6 @@ describe("HANDLERS routing — deferred modules", () => {
     "sheets.get_row",
     "sheets.create_tab",
     "bitrix.find_leads",
-    "bitrix.create_deal",
     "bitrix.update_deal",
   ];
 
@@ -476,8 +475,12 @@ describe("bitrixCreateLeadHandler", () => {
       call: vi.fn(),
       batch: vi.fn(),
       createLead: createLeadSpy,
-      getLeadUrl: vi.fn(() => "https://example.bitrix24.com/crm/lead/details/4242/"),
+      getLeadUrl: vi.fn(() => null),
       updateLead: vi.fn(),
+    }));
+    vi.doMock("~/integrations/bitrix/oauth", () => ({
+      getPortalAuth: vi.fn(),
+      getPortalOrigin: vi.fn(async () => "https://example.bitrix24.com"),
     }));
 
     const mod = await import("../module-handlers");
@@ -487,6 +490,7 @@ describe("bitrixCreateLeadHandler", () => {
       id: "step_create",
       moduleType: "bitrix.create_lead",
       config: {
+        portalId: "portal_abc",
         title: "Website inquiry",
         name: "Alice",
         lastName: "Smith",
@@ -525,17 +529,16 @@ describe("bitrixCreateLeadHandler", () => {
         comments: "from contact form",
       },
       "u",
+      { portalId: "portal_abc" },
     );
     expect(calls.length).toBe(1);
   });
 
-  it("propagates BitrixError from createLead", async () => {
+  it("throws MISSING_PORTAL_ID when no portalId is configured", async () => {
     vi.doMock("~/server/bitrix24/client", () => ({
       call: vi.fn(),
       batch: vi.fn(),
-      createLead: vi.fn(async () => {
-        throw new Error("BitrixError: INVALID_INPUT");
-      }),
+      createLead: vi.fn(),
       getLeadUrl: vi.fn(),
       updateLead: vi.fn(),
     }));
@@ -546,7 +549,42 @@ describe("bitrixCreateLeadHandler", () => {
     const fakeStep = {
       id: "step_create",
       moduleType: "bitrix.create_lead",
+      config: { title: "X", name: "Y", sourceId: "WEB" },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/MISSING_PORTAL_ID/);
+  });
+
+  it("propagates BitrixError from createLead", async () => {
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(async () => {
+        throw new Error("BitrixError: INVALID_INPUT");
+      }),
+      getLeadUrl: vi.fn(() => null),
+      updateLead: vi.fn(),
+    }));
+    vi.doMock("~/integrations/bitrix/oauth", () => ({
+      getPortalAuth: vi.fn(),
+      getPortalOrigin: vi.fn(async () => null),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.create_lead");
+
+    const fakeStep = {
+      id: "step_create",
+      moduleType: "bitrix.create_lead",
       config: {
+        portalId: "portal_abc",
         title: "X",
         name: "Y",
         sourceId: "BOGUS",
@@ -586,6 +624,7 @@ describe("bitrixUpdateLeadHandler", () => {
       id: "step_upd_lead",
       moduleType: "bitrix.update_lead",
       config: {
+        portalId: "portal_abc",
         leadId: "4242",
         title: "Updated title",
         statusId: "IN_PROCESS",
@@ -614,7 +653,36 @@ describe("bitrixUpdateLeadHandler", () => {
         comments: "follow-up scheduled",
       },
       "u",
+      { portalId: "portal_abc" },
     );
+  });
+
+  it("throws MISSING_PORTAL_ID when no portalId is configured", async () => {
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: vi.fn(),
+      getLeadUrl: vi.fn(),
+      updateLead: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.update_lead");
+
+    const fakeStep = {
+      id: "step_upd_lead",
+      moduleType: "bitrix.update_lead",
+      config: { leadId: "4242", title: "X" },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    await expect(handler(fakeStep, fakeCtx, "u")).rejects.toThrow(/MISSING_PORTAL_ID/);
   });
 
   it("propagates BitrixError from updateLead", async () => {
@@ -634,7 +702,7 @@ describe("bitrixUpdateLeadHandler", () => {
     const fakeStep = {
       id: "step_upd_lead",
       moduleType: "bitrix.update_lead",
-      config: { leadId: "4242", title: "X" },
+      config: { portalId: "portal_abc", leadId: "4242", title: "X" },
       position: 1,
     } as unknown as Parameters<typeof handler>[0];
 

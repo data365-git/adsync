@@ -19,6 +19,11 @@ vi.mock("~/server/db", () => ({
       update: vi.fn(),
       updateMany: vi.fn(),
     },
+    bitrixPortal: {
+      findFirst: vi.fn(async () => null),
+      findUnique: vi.fn(async () => null),
+      findMany: vi.fn(async () => []),
+    },
   },
 }));
 

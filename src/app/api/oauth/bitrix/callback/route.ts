@@ -1,14 +1,22 @@
-// MOCK callback — Phase 4 swaps this for the real Bitrix24 token exchange.
-// Simulates the OAuth dance: upserts an OAuthConnection with an encrypted
-// placeholder token and a fixed mock email + externalId.
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { auth } from "~/server/auth";
-import { db } from "~/server/db";
-import { encryptToken } from "~/lib/crypto";
-import { ConnectionStatus, Provider } from "@prisma/client";
+import { exchangeCode } from "~/integrations/bitrix/oauth";
 
 export const runtime = "nodejs";
 
+/** Where to send the user after connecting — the page they started from, else /connections. */
+async function resolveReturnTo(): Promise<string> {
+  const jar = await cookies();
+  const v = jar.get("bitrix_oauth_return")?.value;
+  return v?.startsWith("/") ? v : "/connections";
+}
+
+/**
+ * Bitrix24 OAuth callback. Exchanges the authorization code for tokens and
+ * stores the portal (domain + member_id + encrypted tokens). The portal
+ * identity comes from the token response, so one app handles any portal.
+ */
 export async function GET(req: Request) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -19,50 +27,32 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-
-  if (!code?.startsWith("mock-bitrix-")) {
+  if (!code) {
     return NextResponse.redirect(
-      new URL("/connections?error=bitrix_invalid_code", process.env.NEXTAUTH_URL ?? req.url),
+      new URL(
+        "/connections?error=bitrix_invalid_code",
+        process.env.NEXTAUTH_URL ?? req.url,
+      ),
     );
   }
 
+  const base = process.env.NEXTAUTH_URL ?? req.url;
+  const returnTo = await resolveReturnTo();
+
   try {
-    const encryptedToken = encryptToken("MOCK_BITRIX_TOKEN_FROM_PHASE_3_UI");
-    const expiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000); // 90 days
-
-    await db.oAuthConnection.upsert({
-      where: {
-        userId_provider: {
-          userId: session.user.id,
-          provider: Provider.BITRIX24,
-        },
-      },
-      update: {
-        status: ConnectionStatus.CONNECTED,
-        accessToken: encryptedToken,
-        email: "mockuser@bitrix24.example.com",
-        externalId: "mock_bitrix_user_001",
-        expiresAt,
-        updatedAt: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        provider: Provider.BITRIX24,
-        status: ConnectionStatus.CONNECTED,
-        accessToken: encryptedToken,
-        email: "mockuser@bitrix24.example.com",
-        externalId: "mock_bitrix_user_001",
-        expiresAt,
-      },
-    });
-
-    return NextResponse.redirect(
-      new URL("/connections?success=bitrix", process.env.NEXTAUTH_URL ?? req.url),
+    await exchangeCode(code, session.user.id);
+    const sep = returnTo.includes("?") ? "&" : "?";
+    const res = NextResponse.redirect(
+      new URL(`${returnTo}${sep}success=bitrix`, base),
     );
+    res.cookies.delete("bitrix_oauth_return");
+    return res;
   } catch (err) {
-    console.error("[bitrix/callback] upsert failed:", err);
-    return NextResponse.redirect(
-      new URL("/connections?error=bitrix_upsert_failed", process.env.NEXTAUTH_URL ?? req.url),
+    console.error("[bitrix/callback] token exchange failed:", err);
+    const res = NextResponse.redirect(
+      new URL("/connections?error=bitrix_oauth_failed", base),
     );
+    res.cookies.delete("bitrix_oauth_return");
+    return res;
   }
 }

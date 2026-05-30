@@ -13,6 +13,7 @@ import {
 } from "~/server/core/executor";
 import { RunContext } from "~/server/core/run-context";
 import { getHandler } from "~/server/core/module-handlers";
+import { findFirstInvalidStep, fieldLabel } from "~/server/core/validate-config";
 import type { Scenario as MockScenario } from "~/server/mocks/types";
 import type { ScenarioStep } from "@prisma/client";
 
@@ -125,6 +126,23 @@ function isWebhookTrigger(
   steps: Array<{ moduleType: string }> | undefined,
 ): boolean {
   return steps?.[0]?.moduleType === "trigger.webhook";
+}
+
+/**
+ * Throw a BAD_REQUEST if any step is missing a required field. Used to block
+ * running or enabling an incomplete scenario — without this the worker would
+ * pick up an enabled-but-invalid scenario and fail on every tick.
+ */
+function assertScenarioRunnable(
+  steps: Array<{ position: number; moduleType: string; config: unknown }>,
+): void {
+  const invalid = findFirstInvalidStep(steps);
+  if (invalid) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Step ${invalid.position} is missing its ${fieldLabel(invalid.field)}. Fill in every required field before running or enabling this scenario.`,
+    });
+  }
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -269,7 +287,7 @@ export const scenariosRouter = createTRPCRouter({
           webhookSecret: true,
           steps: {
             orderBy: { position: "asc" },
-            select: { moduleType: true },
+            select: { position: true, moduleType: true, config: true },
           },
         },
       });
@@ -278,6 +296,13 @@ export const scenariosRouter = createTRPCRouter({
           code: "NOT_FOUND",
           message: `Scenario ${input.id} not found`,
         });
+      }
+
+      // Block enabling an incomplete scenario. Validate the steps being saved
+      // (or the persisted steps when the payload only flips `enabled`).
+      if (input.data.enabled) {
+        const stepsToCheck = input.data.steps ?? existing.steps;
+        assertScenarioRunnable(stepsToCheck);
       }
 
       const nextWebhookSecret =
@@ -323,12 +348,17 @@ export const scenariosRouter = createTRPCRouter({
       const userId = ctx.userId;
       const existing = await db.scenario.findUnique({
         where: { id: input.id },
+        include: { steps: { orderBy: { position: "asc" } } },
       });
       if (existing?.userId !== userId) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: `Scenario ${input.id} not found`,
         });
+      }
+      // Block enabling an incomplete scenario; always allow disabling.
+      if (input.enabled) {
+        assertScenarioRunnable(existing.steps);
       }
       await db.scenario.update({
         where: { id: input.id },
@@ -343,6 +373,7 @@ export const scenariosRouter = createTRPCRouter({
       const userId = ctx.userId;
       const existing = await db.scenario.findUnique({
         where: { id: input.id },
+        include: { steps: { orderBy: { position: "asc" } } },
       });
       if (existing?.userId !== userId) {
         throw new TRPCError({
@@ -350,6 +381,7 @@ export const scenariosRouter = createTRPCRouter({
           message: `Scenario ${input.id} not found`,
         });
       }
+      assertScenarioRunnable(existing.steps);
       const runId = await executeRun(input.id, "MANUAL", userId);
       // Expose both `id` and `runId` for UI compat:
       // Phase 1 UI calls `run.id`; Phase 2 callers can use `runId`.
@@ -362,6 +394,7 @@ export const scenariosRouter = createTRPCRouter({
       const userId = ctx.userId;
       const existing = await db.scenario.findUnique({
         where: { id: input.id },
+        include: { steps: { orderBy: { position: "asc" } } },
       });
       if (existing?.userId !== userId) {
         throw new TRPCError({
@@ -369,6 +402,7 @@ export const scenariosRouter = createTRPCRouter({
           message: `Scenario ${input.id} not found`,
         });
       }
+      assertScenarioRunnable(existing.steps);
       const runId = await executeRun(input.id, "MANUAL", userId);
       const logs = await db.runLog.findMany({
         where: { runId },
@@ -635,22 +669,43 @@ export const scenariosRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.userId;
 
-      const count = await db.scenario.count({
+      const owned = await db.scenario.findMany({
         where: { id: { in: input.ids }, userId },
+        select: {
+          id: true,
+          steps: {
+            orderBy: { position: "asc" },
+            select: { position: true, moduleType: true, config: true },
+          },
+        },
       });
-      if (count !== input.ids.length) {
+      if (owned.length !== input.ids.length) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "One or more scenarios not found",
         });
       }
 
-      await db.scenario.updateMany({
-        where: { id: { in: input.ids }, userId },
-        data: { enabled: input.enabled },
-      });
+      // When enabling, skip incomplete scenarios so the worker never picks up
+      // one that's guaranteed to fail. Disabling is always allowed.
+      const targetIds = input.enabled
+        ? owned
+            .filter((s) => findFirstInvalidStep(s.steps) === null)
+            .map((s) => s.id)
+        : owned.map((s) => s.id);
 
-      return { success: true as const, count: input.ids.length };
+      if (targetIds.length > 0) {
+        await db.scenario.updateMany({
+          where: { id: { in: targetIds }, userId },
+          data: { enabled: input.enabled },
+        });
+      }
+
+      return {
+        success: true as const,
+        count: targetIds.length,
+        skipped: input.ids.length - targetIds.length,
+      };
     }),
 
   /**

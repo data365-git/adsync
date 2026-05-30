@@ -219,6 +219,20 @@ export async function executeRun(
   }
 
   try {
+    // ── 2b. Validate the whole scenario up front ─────────────────────────────
+    // An incomplete step (missing required field) makes the scenario
+    // un-runnable. Fail before executing ANY step — including the trigger — so
+    // we never half-run and fail mid-chain. This gate covers every entry point
+    // that reaches executeRun: manual, re-run, retry, webhook, and the worker.
+    for (const step of scenario.steps) {
+      const upfront = validateStepConfig(step.moduleType, step.config);
+      if (!upfront.ok) {
+        throw new Error(
+          `Step ${step.position} (${step.moduleType}): missing required field '${upfront.field}'`,
+        );
+      }
+    }
+
     // ── 3. Execute steps ────────────────────────────────────────────────────
     for (const step of scenario.steps) {
       if (
@@ -241,11 +255,21 @@ export async function executeRun(
         config: toInputJsonValue(resolvedConfig) as ScenarioStep["config"],
       };
 
-      const validation = validateStepConfig(step.moduleType, resolvedStep.config);
-      if (!validation.ok) {
-        throw new Error(
-          `Step ${step.position} (${step.moduleType}): missing required field '${validation.field}'`,
+      // Validate the RESOLVED config only when there's upstream data to map
+      // from. With 0 upstream rows the row-consuming actions (sheets.*, bitrix.*)
+      // skip gracefully — validating tokens that resolved against an empty row
+      // would be a false "missing required field" failure. Genuinely
+      // unconfigured fields are already caught by the up-front raw-config gate.
+      if (upstreamRows.length > 0) {
+        const validation = validateStepConfig(
+          step.moduleType,
+          resolvedStep.config,
         );
+        if (!validation.ok) {
+          throw new Error(
+            `Step ${step.position} (${step.moduleType}): missing required field '${validation.field}'`,
+          );
+        }
       }
 
       await db.runLog.create({

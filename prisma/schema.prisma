@@ -24,6 +24,7 @@ model User {
   accounts         Account[]
   sessions         Session[]
   oauthConnections OAuthConnection[]
+  bitrixPortals    BitrixPortal[]
   adAccounts       AdAccount[]
   scenarios        Scenario[]
   runs             Run[]
@@ -101,6 +102,30 @@ model OAuthConnection {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, provider])
+}
+
+// A single Bitrix24 portal authorized via OAuth. Unlike OAuthConnection
+// (one row per provider per user), a user can connect MANY Bitrix portals —
+// each portal is a separate Bitrix tenant. Tokens are encrypted at rest with
+// TOKEN_ENC_KEY (AES-GCM), same as OAuthConnection.
+model BitrixPortal {
+  id             String           @id @default(cuid())
+  userId         String
+  memberId       String // Bitrix member_id — stable per portal
+  domain         String // e.g. companyA.bitrix24.com
+  clientEndpoint String // REST base from the token response, e.g. https://companyA.bitrix24.com/rest/
+  accessToken    String           @db.Text
+  refreshToken   String           @db.Text
+  scope          String?
+  status         ConnectionStatus @default(CONNECTED)
+  expiresAt      DateTime?
+  connectedAt    DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, memberId])
+  @@index([userId])
 }
 
 enum Provider {

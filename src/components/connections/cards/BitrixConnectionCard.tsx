@@ -163,6 +163,53 @@ function ActivityLog({
   );
 }
 
+/**
+ * OAuth-connected Bitrix portals (separate from the legacy webhook). Each row
+ * is a portal a scenario's Create-Lead step can target. Lets the user
+ * disconnect a portal. Hidden when none are connected yet.
+ */
+function ConnectedPortals() {
+  const utils = api.useUtils();
+  const { data: portals } = api.connections.listBitrixPortals.useQuery(
+    undefined,
+    { staleTime: 60_000 },
+  );
+  const disconnect = api.connections.disconnectBitrixPortal.useMutation({
+    onSuccess: () => void utils.connections.listBitrixPortals.invalidate(),
+  });
+  if (!portals || portals.length === 0) return null;
+  return (
+    <div className="space-y-1.5 border-t border-slate-200 pt-3">
+      <p className="text-xs font-medium text-slate-700">
+        Connected portals ({portals.length})
+      </p>
+      <ul className="space-y-1">
+        {portals.map((p) => (
+          <li
+            key={p.id}
+            className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs"
+          >
+            <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+              {p.domain}
+              {p.status !== "CONNECTED" ? (
+                <span className="ml-1 text-amber-600">· reconnect</span>
+              ) : null}
+            </span>
+            <button
+              type="button"
+              onClick={() => disconnect.mutate({ id: p.id })}
+              disabled={disconnect.isPending}
+              className="text-slate-500 underline hover:text-slate-900 disabled:opacity-50"
+            >
+              Disconnect
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 const primaryOutlineButtonClass =
   "h-9 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:ring-sky-500/40 focus-visible:ring-offset-2";
 
@@ -249,6 +296,8 @@ export function BitrixConnectionCard({
       </div>
 
       <div className="mt-5 flex flex-1 flex-col gap-4">
+        <ConnectedPortals />
+
         <ScopeChips scopes={scopes} />
 
         <div className="space-y-2">

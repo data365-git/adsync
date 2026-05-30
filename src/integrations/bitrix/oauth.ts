@@ -1,5 +1,5 @@
 import { db } from "~/server/db";
-import { ConnectionStatus } from "@prisma/client";
+import { ConnectionStatus, BitrixConnectionKind } from "@prisma/client";
 import { encryptToken, decryptToken } from "~/lib/crypto";
 import { TokenRefreshError } from "~/integrations/google/oauth";
 
@@ -113,6 +113,67 @@ export async function exchangeCode(
   return { domain };
 }
 
+/**
+ * Connect a Bitrix24 portal via an inbound REST webhook URL the user pastes
+ * (https://<portal>/rest/<userId>/<token>/). No OAuth app required — good for
+ * a small set of users who each generate a webhook in their own portal. The
+ * webhook base is verified live, then stored encrypted as a WEBHOOK portal so
+ * it flows through the same portalId selector + enforcement as OAuth portals.
+ */
+export async function connectWebhook(
+  userId: string,
+  rawUrl: string,
+): Promise<{ domain: string }> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl.trim());
+  } catch {
+    throw new Error("That doesn't look like a valid URL.");
+  }
+  if (url.protocol !== "https:") {
+    throw new Error("Webhook URL must start with https://");
+  }
+  const parts = url.pathname.split("/").filter(Boolean); // ["rest", "<uid>", "<token>"]
+  if (parts[0] !== "rest" || parts.length < 3) {
+    throw new Error(
+      "Not a Bitrix24 inbound webhook URL — expected https://<portal>/rest/<id>/<token>/",
+    );
+  }
+  const host = url.hostname.toLowerCase();
+  const base = `${url.origin}/${parts.slice(0, 3).join("/")}`; // normalized, no trailing slash
+
+  // Verify the webhook is live before persisting (profile is available on any scope).
+  const res = await fetch(`${base}/profile.json`, { method: "POST" }).catch(
+    () => null,
+  );
+  if (!res) {
+    throw new Error("Couldn't reach that webhook — check the URL and your connection.");
+  }
+  const json = (await res.json().catch(() => null)) as
+    | { error?: string; error_description?: string }
+    | null;
+  if (!res.ok || json?.error) {
+    const detail = json?.error_description ?? json?.error ?? `HTTP ${res.status}`;
+    throw new Error(`Bitrix rejected the webhook: ${detail}`);
+  }
+
+  const memberId = `webhook:${host}`;
+  const shared = {
+    domain: host,
+    clientEndpoint: `${url.origin}/rest/`,
+    webhookUrl: encryptToken(base),
+    kind: BitrixConnectionKind.WEBHOOK,
+    status: ConnectionStatus.CONNECTED,
+    expiresAt: null,
+  };
+  await db.bitrixPortal.upsert({
+    where: { userId_memberId: { userId, memberId } },
+    create: { userId, memberId, ...shared },
+    update: shared,
+  });
+  return { domain: host };
+}
+
 /** Portal origin (https://domain) for building deep links — no token needed. */
 export async function getPortalOrigin(portalId: string): Promise<string | null> {
   const portal = await db.bitrixPortal.findUnique({
@@ -129,12 +190,23 @@ export async function getPortalOrigin(portalId: string): Promise<string | null> 
  */
 export async function getPortalAuth(
   portalId: string,
-): Promise<{ accessToken: string; clientEndpoint: string }> {
+): Promise<{ accessToken: string | null; clientEndpoint: string }> {
   const portal = await db.bitrixPortal.findUnique({ where: { id: portalId } });
   if (!portal || portal.status === ConnectionStatus.DISCONNECTED) {
     throw new TokenRefreshError("Bitrix");
   }
 
+  // Webhook portals: the (encrypted) webhook URL is itself the authenticated
+  // REST base — no bearer token, no refresh. `call()` omits the ?auth= param
+  // when accessToken is null, hitting the webhook URL directly.
+  if (portal.kind === BitrixConnectionKind.WEBHOOK) {
+    if (!portal.webhookUrl) throw new TokenRefreshError("Bitrix");
+    return { accessToken: null, clientEndpoint: decryptToken(portal.webhookUrl) };
+  }
+
+  if (!portal.accessToken || !portal.refreshToken) {
+    throw new TokenRefreshError("Bitrix");
+  }
   let accessToken = decryptToken(portal.accessToken);
   let clientEndpoint = portal.clientEndpoint;
 

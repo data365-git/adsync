@@ -6,6 +6,7 @@ import { Provider, ConnectionStatus } from "@prisma/client";
 import { google } from "googleapis";
 
 import { getAuthedClient } from "~/integrations/google/oauth";
+import { connectWebhook } from "~/integrations/bitrix/oauth";
 import { call as bitrixCall } from "~/server/bitrix24/client";
 
 type OAuthConnectionRow = {
@@ -584,6 +585,25 @@ export const connectionsRouter = createTRPCRouter({
       },
     });
   }),
+
+  /**
+   * Connect a Bitrix24 portal via an inbound REST webhook URL (no OAuth app
+   * required). The URL is verified live, then stored as a per-user WEBHOOK
+   * portal that behaves like any other connected portal.
+   */
+  connectBitrixWebhook: authedProcedure
+    .input(z.object({ webhookUrl: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await connectWebhook(ctx.userId, input.webhookUrl);
+      } catch (err) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            err instanceof Error ? err.message : "Failed to connect webhook.",
+        });
+      }
+    }),
 
   /** Disconnect a connected Bitrix24 portal (soft — keeps the row, flips status). */
   disconnectBitrixPortal: authedProcedure

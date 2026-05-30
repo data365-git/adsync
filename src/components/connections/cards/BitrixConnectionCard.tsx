@@ -22,7 +22,9 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { ConnectionStatus } from "~/components/connections/ConnectionStatus";
 import { DisconnectDialog } from "~/components/connections/DisconnectDialog";
+import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
+import { toast } from "sonner";
 
 const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -164,11 +166,11 @@ function ActivityLog({
 }
 
 /**
- * OAuth-connected Bitrix portals (separate from the legacy webhook). Each row
- * is a portal a scenario's Create-Lead step can target. Lets the user
- * disconnect a portal. Hidden when none are connected yet.
+ * Connected Bitrix portals + a "connect via webhook" form. Each portal (OAuth
+ * or webhook-backed) is a target a scenario's Bitrix step can pick. Always
+ * rendered — a user with zero portals still needs the webhook form.
  */
-function ConnectedPortals() {
+function BitrixPortalsSection() {
   const utils = api.useUtils();
   const { data: portals } = api.connections.listBitrixPortals.useQuery(
     undefined,
@@ -177,35 +179,109 @@ function ConnectedPortals() {
   const disconnect = api.connections.disconnectBitrixPortal.useMutation({
     onSuccess: () => void utils.connections.listBitrixPortals.invalidate(),
   });
-  if (!portals || portals.length === 0) return null;
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const connect = api.connections.connectBitrixWebhook.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Connected ${res.domain}`);
+      setWebhookUrl("");
+      setShowForm(false);
+      void utils.connections.listBitrixPortals.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const hasPortals = !!portals && portals.length > 0;
+
   return (
-    <div className="space-y-1.5 border-t border-slate-200 pt-3">
-      <p className="text-xs font-medium text-slate-700">
-        Connected portals ({portals.length})
-      </p>
-      <ul className="space-y-1">
-        {portals.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs"
-          >
-            <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
-              {p.domain}
-              {p.status !== "CONNECTED" ? (
-                <span className="ml-1 text-amber-600">· reconnect</span>
-              ) : null}
-            </span>
-            <button
-              type="button"
-              onClick={() => disconnect.mutate({ id: p.id })}
-              disabled={disconnect.isPending}
-              className="text-slate-500 underline hover:text-slate-900 disabled:opacity-50"
+    <div className="space-y-2 border-t border-slate-200 pt-3">
+      {hasPortals ? (
+        <>
+          <p className="text-xs font-medium text-slate-700">
+            Connected portals ({portals.length})
+          </p>
+          <ul className="space-y-1">
+            {portals.map((p) => (
+              <li
+                key={p.id}
+                className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2.5 py-1.5 text-xs"
+              >
+                <span className="min-w-0 flex-1 truncate font-medium text-slate-700">
+                  {p.domain}
+                  {p.status !== "CONNECTED" ? (
+                    <span className="ml-1 text-amber-600">· reconnect</span>
+                  ) : null}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => disconnect.mutate({ id: p.id })}
+                  disabled={disconnect.isPending}
+                  className="text-slate-500 underline hover:text-slate-900 disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <p className="text-xs text-slate-500">No portals connected yet.</p>
+      )}
+
+      {showForm ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const trimmed = webhookUrl.trim();
+            if (trimmed) connect.mutate({ webhookUrl: trimmed });
+          }}
+          className="space-y-1.5"
+        >
+          <Input
+            type="url"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+            placeholder="https://your-portal.bitrix24.com/rest/1/xxxxxxxx/"
+            aria-label="Bitrix24 inbound webhook URL"
+            className="h-8 text-xs"
+            autoFocus
+          />
+          <p className="text-[11px] text-slate-500">
+            In Bitrix24: Developer resources → Inbound webhook → copy the REST
+            URL (it needs CRM scope).
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              disabled={connect.isPending || !webhookUrl.trim()}
+              className={primaryButtonClass}
             >
-              Disconnect
-            </button>
-          </li>
-        ))}
-      </ul>
+              {connect.isPending ? "Connecting..." : "Connect webhook"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setShowForm(false);
+                setWebhookUrl("");
+              }}
+              className={ghostButtonClass}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="text-xs font-medium text-sky-700 underline underline-offset-2 hover:no-underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-sky-500/40 focus-visible:outline-none"
+        >
+          + Connect a portal via webhook
+        </button>
+      )}
     </div>
   );
 }
@@ -296,7 +372,7 @@ export function BitrixConnectionCard({
       </div>
 
       <div className="mt-5 flex flex-1 flex-col gap-4">
-        <ConnectedPortals />
+        <BitrixPortalsSection />
 
         <ScopeChips scopes={scopes} />
 

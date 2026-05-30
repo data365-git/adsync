@@ -245,10 +245,43 @@ function BitrixPortalsSection() {
             className="h-8 text-xs"
             autoFocus
           />
-          <p className="text-[11px] text-slate-500">
-            In Bitrix24: Developer resources → Inbound webhook → copy the REST
-            URL (it needs CRM scope).
-          </p>
+          <details className="text-[11px] text-slate-500">
+            <summary className="cursor-pointer font-medium text-slate-600 select-none hover:text-slate-900">
+              How do I get this URL?
+            </summary>
+            <ol className="mt-1.5 list-decimal space-y-1 pl-4">
+              <li>
+                In your Bitrix24 portal, open{" "}
+                <span className="font-medium">Developer resources</span> (left
+                menu — sometimes under Sitemap or More). You must be a portal
+                admin.
+              </li>
+              <li>
+                Choose{" "}
+                <span className="font-medium">Other → Inbound webhook</span>.
+              </li>
+              <li>
+                Enable the <span className="font-medium">CRM</span> permission
+                scope.
+              </li>
+              <li>
+                Copy the generated{" "}
+                <span className="font-medium">REST URL</span> (e.g.{" "}
+                <code className="rounded bg-slate-100 px-1">
+                  https://your-portal.bitrix24.com/rest/1/xxxxxxxx/
+                </code>
+                ) and paste it above.
+              </li>
+            </ol>
+            <a
+              href="https://www.bitrix24.com/apps/dev.php"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1.5 inline-flex items-center gap-1 underline hover:text-slate-900"
+            >
+              Bitrix24 developer docs ↗
+            </a>
+          </details>
           <div className="flex gap-2">
             <Button
               type="submit"

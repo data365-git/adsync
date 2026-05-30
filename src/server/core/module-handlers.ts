@@ -220,6 +220,8 @@ type BitrixCreateLeadCfg = {
   email?: string;
   sourceId: string;
   comments?: string;
+  /** Connected Bitrix portal to write to. Absent ⇒ legacy webhook portal. */
+  portalId?: string;
 };
 
 type BitrixUpdateLeadCfg = {
@@ -227,6 +229,18 @@ type BitrixUpdateLeadCfg = {
   title?: string;
   statusId?: string;
   comments?: string;
+  portalId?: string;
+};
+
+type BitrixCreateDealCfg = {
+  title: string;
+  categoryId?: string;
+  stageId?: string;
+  opportunity?: number;
+  currency?: string;
+  contactId?: string;
+  comments?: string;
+  portalId?: string;
 };
 
 const sheetsAppendHandler: Handler = async (step, ctx, userId) => {
@@ -364,6 +378,16 @@ const bitrixCreateLeadHandler: Handler = async (step, ctx, userId) => {
   if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
     return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
   }
+  const portalId =
+    typeof config.portalId === "string" && config.portalId
+      ? config.portalId
+      : undefined;
+  if (!portalId) {
+    throw new Error(
+      "MISSING_PORTAL_ID: bitrix.create_lead requires a connected Bitrix24 portal. " +
+        "Open the step config and select a portal.",
+    );
+  }
   const result = await createLead(
     {
       title: config.title,
@@ -375,10 +399,17 @@ const bitrixCreateLeadHandler: Handler = async (step, ctx, userId) => {
       comments: config.comments,
     },
     userId,
+    portalId ? { portalId } : undefined,
   );
+  let leadUrl = getLeadUrl(result.leadId);
+  if (portalId) {
+    const { getPortalOrigin } = await import("~/integrations/bitrix/oauth");
+    const origin = await getPortalOrigin(portalId);
+    if (origin) leadUrl = `${origin}/crm/lead/details/${result.leadId}/`;
+  }
   const outputRow = {
     leadId: result.leadId,
-    leadUrl: getLeadUrl(result.leadId),
+    leadUrl,
     createdAt: new Date().toISOString(),
   };
   ctx.setOutput(step.position, [outputRow]);
@@ -392,6 +423,16 @@ const bitrixUpdateLeadHandler: Handler = async (step, ctx, userId) => {
   if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
     return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
   }
+  const portalId =
+    typeof config.portalId === "string" && config.portalId
+      ? config.portalId
+      : undefined;
+  if (!portalId) {
+    throw new Error(
+      "MISSING_PORTAL_ID: bitrix.update_lead requires a connected Bitrix24 portal. " +
+        "Open the step config and select a portal.",
+    );
+  }
   const result = await updateLead(
     {
       leadId: config.leadId,
@@ -400,8 +441,54 @@ const bitrixUpdateLeadHandler: Handler = async (step, ctx, userId) => {
       comments: config.comments,
     },
     userId,
+    portalId ? { portalId } : undefined,
   );
   const outputRow = { leadId: result.leadId, updated: result.updated };
+  ctx.setOutput(step.position, [outputRow]);
+  return { rowCount: 1, rows: [outputRow] };
+};
+
+const bitrixCreateDealHandler: Handler = async (step, ctx, userId) => {
+  const { createDeal } = await import("~/server/bitrix24/client");
+  const config = cfg<BitrixCreateDealCfg>(step);
+  const upstreamRows = ctx.getUpstreamRows(step.position);
+  if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
+    return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
+  }
+  const portalId =
+    typeof config.portalId === "string" && config.portalId
+      ? config.portalId
+      : undefined;
+  if (!portalId) {
+    throw new Error(
+      "MISSING_PORTAL_ID: bitrix.create_deal requires a connected Bitrix24 portal. " +
+        "Open the step config and select a portal.",
+    );
+  }
+  const result = await createDeal(
+    {
+      title: config.title,
+      categoryId: config.categoryId,
+      stageId: config.stageId,
+      opportunity: config.opportunity,
+      currency: config.currency,
+      contactId: config.contactId,
+      comments: config.comments,
+    },
+    userId,
+    portalId ? { portalId } : undefined,
+  );
+  let dealUrl: string | null = null;
+  if (portalId) {
+    const { getPortalOrigin } = await import("~/integrations/bitrix/oauth");
+    const origin = await getPortalOrigin(portalId);
+    if (origin) dealUrl = `${origin}/crm/deal/details/${result.dealId}/`;
+  }
+  const outputRow = {
+    dealId: result.dealId,
+    dealUrl,
+    createdAt: new Date().toISOString(),
+  };
   ctx.setOutput(step.position, [outputRow]);
   return { rowCount: 1, rows: [outputRow] };
 };
@@ -429,7 +516,7 @@ const HANDLERS: Record<string, Handler> = {
   "bitrix.create_lead": bitrixCreateLeadHandler,
   "bitrix.update_lead": bitrixUpdateLeadHandler,
   "bitrix.find_leads": notImplementedHandler,
-  "bitrix.create_deal": notImplementedHandler,
+  "bitrix.create_deal": bitrixCreateDealHandler,
   "bitrix.update_deal": notImplementedHandler,
 };
 

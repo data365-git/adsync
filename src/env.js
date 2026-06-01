@@ -28,9 +28,8 @@ export const env = createEnv({
     // 64-character hex = 32-byte AES-256 key. `openssl rand -hex 32`.
     TOKEN_ENC_KEY: z.string().length(64),
 
-    // ── Allowlist (required) ────────────────────────────────────────────────
-    // Comma-separated emails that may sign in. Single-user app: just one.
-    ALLOWLIST_EMAIL: z.string().min(1),
+    // ── Allowlist (unused — open signup) ───────────────────────────────────
+    ALLOWLIST_EMAIL: z.string().optional(),
 
     // ── Google OAuth — Sheets data source (optional, needed to connect) ────
     GOOGLE_OAUTH_SHEETS_CLIENT_ID: z.string().optional(),

@@ -228,6 +228,37 @@ export async function findRows(
 }
 
 /**
+ * Shape a raw `values` grid (header row + data rows) into row objects keyed by
+ * the header row. Each object carries a `row` field (1-indexed sheet row number).
+ *
+ * Columns whose header cell is blank are skipped WITHOUT shifting the columns
+ * after them: every value is read by its own column index, not by a filtered
+ * header index. (The earlier implementation filtered empty headers and then
+ * mapped by the filtered index, so a single blank header cell silently moved
+ * every later column's value under the wrong key.)
+ *
+ * Returns [] when there's no data row (fewer than 2 rows total).
+ */
+export function shapeRowsByHeader(
+  values: string[][],
+): Array<Record<string, unknown>> {
+  if (values.length < 2) return [];
+
+  const headerRow = values[0]!;
+  const dataRows = values.slice(1);
+
+  return dataRows.map((row, idx) => {
+    const obj: Record<string, unknown> = { row: idx + 2 };
+    headerRow.forEach((rawHeader, colIdx) => {
+      const header = (rawHeader ?? "").trim();
+      if (header.length === 0) return; // unnamed column — skip, keep others aligned
+      obj[header] = row[colIdx] ?? "";
+    });
+    return obj;
+  });
+}
+
+/**
  * Reads every data row from a tab and returns them keyed by the header row.
  * Each returned object includes a `row` field (1-indexed sheet row number).
  * Returns [] if the sheet is empty or has only a header row.
@@ -246,18 +277,7 @@ export async function readTabRows(
   });
 
   const values = (res.data.values ?? []) as string[][];
-  if (values.length < 2) return [];
-
-  const headers = values[0]!.map((h) => h.trim()).filter((h) => h.length > 0);
-  const dataRows = values.slice(1);
-
-  return dataRows.map((row, idx) => {
-    const obj: Record<string, unknown> = { row: idx + 2 };
-    headers.forEach((header, hIdx) => {
-      obj[header] = row[hIdx] ?? "";
-    });
-    return obj;
-  });
+  return shapeRowsByHeader(values);
 }
 
 export type RowIdentifier =

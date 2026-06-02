@@ -2,6 +2,51 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
+describe("shapeRowsByHeader", () => {
+  it("keys each data row by the header row plus a 1-indexed `row` field", async () => {
+    const { shapeRowsByHeader } = await import("../sheets-client");
+    const values = [
+      ["name", "phone", "email"],
+      ["Alice", "111", "a@x.com"],
+      ["Bob", "222", "b@x.com"],
+    ];
+    expect(shapeRowsByHeader(values)).toEqual([
+      { row: 2, name: "Alice", phone: "111", email: "a@x.com" },
+      { row: 3, name: "Bob", phone: "222", email: "b@x.com" },
+    ]);
+  });
+
+  it("skips a blank header cell WITHOUT shifting later columns (misalignment fix)", async () => {
+    const { shapeRowsByHeader } = await import("../sheets-client");
+    // The middle column has no header. `email` must still read from column 3,
+    // not from the unnamed middle column.
+    const values = [
+      ["name", "", "email"],
+      ["Alice", "ignored-unnamed", "a@x.com"],
+    ];
+    expect(shapeRowsByHeader(values)).toEqual([
+      { row: 2, name: "Alice", email: "a@x.com" },
+    ]);
+  });
+
+  it("returns [] when there is no data row", async () => {
+    const { shapeRowsByHeader } = await import("../sheets-client");
+    expect(shapeRowsByHeader([])).toEqual([]);
+    expect(shapeRowsByHeader([["name", "email"]])).toEqual([]);
+  });
+
+  it("fills missing trailing cells with empty strings", async () => {
+    const { shapeRowsByHeader } = await import("../sheets-client");
+    const values = [
+      ["name", "phone", "email"],
+      ["Alice"], // phone + email absent in the data row
+    ];
+    expect(shapeRowsByHeader(values)).toEqual([
+      { row: 2, name: "Alice", phone: "", email: "" },
+    ]);
+  });
+});
+
 describe("parseRowIdentifier", () => {
   it("parses a bare numeric string as a row number", async () => {
     const { parseRowIdentifier } = await import("../sheets-client");

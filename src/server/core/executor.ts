@@ -159,7 +159,12 @@ export function buildStepStartLogMeta(
  * lead from the first row. (Sheets handlers achieve the same via their nested
  * `mappedFields` object, which the executor already passes through untouched.)
  */
-const SELF_INTERPOLATING_MODULES = new Set<string>(["bitrix.create_lead"]);
+const SELF_INTERPOLATING_MODULES = new Set<string>([
+  "bitrix.create_lead",
+  "bitrix.update_lead",
+  "bitrix.delete_lead",
+  "bitrix.create_deal",
+]);
 
 export async function executeRun(
   scenarioId: string,

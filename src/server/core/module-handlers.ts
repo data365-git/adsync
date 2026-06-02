@@ -518,19 +518,34 @@ const bitrixUpdateLeadHandler: Handler = async (step, ctx, userId) => {
         "Open the step config and select a portal.",
     );
   }
-  const result = await updateLead(
-    {
-      leadId: config.leadId,
-      title: config.title,
-      statusId: config.statusId,
-      comments: config.comments,
-    },
-    userId,
-    portalId ? { portalId } : undefined,
-  );
-  const outputRow = { leadId: result.leadId, updated: result.updated };
-  ctx.setOutput(step.position, [outputRow]);
-  return { rowCount: 1, rows: [outputRow] };
+  const sourceRows: Array<Record<string, unknown>> =
+    upstreamRows.length > 0
+      ? upstreamRows.map((r) =>
+          typeof r === "object" && r !== null ? (r as Record<string, unknown>) : {},
+        )
+      : [{}];
+
+  const interp = (expr: unknown, row: Record<string, unknown>): string => {
+    if (typeof expr !== "string" || expr === "") return "";
+    return interpolateWithWarnings(expr, row).value;
+  };
+
+  const outputRows: Array<Record<string, unknown>> = [];
+  for (const row of sourceRows) {
+    const input: { leadId: string; title?: string; statusId?: string; comments?: string } = {
+      leadId: interp(config.leadId, row),
+    };
+    const title = interp(config.title, row);
+    const statusId = interp(config.statusId, row);
+    const comments = interp(config.comments, row);
+    if (title) input.title = title;
+    if (statusId) input.statusId = statusId;
+    if (comments) input.comments = comments;
+    const result = await updateLead(input, userId, { portalId });
+    outputRows.push({ leadId: result.leadId, updated: result.updated });
+  }
+  ctx.setOutput(step.position, outputRows);
+  return { rowCount: outputRows.length, rows: outputRows };
 };
 
 const bitrixDeleteLeadHandler: Handler = async (step, ctx, userId) => {
@@ -550,12 +565,24 @@ const bitrixDeleteLeadHandler: Handler = async (step, ctx, userId) => {
         "Open the step config and select a portal.",
     );
   }
-  const result = await deleteLead({ leadId: config.leadId }, userId, {
-    portalId,
-  });
-  const outputRow = { leadId: result.leadId, deleted: result.deleted };
-  ctx.setOutput(step.position, [outputRow]);
-  return { rowCount: 1, rows: [outputRow] };
+  const sourceRows: Array<Record<string, unknown>> =
+    upstreamRows.length > 0
+      ? upstreamRows.map((r) =>
+          typeof r === "object" && r !== null ? (r as Record<string, unknown>) : {},
+        )
+      : [{}];
+
+  const outputRows: Array<Record<string, unknown>> = [];
+  for (const row of sourceRows) {
+    const leadId =
+      typeof config.leadId === "string" && config.leadId
+        ? interpolateWithWarnings(config.leadId, row).value
+        : "";
+    const result = await deleteLead({ leadId }, userId, { portalId });
+    outputRows.push({ leadId: result.leadId, deleted: result.deleted });
+  }
+  ctx.setOutput(step.position, outputRows);
+  return { rowCount: outputRows.length, rows: outputRows };
 };
 
 const bitrixCreateDealHandler: Handler = async (step, ctx, userId) => {
@@ -575,32 +602,41 @@ const bitrixCreateDealHandler: Handler = async (step, ctx, userId) => {
         "Open the step config and select a portal.",
     );
   }
-  const result = await createDeal(
-    {
-      title: config.title,
-      categoryId: config.categoryId,
-      stageId: config.stageId,
-      opportunity: config.opportunity,
-      currency: config.currency,
-      contactId: config.contactId,
-      comments: config.comments,
-    },
-    userId,
-    portalId ? { portalId } : undefined,
-  );
-  let dealUrl: string | null = null;
-  if (portalId) {
-    const { getPortalOrigin } = await import("~/integrations/bitrix/oauth");
-    const origin = await getPortalOrigin(portalId);
-    if (origin) dealUrl = `${origin}/crm/deal/details/${result.dealId}/`;
-  }
-  const outputRow = {
-    dealId: result.dealId,
-    dealUrl,
-    createdAt: new Date().toISOString(),
+  const sourceRows: Array<Record<string, unknown>> =
+    upstreamRows.length > 0
+      ? upstreamRows.map((r) =>
+          typeof r === "object" && r !== null ? (r as Record<string, unknown>) : {},
+        )
+      : [{}];
+
+  const { getPortalOrigin } = await import("~/integrations/bitrix/oauth");
+  const origin = await getPortalOrigin(portalId);
+
+  const interp = (expr: unknown, row: Record<string, unknown>): string => {
+    if (typeof expr !== "string" || expr === "") return "";
+    return interpolateWithWarnings(expr, row).value;
   };
-  ctx.setOutput(step.position, [outputRow]);
-  return { rowCount: 1, rows: [outputRow] };
+
+  const outputRows: Array<Record<string, unknown>> = [];
+  for (const row of sourceRows) {
+    const result = await createDeal(
+      {
+        title: interp(config.title, row),
+        categoryId: interp(config.categoryId, row) || undefined,
+        stageId: interp(config.stageId, row) || undefined,
+        opportunity: config.opportunity,
+        currency: interp(config.currency, row) || undefined,
+        contactId: interp(config.contactId, row) || undefined,
+        comments: interp(config.comments, row) || undefined,
+      },
+      userId,
+      { portalId },
+    );
+    const dealUrl = origin ? `${origin}/crm/deal/details/${result.dealId}/` : null;
+    outputRows.push({ dealId: result.dealId, dealUrl, createdAt: new Date().toISOString() });
+  }
+  ctx.setOutput(step.position, outputRows);
+  return { rowCount: outputRows.length, rows: outputRows };
 };
 
 // ── Registry ──────────────────────────────────────────────────────────────────

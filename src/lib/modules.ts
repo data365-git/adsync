@@ -592,6 +592,13 @@ const PHASE_3_MODULES: ModuleDefinition[] = [
         help: "Contact email address",
       },
       {
+        key: "address",
+        label: "Address",
+        type: "text",
+        required: false,
+        help: "Street address (maps to the Bitrix24 lead ADDRESS field)",
+      },
+      {
         key: "sourceId",
         label: "Source",
         type: "select",

@@ -17,6 +17,7 @@
  */
 
 import type { ScenarioStep } from "@prisma/client";
+import type { CreateLeadInput } from "~/server/bitrix24/client";
 import type { RunContext } from "./run-context";
 import { interpolateWithWarnings } from "./template";
 
@@ -219,11 +220,17 @@ export function buildRowFromMappingWithWarnings(
 }
 
 type BitrixCreateLeadCfg = {
+  /**
+   * Each field may be a literal or a `{{column}}` token. The executor leaves
+   * bitrix.create_lead config RAW (see SELF_INTERPOLATING_MODULES) so this
+   * handler interpolates every field PER upstream row — one lead per row.
+   */
   title: string;
   name: string;
   lastName?: string;
   phone?: string;
   email?: string;
+  address?: string;
   sourceId: string;
   comments?: string;
   /** Connected Bitrix portal to write to. Absent ⇒ legacy webhook portal. */
@@ -349,10 +356,15 @@ const sheetsGetAllRowsHandler: Handler = async (step, ctx, userId) => {
   const config = cfg<SheetsGetAllRowsCfg>(step);
   const rows = await readTabRows(userId, config.spreadsheetId, config.tabName);
   const limited = config.limit ? rows.slice(0, config.limit) : rows;
-  ctx.setOutput(step.position, limited);
+  // Synthesize a per-row read timestamp. Google Sheets rows carry no creation
+  // time, so this is when adsync read the row — not the lead's true creation
+  // time. Downstream steps can map it like any other column ({{readAt}}).
+  const readAt = new Date().toISOString();
+  const stamped = limited.map((row) => ({ ...row, readAt }));
+  ctx.setOutput(step.position, stamped);
   return {
-    rowCount: limited.length,
-    rows: limited,
+    rowCount: stamped.length,
+    rows: stamped,
     sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
   };
 };
@@ -394,13 +406,52 @@ const sheetsUpdateRowHandler: Handler = async (step, ctx, userId) => {
   };
 };
 
+/**
+ * Build one Bitrix CreateLeadInput from a single upstream row by interpolating
+ * each configured field against that row. Optional fields are omitted when they
+ * resolve to empty, matching the single-lead contract.
+ */
+function buildLeadInput(
+  config: BitrixCreateLeadCfg,
+  row: Record<string, unknown>,
+  warnings: string[],
+): CreateLeadInput {
+  const interp = (expr: unknown): string => {
+    if (typeof expr !== "string" || expr === "") return "";
+    const out = interpolateWithWarnings(expr, row);
+    warnings.push(...out.warnings);
+    return out.value;
+  };
+  const input: CreateLeadInput = {
+    title: interp(config.title),
+    name: interp(config.name),
+    sourceId: interp(config.sourceId),
+  };
+  const lastName = interp(config.lastName);
+  const phone = interp(config.phone);
+  const email = interp(config.email);
+  const address = interp(config.address);
+  const comments = interp(config.comments);
+  if (lastName) input.lastName = lastName;
+  if (phone) input.phone = phone;
+  if (email) input.email = email;
+  if (address) input.address = address;
+  if (comments) input.comments = comments;
+  return input;
+}
+
 const bitrixCreateLeadHandler: Handler = async (step, ctx, userId) => {
   const { createLead, getLeadUrl } = await import("~/server/bitrix24/client");
   const config = cfg<BitrixCreateLeadCfg>(step);
   const upstreamRows = ctx.getUpstreamRows(step.position);
+
+  // An upstream step ran but produced no rows ⇒ nothing to create. (Standalone
+  // create_lead with no upstream step at all still creates one lead from its
+  // literal config — handled by the `[{}]` fallback below.)
   if (ctx.outputs?.has(step.position - 1) && upstreamRows.length === 0) {
     return { rowCount: 0, rows: [], message: "0 upstream rows; skipped" };
   }
+
   const portalId =
     typeof config.portalId === "string" && config.portalId
       ? config.portalId
@@ -411,32 +462,43 @@ const bitrixCreateLeadHandler: Handler = async (step, ctx, userId) => {
         "Open the step config and select a portal.",
     );
   }
-  const result = await createLead(
-    {
-      title: config.title,
-      name: config.name,
-      lastName: config.lastName,
-      phone: config.phone,
-      email: config.email,
-      sourceId: config.sourceId,
-      comments: config.comments,
-    },
-    userId,
-    portalId ? { portalId } : undefined,
-  );
-  let leadUrl = getLeadUrl(result.leadId);
-  if (portalId) {
-    const { getPortalOrigin } = await import("~/integrations/bitrix/oauth");
-    const origin = await getPortalOrigin(portalId);
-    if (origin) leadUrl = `${origin}/crm/lead/details/${result.leadId}/`;
+
+  // One lead per upstream row (bulk). With no upstream rows, fall back to a
+  // single synthetic empty row so a literal-only config still creates one lead.
+  const sourceRows: Array<Record<string, unknown>> =
+    upstreamRows.length > 0
+      ? upstreamRows.map((r) =>
+          typeof r === "object" && r !== null
+            ? (r as Record<string, unknown>)
+            : {},
+        )
+      : [{}];
+
+  // Resolve the portal origin once; reuse it for every lead's URL.
+  const { getPortalOrigin } = await import("~/integrations/bitrix/oauth");
+  const origin = await getPortalOrigin(portalId);
+
+  const warnings: string[] = [];
+  const outputRows: Array<Record<string, unknown>> = [];
+  for (const row of sourceRows) {
+    const input = buildLeadInput(config, row, warnings);
+    const result = await createLead(input, userId, { portalId });
+    const leadUrl = origin
+      ? `${origin}/crm/lead/details/${result.leadId}/`
+      : getLeadUrl(result.leadId);
+    outputRows.push({
+      leadId: result.leadId,
+      leadUrl,
+      createdAt: new Date().toISOString(),
+    });
   }
-  const outputRow = {
-    leadId: result.leadId,
-    leadUrl,
-    createdAt: new Date().toISOString(),
+
+  ctx.setOutput(step.position, outputRows);
+  return {
+    rowCount: outputRows.length,
+    rows: outputRows,
+    warnings: Array.from(new Set(warnings)),
   };
-  ctx.setOutput(step.position, [outputRow]);
-  return { rowCount: 1, rows: [outputRow] };
 };
 
 const bitrixUpdateLeadHandler: Handler = async (step, ctx, userId) => {

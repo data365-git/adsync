@@ -33,6 +33,7 @@ export function BitrixCreateLeadConfig({
   const lastName = typeof config.lastName === "string" ? config.lastName : "";
   const phone = typeof config.phone === "string" ? config.phone : "";
   const email = typeof config.email === "string" ? config.email : "";
+  const address = typeof config.address === "string" ? config.address : "";
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
   const comments = typeof config.comments === "string" ? config.comments : "";
   const portalId = typeof config.portalId === "string" ? config.portalId : "";
@@ -96,6 +97,15 @@ export function BitrixCreateLeadConfig({
           placeholder="alice@example.com"
         />
       </div>
+
+      <FieldMapper
+        label="Address"
+        value={address}
+        onChange={(value) => onChange({ ...config, address: value })}
+        upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
+        placeholder="123 Main St, Springfield"
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-lead-source">

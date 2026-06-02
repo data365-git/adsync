@@ -170,13 +170,16 @@ describe("executeRun validation and logs", () => {
   });
 
   it("adds unknown-token mapping warnings to the run log", async () => {
+    // Exercises the executor's top-level-string resolution warning path. Uses
+    // bitrix.update_lead because it is still executor-resolved; bitrix.create_lead
+    // now self-interpolates per row (SELF_INTERPOLATING_MODULES), so its
+    // unknown-token warnings come from the handler instead of the executor.
     setScenario([
       step(1, "trigger.webhook", {}),
-      step(2, "bitrix.create_lead", {
+      step(2, "bitrix.update_lead", {
         portalId: "portal_abc",
+        leadId: "42",
         title: "Lead from {{foo}}",
-        name: "Alice",
-        sourceId: "WEB",
       }),
     ]);
     const executor = await loadExecutor();
@@ -184,7 +187,7 @@ describe("executeRun validation and logs", () => {
     await executor.executeRun("scenario_test", "MANUAL", "user_test");
 
     const completedLog = state.logs.find(
-      (log) => log.message === "Completed step 2: bitrix.create_lead",
+      (log) => log.message === "Completed step 2: bitrix.update_lead",
     );
     expect(completedLog?.meta).toMatchObject({ warnings: ["foo"] });
   });

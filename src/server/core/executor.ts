@@ -151,6 +151,16 @@ export function buildStepStartLogMeta(
   };
 }
 
+/**
+ * Modules that interpolate their own config PER upstream row instead of relying
+ * on the executor's single (row-0) pass. For these we hand the handler the RAW
+ * config (tokens intact) so it can map every row — that's what makes bulk
+ * actions like `bitrix.create_lead` produce one lead per row rather than one
+ * lead from the first row. (Sheets handlers achieve the same via their nested
+ * `mappedFields` object, which the executor already passes through untouched.)
+ */
+const SELF_INTERPOLATING_MODULES = new Set<string>(["bitrix.create_lead"]);
+
 export async function executeRun(
   scenarioId: string,
   trigger: "MANUAL" | "SCHEDULED",
@@ -248,7 +258,9 @@ export async function executeRun(
         typeof upstreamRows[0] === "object" && upstreamRows[0] !== null
           ? (upstreamRows[0] as Record<string, unknown>)
           : {};
-      const resolved = resolveStepConfigWithWarnings(step.config, upstreamRow0);
+      const resolved = SELF_INTERPOLATING_MODULES.has(step.moduleType)
+        ? { config: step.config, warnings: [] as string[] }
+        : resolveStepConfigWithWarnings(step.config, upstreamRow0);
       const resolvedConfig = resolved.config;
       const resolvedStep: ScenarioStep = {
         ...step,

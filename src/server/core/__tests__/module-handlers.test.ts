@@ -169,7 +169,14 @@ describe("sheetsGetAllRowsHandler", () => {
     vi.resetModules();
   });
 
-  it("reads all rows via readTabRows and sets the context output", async () => {
+  const stripReadAt = (rows: unknown[]) =>
+    rows.map((r) => {
+      const o = { ...(r as Record<string, unknown>) };
+      delete o.readAt;
+      return o;
+    });
+
+  it("reads all rows via readTabRows, stamps readAt, and sets the context output", async () => {
     const fakeRows = [
       { row: 2, id: "1", name: "Alice" },
       { row: 3, id: "2", name: "Bob" },
@@ -202,12 +209,18 @@ describe("sheetsGetAllRowsHandler", () => {
     const result = await handler(fakeStep, fakeCtx, "u");
 
     expect(readTabRowsSpy).toHaveBeenCalledWith("u", "sheet_abc", "Leads");
-    expect(result).toEqual({
-      rowCount: 3,
-      rows: fakeRows,
-      sheetsUrl: "https://docs.google.com/spreadsheets/d/sheet_abc",
-    });
-    expect(calls).toEqual([[2, fakeRows]]);
+    expect(result.rowCount).toBe(3);
+    expect(result.sheetsUrl).toBe(
+      "https://docs.google.com/spreadsheets/d/sheet_abc",
+    );
+    expect(result.rows).toHaveLength(3);
+    // every row carries a synthesized read timestamp...
+    for (const r of result.rows!) {
+      expect(typeof (r as Record<string, unknown>).readAt).toBe("string");
+    }
+    // ...and the underlying sheet data is otherwise unchanged.
+    expect(stripReadAt(result.rows!)).toEqual(fakeRows);
+    expect(calls).toEqual([[2, result.rows]]);
   });
 
   it("slices the result to the configured limit", async () => {
@@ -242,11 +255,11 @@ describe("sheetsGetAllRowsHandler", () => {
     const result = await handler(fakeStep, fakeCtx, "u");
 
     expect(result.rowCount).toBe(2);
-    expect(result.rows).toEqual([
+    expect(stripReadAt(result.rows!)).toEqual([
       { row: 2, id: "1" },
       { row: 3, id: "2" },
     ]);
-    expect(calls).toEqual([[1, [{ row: 2, id: "1" }, { row: 3, id: "2" }]]]);
+    expect(calls).toEqual([[1, result.rows]]);
   });
 
   it("returns rowCount 0 for an empty tab", async () => {
@@ -648,6 +661,111 @@ describe("bitrixCreateLeadHandler", () => {
       { portalId: "portal_abc" },
     );
     expect(calls.length).toBe(1);
+  });
+
+  it("creates one lead per upstream row, mapping each field per row (bulk)", async () => {
+    const created: Array<Record<string, unknown>> = [];
+    const createLeadSpy = vi.fn(async (input: Record<string, unknown>) => {
+      created.push(input);
+      return { leadId: `lead_${created.length}` };
+    });
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: createLeadSpy,
+      getLeadUrl: vi.fn(() => null),
+      updateLead: vi.fn(),
+    }));
+    vi.doMock("~/integrations/bitrix/oauth", () => ({
+      getPortalAuth: vi.fn(),
+      getPortalOrigin: vi.fn(async () => "https://example.bitrix24.com"),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.create_lead");
+
+    const fakeStep = {
+      id: "step_bulk",
+      moduleType: "bitrix.create_lead",
+      config: {
+        portalId: "portal_abc",
+        title: "Lead — {{name}}",
+        name: "{{name}}",
+        phone: "{{phone}}",
+        email: "{{email}}",
+        address: "{{address}}",
+        sourceId: "WEB",
+      },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const upstream = [
+      { name: "Alice", phone: "111", email: "a@x.com", address: "1 St" },
+      { name: "Bob", phone: "222", email: "b@x.com", address: "2 St" },
+      { name: "Carol", phone: "333", email: "c@x.com", address: "3 St" },
+    ];
+
+    const calls: Array<[number, unknown]> = [];
+    const fakeCtx = {
+      setOutput: (pos: number, val: unknown) => calls.push([pos, val]),
+      getUpstreamRows: () => upstream,
+      outputs: new Map<number, unknown[]>([[1, upstream]]),
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result.rowCount).toBe(3);
+    expect(createLeadSpy).toHaveBeenCalledTimes(3);
+    expect(created[0]).toEqual({
+      title: "Lead — Alice",
+      name: "Alice",
+      sourceId: "WEB",
+      phone: "111",
+      email: "a@x.com",
+      address: "1 St",
+    });
+    expect(created[1]!.name).toBe("Bob");
+    expect(created[2]!.address).toBe("3 St");
+    expect(result.rows).toHaveLength(3);
+    expect(result.rows![0]).toEqual(
+      expect.objectContaining({
+        leadId: "lead_1",
+        leadUrl: "https://example.bitrix24.com/crm/lead/details/lead_1/",
+      }),
+    );
+    expect(calls).toEqual([[2, result.rows]]);
+  });
+
+  it("creates no leads when the upstream step produced 0 rows", async () => {
+    const createLeadSpy = vi.fn();
+    vi.doMock("~/server/bitrix24/client", () => ({
+      call: vi.fn(),
+      batch: vi.fn(),
+      createLead: createLeadSpy,
+      getLeadUrl: vi.fn(),
+      updateLead: vi.fn(),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("bitrix.create_lead");
+
+    const fakeStep = {
+      id: "step_bulk_empty",
+      moduleType: "bitrix.create_lead",
+      config: { portalId: "portal_abc", title: "X", name: "Y", sourceId: "WEB" },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+      outputs: new Map<number, unknown[]>([[1, []]]),
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(0);
+    expect(createLeadSpy).not.toHaveBeenCalled();
   });
 
   it("throws MISSING_PORTAL_ID when no portalId is configured", async () => {

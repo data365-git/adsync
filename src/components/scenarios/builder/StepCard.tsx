@@ -12,6 +12,7 @@ import { SheetsFindRowsConfig } from "./modules/SheetsFindRowsConfig";
 import { SheetsUpdateRowConfig } from "./modules/SheetsUpdateRowConfig";
 import { SheetsDeleteRowConfig } from "./modules/SheetsDeleteRowConfig";
 import { SheetsGetRowConfig } from "./modules/SheetsGetRowConfig";
+import { SheetsGetAllRowsConfig } from "./modules/SheetsGetAllRowsConfig";
 import { SheetsCreateTabConfig } from "./modules/SheetsCreateTabConfig";
 import { BitrixCreateLeadConfig } from "./modules/BitrixCreateLeadConfig";
 import { BitrixUpdateLeadConfig } from "./modules/BitrixUpdateLeadConfig";
@@ -95,6 +96,9 @@ const MODULE_CONFIG_MAP: Partial<Record<ModuleType, ModuleConfigRenderer>> = {
   ),
   "sheets.get_row": ({ config, onChange, errors }) => (
     <SheetsGetRowConfig config={config} onChange={onChange} errors={errors} />
+  ),
+  "sheets.get_all_rows": ({ config, onChange, errors }) => (
+    <SheetsGetAllRowsConfig config={config} onChange={onChange} errors={errors} />
   ),
   "sheets.create_tab": ({ config, onChange, errors }) => (
     <SheetsCreateTabConfig config={config} onChange={onChange} errors={errors} />

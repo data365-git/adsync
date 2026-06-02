@@ -364,6 +364,43 @@ const PHASE_3_MODULES: ModuleDefinition[] = [
     ],
   },
   {
+    id: "sheets.get_all_rows",
+    name: "Get All Rows",
+    shortName: "Get All Rows",
+    description:
+      "Reads every row from a Google Sheets tab and emits them downstream (one item per row).",
+    group: "googleSheets",
+    outputsArray: true,
+    configSchema: [
+      {
+        key: "spreadsheetId",
+        label: "Spreadsheet ID",
+        type: "text",
+        required: true,
+        help: "The ID from your Google Sheets URL (between /d/ and /edit)",
+      },
+      {
+        key: "tabName",
+        label: "Tab name",
+        type: "text",
+        required: true,
+        help: "Name of the sheet tab to read",
+      },
+      {
+        key: "limit",
+        label: "Row limit",
+        type: "number",
+        required: false,
+        help: "Optional. Stop after this many rows (leave blank to read all)",
+      },
+    ],
+    sampleOutput: [
+      { row: 2, id: "1", name: "Alice", email: "alice@example.com", status: "new" },
+      { row: 3, id: "2", name: "Bob", email: "bob@example.com", status: "new" },
+      { row: 4, id: "3", name: "Carol", email: "carol@example.com", status: "new" },
+    ],
+  },
+  {
     id: "sheets.update_row",
     name: "Update Row",
     shortName: "Update Row",

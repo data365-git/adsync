@@ -164,6 +164,122 @@ describe("sheetsFindRowsHandler", () => {
   });
 });
 
+describe("sheetsGetAllRowsHandler", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("reads all rows via readTabRows and sets the context output", async () => {
+    const fakeRows = [
+      { row: 2, id: "1", name: "Alice" },
+      { row: 3, id: "2", name: "Bob" },
+      { row: 4, id: "3", name: "Carol" },
+    ];
+    const readTabRowsSpy = vi.fn(async () => fakeRows);
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      readTabRows: readTabRowsSpy,
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.get_all_rows");
+
+    const fakeStep = {
+      id: "step_all",
+      moduleType: "sheets.get_all_rows",
+      config: { spreadsheetId: "sheet_abc", tabName: "Leads" },
+      position: 2,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const calls: Array<[number, unknown]> = [];
+    const fakeCtx = {
+      setOutput: (pos: number, val: unknown) => calls.push([pos, val]),
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(readTabRowsSpy).toHaveBeenCalledWith("u", "sheet_abc", "Leads");
+    expect(result).toEqual({
+      rowCount: 3,
+      rows: fakeRows,
+      sheetsUrl: "https://docs.google.com/spreadsheets/d/sheet_abc",
+    });
+    expect(calls).toEqual([[2, fakeRows]]);
+  });
+
+  it("slices the result to the configured limit", async () => {
+    const fakeRows = [
+      { row: 2, id: "1" },
+      { row: 3, id: "2" },
+      { row: 4, id: "3" },
+    ];
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      readTabRows: vi.fn(async () => fakeRows),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.get_all_rows");
+
+    const fakeStep = {
+      id: "step_all_limit",
+      moduleType: "sheets.get_all_rows",
+      config: { spreadsheetId: "sheet_abc", tabName: "Leads", limit: 2 },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const calls: Array<[number, unknown]> = [];
+    const fakeCtx = {
+      setOutput: (pos: number, val: unknown) => calls.push([pos, val]),
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+
+    expect(result.rowCount).toBe(2);
+    expect(result.rows).toEqual([
+      { row: 2, id: "1" },
+      { row: 3, id: "2" },
+    ]);
+    expect(calls).toEqual([[1, [{ row: 2, id: "1" }, { row: 3, id: "2" }]]]);
+  });
+
+  it("returns rowCount 0 for an empty tab", async () => {
+    vi.doMock("~/integrations/google/sheets-client", () => ({
+      appendRows: vi.fn(),
+      upsertRows: vi.fn(),
+      findRows: vi.fn(),
+      readTabRows: vi.fn(async () => []),
+    }));
+
+    const mod = await import("../module-handlers");
+    const handler = mod.getHandler("sheets.get_all_rows");
+
+    const fakeStep = {
+      id: "step_all_empty",
+      moduleType: "sheets.get_all_rows",
+      config: { spreadsheetId: "sheet_abc", tabName: "Empty" },
+      position: 1,
+    } as unknown as Parameters<typeof handler>[0];
+
+    const fakeCtx = {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function -- test stub
+      setOutput: () => {},
+      getUpstreamRows: () => [],
+    } as unknown as Parameters<typeof handler>[1];
+
+    const result = await handler(fakeStep, fakeCtx, "u");
+    expect(result.rowCount).toBe(0);
+    expect(result.rows).toEqual([]);
+    expect(result.sheetsUrl).toBe("https://docs.google.com/spreadsheets/d/sheet_abc");
+  });
+});
+
 describe("sheetsUpdateRowHandler", () => {
   beforeEach(() => {
     vi.resetModules();

@@ -32,6 +32,22 @@ describe("validateStepConfig", () => {
     ).toEqual({ ok: true });
   });
 
+  it("flags sheets.get_all_rows required fields", () => {
+    expect(validateStepConfig("sheets.get_all_rows", {})).toEqual({
+      ok: false,
+      field: "spreadsheetId",
+    });
+    expect(
+      validateStepConfig("sheets.get_all_rows", { spreadsheetId: "abc" }),
+    ).toEqual({ ok: false, field: "tabName" });
+    expect(
+      validateStepConfig("sheets.get_all_rows", {
+        spreadsheetId: "abc",
+        tabName: "Sheet1",
+      }),
+    ).toEqual({ ok: true });
+  });
+
   it("flags Bitrix create_lead required fields", () => {
     expect(validateStepConfig("bitrix.create_lead", {})).toEqual({
       ok: false,

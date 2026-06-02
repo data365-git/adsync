@@ -21,6 +21,7 @@ const ModuleTypeSchema = z.enum([
   "sheets.append",
   "sheets.upsert",
   "sheets.find_rows",
+  "sheets.get_all_rows",
   "sheets.update_row",
   "sheets.delete_row",
   "sheets.get_row",

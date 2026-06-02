@@ -4,6 +4,7 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   "sheets.append": ["spreadsheetId", "tabName", "mappedFields"],
   "sheets.upsert": ["spreadsheetId", "tabName", "keyFields", "mappedFields"],
   "sheets.find_rows": ["spreadsheetId", "tabName"],
+  "sheets.get_all_rows": ["spreadsheetId", "tabName"],
   "sheets.update_row": ["spreadsheetId", "tabName", "rowIdentifier", "mappedFields"],
   "bitrix.create_lead": ["portalId", "title", "name", "sourceId"],
   "bitrix.update_lead": ["portalId", "leadId"],

@@ -143,6 +143,12 @@ type SheetsFindRowsCfg = {
   limit?: number;
 };
 
+type SheetsGetAllRowsCfg = {
+  spreadsheetId: string;
+  tabName: string;
+  limit?: number;
+};
+
 type SheetsUpdateRowCfg = {
   spreadsheetId: string;
   tabName: string;
@@ -335,6 +341,18 @@ const sheetsFindRowsHandler: Handler = async (step, ctx, userId) => {
   return {
     rowCount: rows.length,
     rows,
+    sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
+  };
+};
+
+const sheetsGetAllRowsHandler: Handler = async (step, ctx, userId) => {
+  const config = cfg<SheetsGetAllRowsCfg>(step);
+  const rows = await readTabRows(userId, config.spreadsheetId, config.tabName);
+  const limited = config.limit ? rows.slice(0, config.limit) : rows;
+  ctx.setOutput(step.position, limited);
+  return {
+    rowCount: limited.length,
+    rows: limited,
     sheetsUrl: `https://docs.google.com/spreadsheets/d/${config.spreadsheetId}`,
   };
 };
@@ -537,6 +555,7 @@ const HANDLERS: Record<string, Handler> = {
   "sheets.append": sheetsAppendHandler,
   "sheets.upsert": sheetsUpsertHandler,
   "sheets.find_rows": sheetsFindRowsHandler,
+  "sheets.get_all_rows": sheetsGetAllRowsHandler,
   "sheets.update_row": sheetsUpdateRowHandler,
   "sheets.delete_row": notImplementedHandler,
   "sheets.get_row": notImplementedHandler,

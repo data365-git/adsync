@@ -232,6 +232,7 @@ type BitrixCreateLeadCfg = {
   email?: string;
   address?: string;
   sourceId: string;
+  statusId?: string;
   comments?: string;
   /** Connected Bitrix portal to write to. Absent ⇒ legacy webhook portal. */
   portalId?: string;
@@ -431,11 +432,13 @@ function buildLeadInput(
   const phone = interp(config.phone);
   const email = interp(config.email);
   const address = interp(config.address);
+  const statusId = interp(config.statusId);
   const comments = interp(config.comments);
   if (lastName) input.lastName = lastName;
   if (phone) input.phone = phone;
   if (email) input.email = email;
   if (address) input.address = address;
+  if (statusId) input.statusId = statusId;
   if (comments) input.comments = comments;
   return input;
 }

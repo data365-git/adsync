@@ -213,6 +213,7 @@ export type CreateLeadInput = {
   email?: string;
   address?: string;
   sourceId: string;
+  statusId?: string;
   comments?: string;
 };
 
@@ -237,6 +238,7 @@ export async function createLead(
     fields.EMAIL = [{ VALUE: input.email, VALUE_TYPE: "WORK" }];
   }
   if (input.address) fields.ADDRESS = input.address;
+  if (input.statusId) fields.STATUS_ID = input.statusId;
   if (input.comments) fields.COMMENTS = input.comments;
 
   const id = await call<number>("crm.lead.add", { fields }, opts);

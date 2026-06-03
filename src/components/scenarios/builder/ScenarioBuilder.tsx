@@ -463,6 +463,7 @@ export function ScenarioBuilder({
           if (expandedStepId) handleConfigChange(expandedStepId, config);
         }}
         showErrors={showErrors}
+        onSaveFirst={() => void handleSave()}
       />
 
       <BuilderHeader

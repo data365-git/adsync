@@ -123,6 +123,8 @@ interface StepConfigModalProps {
   onConfigChange: (config: Record<string, unknown>) => void;
   /** Forwarded down to renderers so they can show required-field error states. */
   showErrors?: boolean;
+  /** Called when the user clicks "Test this step" on an unsaved scenario — should save + redirect. */
+  onSaveFirst?: () => void;
 }
 
 export function StepConfigModal({
@@ -134,6 +136,7 @@ export function StepConfigModal({
   steps = [],
   onConfigChange,
   showErrors,
+  onSaveFirst,
 }: StepConfigModalProps) {
   const [activeTab, setActiveTab] = React.useState<"configure" | "sample" | "values" | "lastTest">(
     "configure",
@@ -224,20 +227,23 @@ export function StepConfigModal({
   // e.g. a Watch-Sheets trigger reads the tab live (read-only, no side effects)
   // so you can confirm it actually pulls rows.
   const testDisabled =
-    !scenarioId ||
+    (!scenarioId && !onSaveFirst) ||
     Object.keys(validationErrors).length > 0 ||
     testStepMutation.isPending;
   // Visible, human-readable reason the test button is unavailable (order
   // matters — most specific blocker first).
-  const testDisabledReason = !scenarioId
-    ? "Save the scenario first, then you can test individual steps."
-    : Object.keys(validationErrors).length > 0
+  const testDisabledReason =
+    Object.keys(validationErrors).length > 0
       ? "Fill in the required fields above to test this step."
       : null;
   const isBitrixStep = step.moduleType.startsWith("bitrix.");
   const stepId = step.id;
   function handleTestStep() {
-    if (!scenarioId || testDisabled) return;
+    if (testDisabled) return;
+    if (!scenarioId) {
+      onSaveFirst?.();
+      return;
+    }
     if (
       isBitrixStep &&
       !window.confirm("Testing this Bitrix step can create or update real CRM records. Continue?")
@@ -413,7 +419,9 @@ export function StepConfigModal({
             {testDisabledReason ??
               (scenarioId
                 ? "Changes are saved automatically."
-                : "Save the scenario to keep your changes.")}
+                : onSaveFirst
+                  ? "Scenario will be saved before testing."
+                  : "Save the scenario to keep your changes.")}
           </span>
           <div className="flex items-center gap-2">
             <Button

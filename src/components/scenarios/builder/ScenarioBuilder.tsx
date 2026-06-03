@@ -396,9 +396,20 @@ export function ScenarioBuilder({
     setShowTestPanel(true);
     setTestResults([]);
     try {
-      // Use a known scenario id for the mock test run
-      const results = await testRunMutation.mutateAsync({ id: "scn_custom_01" });
-      setTestResults(results);
+      // Save first to get a real DB ID, then redirect to the detail page which
+      // owns the full test-run flow with autosave + run results drawer.
+      const safeName = name.trim() || "Untitled scenario";
+      const saved = await createMutation.mutateAsync({
+        name: safeName,
+        enabled,
+        folderId: initialFolderId,
+        steps: steps.map((s) => ({
+          position: s.position,
+          moduleType: s.moduleType,
+          config: s.config,
+        })),
+      });
+      router.push(`/scenarios/${saved.id}?autoRun=1`);
     } catch (err) {
       setShowTestPanel(false);
       setShowErrors(true);

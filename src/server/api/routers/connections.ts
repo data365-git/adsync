@@ -666,4 +666,24 @@ export const connectionsRouter = createTRPCRouter({
       return (stages ?? []).map((s) => ({ statusId: s.STATUS_ID, name: s.NAME }));
     }),
 
+  /** Lead statuses for the given portal — drives the status picker in Create Lead. */
+  listBitrixLeadStatuses: authedProcedure
+    .input(z.object({ portalId: z.string().min(1) }))
+    .query(async ({ input, ctx }) => {
+      const portal = await db.bitrixPortal.findUnique({
+        where: { id: input.portalId },
+        select: { userId: true },
+      });
+      if (portal?.userId !== ctx.userId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Portal not found" });
+      }
+      type Status = { STATUS_ID: string; NAME: string };
+      const statuses = await bitrixCall<Status[]>(
+        "crm.status.list",
+        { filter: { ENTITY_ID: "STATUS" }, order: { SORT: "ASC" } },
+        { portalId: input.portalId },
+      );
+      return (statuses ?? []).map((s) => ({ statusId: s.STATUS_ID, name: s.NAME }));
+    }),
+
 });

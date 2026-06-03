@@ -2,6 +2,15 @@
 
 import * as React from "react";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Label } from "~/components/ui/label";
+import { api } from "~/trpc/react";
 import { FieldMapper } from "./FieldMapper";
 import { BitrixPortalSelector } from "./BitrixPortalSelector";
 
@@ -27,8 +36,14 @@ export function BitrixCreateLeadConfig({
   const email = typeof config.email === "string" ? config.email : "";
   const address = typeof config.address === "string" ? config.address : "";
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
+  const statusId = typeof config.statusId === "string" ? config.statusId : "";
   const comments = typeof config.comments === "string" ? config.comments : "";
   const portalId = typeof config.portalId === "string" ? config.portalId : "";
+
+  const statusesQ = api.connections.listBitrixLeadStatuses.useQuery(
+    { portalId },
+    { enabled: portalId.length > 0, staleTime: 60_000 },
+  );
 
   return (
     <div className="space-y-4">
@@ -109,6 +124,35 @@ export function BitrixCreateLeadConfig({
         required
         error={errors?.sourceId}
       />
+
+      <div className="space-y-1.5">
+        <Label htmlFor="bitrix-lead-status">Status</Label>
+        <Select
+          value={statusId}
+          disabled={!portalId || statusesQ.isLoading}
+          onValueChange={(v) => onChange({ ...config, statusId: v })}
+        >
+          <SelectTrigger id="bitrix-lead-status" className="w-full">
+            <SelectValue
+              placeholder={
+                !portalId
+                  ? "Pick a portal first"
+                  : statusesQ.isLoading
+                    ? "Loading…"
+                    : "Select status (optional)"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">No status</SelectItem>
+            {statusesQ.data?.map((s) => (
+              <SelectItem key={s.statusId} value={s.statusId}>
+                {s.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <FieldMapper
         label="Comments"

@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import { db } from "~/server/db";
 
 /** Name of the single template scenario seeded for brand-new users. */
@@ -32,12 +31,12 @@ export async function seedDefaultScenarios(userId: string): Promise<void> {
             config: {
               cronExpression: "0 20 * * *",
               timezone: "Asia/Tashkent",
-            } as Prisma.InputJsonValue,
+            },
           },
           {
             position: 2,
             moduleType: "sheets.get_all_rows",
-            config: { spreadsheetId: "", tabName: "" } as Prisma.InputJsonValue,
+            config: { spreadsheetId: "", tabName: "" },
           },
           {
             position: 3,
@@ -50,7 +49,7 @@ export async function seedDefaultScenarios(userId: string): Promise<void> {
               sourceId: "WEB",
               comments:
                 "UTM: {{utmsource}} | {{Additional informations}} | Created: {{Created time}}",
-            } as Prisma.InputJsonValue,
+            },
           },
         ],
       },

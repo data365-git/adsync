@@ -25,6 +25,9 @@ type FieldMapperProps = {
   /** When true the right-rail values panel is visible at large breakpoints —
    * hide the "+" popover there (it duplicates the rail). */
   panelVisible?: boolean;
+  /** Extra literal options shown in the popover under a separate heading (e.g. portal source codes). */
+  portalOptions?: { label: string; value: string }[];
+  portalOptionsHeading?: string;
 };
 
 export function FieldMapper({
@@ -37,6 +40,8 @@ export function FieldMapper({
   required,
   error,
   panelVisible,
+  portalOptions,
+  portalOptionsHeading = "Portal values",
 }: FieldMapperProps) {
   const inputRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const fieldId = React.useId();
@@ -146,7 +151,7 @@ export function FieldMapper({
             className={cn("min-h-11", dropRingClass)}
           />
         )}
-        {upstreamColumns.length > 0 ? (
+        {(upstreamColumns.length > 0 || (portalOptions && portalOptions.length > 0)) ? (
           <Popover>
             <PopoverTrigger
               render={
@@ -159,22 +164,46 @@ export function FieldMapper({
               }
             >
               <Plus className="size-4" aria-hidden="true" />
-              <span className="sr-only">Insert upstream column</span>
+              <span className="sr-only">Insert value</span>
             </PopoverTrigger>
             <PopoverContent align="end" className="max-h-72 overflow-y-auto p-1">
-              <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                Upstream columns
-              </div>
-              {upstreamColumns.map((column) => (
-                <button
-                  key={column}
-                  type="button"
-                  className="block w-full rounded-md px-2 py-2 text-left font-mono text-xs hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-                  onClick={() => insertToken(column)}
-                >
-                  {column}
-                </button>
-              ))}
+              {upstreamColumns.length > 0 && (
+                <>
+                  <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                    Upstream columns
+                  </div>
+                  {upstreamColumns.map((column) => (
+                    <button
+                      key={column}
+                      type="button"
+                      className="block w-full rounded-md px-2 py-2 text-left font-mono text-xs hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+                      onClick={() => insertToken(column)}
+                    >
+                      {column}
+                    </button>
+                  ))}
+                </>
+              )}
+              {portalOptions && portalOptions.length > 0 && (
+                <>
+                  <div className={cn("px-2 py-1.5 text-xs font-medium text-muted-foreground", upstreamColumns.length > 0 && "mt-1 border-t border-border pt-2")}>
+                    {portalOptionsHeading}
+                  </div>
+                  {portalOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className="block w-full rounded-md px-2 py-2 text-left text-xs hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
+                      onClick={() => insertText(opt.value)}
+                    >
+                      <span className="font-mono">{opt.value}</span>
+                      {opt.label !== opt.value && (
+                        <span className="ml-2 text-muted-foreground">{opt.label}</span>
+                      )}
+                    </button>
+                  ))}
+                </>
+              )}
             </PopoverContent>
           </Popover>
         ) : null}

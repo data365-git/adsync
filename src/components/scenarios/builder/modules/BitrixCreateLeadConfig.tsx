@@ -11,6 +11,7 @@ import {
 } from "~/components/ui/select";
 import { Label } from "~/components/ui/label";
 import { api } from "~/trpc/react";
+// Select/Label kept for the Status dropdown below
 import { FieldMapper } from "./FieldMapper";
 import { BitrixPortalSelector } from "./BitrixPortalSelector";
 
@@ -118,35 +119,18 @@ export function BitrixCreateLeadConfig({
         placeholder="123 Main St, Springfield"
       />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="bitrix-lead-source">
-          Source
-          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
-        </Label>
-        <Select
-          value={sourceId}
-          disabled={!portalId || sourcesQ.isLoading}
-          onValueChange={(v) => { if (v) onChange({ ...config, sourceId: v }); }}
-        >
-          <SelectTrigger id="bitrix-lead-source" className="w-full" aria-invalid={!!errors?.sourceId}>
-            <SelectValue
-              placeholder={
-                !portalId ? "Pick a portal first"
-                  : sourcesQ.isLoading ? "Loading…"
-                  : "Select source"
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {sourcesQ.data?.map((s) => (
-              <SelectItem key={s.statusId} value={s.statusId}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors?.sourceId && (
-          <p role="alert" className="text-xs text-destructive">{errors.sourceId}</p>
-        )}
-      </div>
+      <FieldMapper
+        label="Source"
+        value={sourceId}
+        onChange={(value) => onChange({ ...config, sourceId: value })}
+        upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
+        placeholder="{{utmsource}} or pick from portal →"
+        required
+        error={errors?.sourceId}
+        portalOptions={sourcesQ.data?.map((s) => ({ label: s.name, value: s.statusId }))}
+        portalOptionsHeading="Bitrix24 sources"
+      />
 
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-lead-status">Status</Label>

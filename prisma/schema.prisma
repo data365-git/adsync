@@ -209,6 +209,7 @@ model Scenario {
   lastRunAt     DateTime?
   lastRunStatus RunStatus?
   webhookSecret String?      @db.Text
+  watcherCursor Int?
 
   user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   adAccount AdAccount?     @relation(fields: [adAccountId], references: [id])

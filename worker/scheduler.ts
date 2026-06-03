@@ -12,6 +12,7 @@
 import { db } from "~/server/db";
 import { nextFireAt } from "~/lib/cron-builder";
 import { executeRun } from "~/server/core/executor";
+import { readTabRows } from "~/integrations/google/sheets-client";
 import { pollAll } from "~/server/sheets/poller";
 import { drainSyncJobs, retryFailedJobs } from "~/server/sync/orchestrator";
 
@@ -64,6 +65,61 @@ async function loadScheduledScenarios(): Promise<ScheduledScenario[]> {
 }
 
 /**
+ * Poll all enabled scenarios whose trigger is `trigger.watch.sheets_new_rows`.
+ * For each, reads the sheet, finds rows beyond the stored cursor, and fires
+ * one executeRun per new row with the row pre-seeded as the trigger output.
+ */
+async function pollWatchScenarios(): Promise<void> {
+  const scenarios = await db.scenario.findMany({
+    where: {
+      enabled: true,
+      steps: { some: { position: 1, moduleType: "trigger.watch.sheets_new_rows" } },
+    },
+    include: {
+      steps: { where: { position: 1, moduleType: "trigger.watch.sheets_new_rows" } },
+    },
+  });
+
+  for (const scenario of scenarios) {
+    const triggerStep = scenario.steps[0];
+    if (!triggerStep) continue;
+    const cfg = triggerStep.config as Record<string, unknown>;
+    const spreadsheetId = typeof cfg.spreadsheetId === "string" ? cfg.spreadsheetId : "";
+    const tabName = typeof cfg.tabName === "string" ? cfg.tabName : "";
+    if (!spreadsheetId || !tabName) continue;
+
+    try {
+      const rows = await readTabRows(scenario.userId, spreadsheetId, tabName);
+      const cursor = scenario.watcherCursor ?? 0;
+      const newRows = rows.slice(cursor);
+
+      if (newRows.length === 0) {
+        // No new rows — update cursor in case rows were deleted (shrinkage)
+        if (rows.length !== cursor) {
+          await db.scenario.update({ where: { id: scenario.id }, data: { watcherCursor: rows.length } });
+        }
+        continue;
+      }
+
+      console.log(`[worker] watch ${scenario.id}: ${newRows.length} new row(s) in ${tabName}`);
+
+      // Fire one run per new row, seeding it as the trigger output
+      for (const row of newRows) {
+        executeRun(scenario.id, "SCHEDULED", scenario.userId, {
+          seedOutputs: [[1, [row]]],
+        }).catch((err: unknown) => {
+          console.error(`[worker] watch executeRun failed for scenario ${scenario.id}:`, err);
+        });
+      }
+
+      await db.scenario.update({ where: { id: scenario.id }, data: { watcherCursor: rows.length } });
+    } catch (err) {
+      console.error(`[worker] watch poll failed for scenario ${scenario.id}:`, err);
+    }
+  }
+}
+
+/**
  * One tick: run all scheduled work in order.
  * Each section is independently guarded — a failure in one does not skip the others.
  */
@@ -89,7 +145,14 @@ export async function tick(): Promise<void> {
     console.error("[worker] Scenario scheduler error:", err);
   }
 
-  // ── 2–4. Legacy Sheets→Bitrix24 sync pipeline ────────────────────────────
+  // ── 2. Poll watch-trigger scenarios for new sheet rows ───────────────────
+  try {
+    await pollWatchScenarios();
+  } catch (err) {
+    console.error("[worker] Watch scenario poll error:", err);
+  }
+
+  // ── 3–5. Legacy Sheets→Bitrix24 sync pipeline ────────────────────────────
   // This pipeline is single-user (GOOGLE_SHEETS_ID + BITRIX24_WEBHOOK_URL env
   // vars) and writes to un-scoped Lead/Deal/Contact tables. It must NOT run
   // for multi-user deployments. Opt-in explicitly with LEGACY_SYNC_ENABLED=true.

@@ -98,6 +98,12 @@ type SheetsWatchCfg = {
 // read the configured tab live and emit the most recent data row downstream.
 // Semantics match outputsArray:false in the module catalog (one row per fire).
 const triggerWatchSheetsNewRowsHandler: Handler = async (step, ctx, userId) => {
+  // Worker pre-seeds the new rows before calling executeRun — use them directly.
+  const seeded = ctx.getOutput(step.position);
+  if (seeded.length > 0) {
+    return { rowCount: seeded.length, rows: seeded };
+  }
+  // Manual / test run: read the tab live and emit the most recent row as a sample.
   const config = cfg<SheetsWatchCfg>(step);
   const rows = await readTabRows(userId, config.spreadsheetId, config.tabName);
   if (rows.length === 0) {

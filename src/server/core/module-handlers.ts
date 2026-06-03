@@ -240,6 +240,11 @@ type BitrixCreateLeadCfg = {
   sourceId: string;
   statusId?: string;
   comments?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
   /** Connected Bitrix portal to write to. Absent ⇒ legacy webhook portal. */
   portalId?: string;
 };
@@ -440,12 +445,22 @@ function buildLeadInput(
   const address = interp(config.address);
   const statusId = interp(config.statusId);
   const comments = interp(config.comments);
+  const utmSource = interp(config.utmSource);
+  const utmMedium = interp(config.utmMedium);
+  const utmCampaign = interp(config.utmCampaign);
+  const utmContent = interp(config.utmContent);
+  const utmTerm = interp(config.utmTerm);
   if (lastName) input.lastName = lastName;
   if (phone) input.phone = phone;
   if (email) input.email = email;
   if (address) input.address = address;
   if (statusId) input.statusId = statusId;
   if (comments) input.comments = comments;
+  if (utmSource) input.utmSource = utmSource;
+  if (utmMedium) input.utmMedium = utmMedium;
+  if (utmCampaign) input.utmCampaign = utmCampaign;
+  if (utmContent) input.utmContent = utmContent;
+  if (utmTerm) input.utmTerm = utmTerm;
   return input;
 }
 

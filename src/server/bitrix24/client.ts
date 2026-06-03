@@ -215,6 +215,11 @@ export type CreateLeadInput = {
   sourceId: string;
   statusId?: string;
   comments?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
 };
 
 export async function createLead(
@@ -240,6 +245,11 @@ export async function createLead(
   if (input.address) fields.ADDRESS = input.address;
   if (input.statusId) fields.STATUS_ID = input.statusId;
   if (input.comments) fields.COMMENTS = input.comments;
+  if (input.utmSource) fields.UTM_SOURCE = input.utmSource;
+  if (input.utmMedium) fields.UTM_MEDIUM = input.utmMedium;
+  if (input.utmCampaign) fields.UTM_CAMPAIGN = input.utmCampaign;
+  if (input.utmContent) fields.UTM_CONTENT = input.utmContent;
+  if (input.utmTerm) fields.UTM_TERM = input.utmTerm;
 
   const id = await call<number>("crm.lead.add", { fields }, opts);
   return { leadId: String(id) };

@@ -39,6 +39,11 @@ export function BitrixCreateLeadConfig({
   const sourceId = typeof config.sourceId === "string" ? config.sourceId : "";
   const statusId = typeof config.statusId === "string" ? config.statusId : "";
   const comments = typeof config.comments === "string" ? config.comments : "";
+  const utmSource = typeof config.utmSource === "string" ? config.utmSource : "";
+  const utmMedium = typeof config.utmMedium === "string" ? config.utmMedium : "";
+  const utmCampaign = typeof config.utmCampaign === "string" ? config.utmCampaign : "";
+  const utmContent = typeof config.utmContent === "string" ? config.utmContent : "";
+  const utmTerm = typeof config.utmTerm === "string" ? config.utmTerm : "";
   const portalId = typeof config.portalId === "string" ? config.portalId : "";
 
   const sourcesQ = api.connections.listBitrixLeadSources.useQuery(
@@ -170,6 +175,50 @@ export function BitrixCreateLeadConfig({
         placeholder="Additional notes..."
         multiline
       />
+
+      <div className="space-y-3 rounded-lg border border-border p-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">UTM tags</p>
+        <FieldMapper
+          label="UTM Source"
+          value={utmSource}
+          onChange={(value) => onChange({ ...config, utmSource: value })}
+          upstreamColumns={prevStepOutputColumns}
+          panelVisible={panelVisible}
+          placeholder="{{utmsource}} or ig, facebook..."
+        />
+        <FieldMapper
+          label="UTM Medium"
+          value={utmMedium}
+          onChange={(value) => onChange({ ...config, utmMedium: value })}
+          upstreamColumns={prevStepOutputColumns}
+          panelVisible={panelVisible}
+          placeholder="{{utm_medium}} or paid, organic..."
+        />
+        <FieldMapper
+          label="UTM Campaign"
+          value={utmCampaign}
+          onChange={(value) => onChange({ ...config, utmCampaign: value })}
+          upstreamColumns={prevStepOutputColumns}
+          panelVisible={panelVisible}
+          placeholder="{{campaign_name}}"
+        />
+        <FieldMapper
+          label="UTM Content"
+          value={utmContent}
+          onChange={(value) => onChange({ ...config, utmContent: value })}
+          upstreamColumns={prevStepOutputColumns}
+          panelVisible={panelVisible}
+          placeholder="{{adset_name}}"
+        />
+        <FieldMapper
+          label="UTM Term"
+          value={utmTerm}
+          onChange={(value) => onChange({ ...config, utmTerm: value })}
+          upstreamColumns={prevStepOutputColumns}
+          panelVisible={panelVisible}
+          placeholder="{{ad_name}}"
+        />
+      </div>
     </div>
   );
 }

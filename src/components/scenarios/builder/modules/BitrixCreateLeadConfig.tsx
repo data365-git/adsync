@@ -40,6 +40,10 @@ export function BitrixCreateLeadConfig({
   const comments = typeof config.comments === "string" ? config.comments : "";
   const portalId = typeof config.portalId === "string" ? config.portalId : "";
 
+  const sourcesQ = api.connections.listBitrixLeadSources.useQuery(
+    { portalId },
+    { enabled: portalId.length > 0, staleTime: 60_000 },
+  );
   const statusesQ = api.connections.listBitrixLeadStatuses.useQuery(
     { portalId },
     { enabled: portalId.length > 0, staleTime: 60_000 },
@@ -114,16 +118,35 @@ export function BitrixCreateLeadConfig({
         placeholder="123 Main St, Springfield"
       />
 
-      <FieldMapper
-        label="Source"
-        value={sourceId}
-        onChange={(value) => onChange({ ...config, sourceId: value })}
-        upstreamColumns={prevStepOutputColumns}
-        panelVisible={panelVisible}
-        placeholder="WEB, CALL, EMAIL, or {{utmsource}}"
-        required
-        error={errors?.sourceId}
-      />
+      <div className="space-y-1.5">
+        <Label htmlFor="bitrix-lead-source">
+          Source
+          <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+        </Label>
+        <Select
+          value={sourceId}
+          disabled={!portalId || sourcesQ.isLoading}
+          onValueChange={(v) => { if (v) onChange({ ...config, sourceId: v }); }}
+        >
+          <SelectTrigger id="bitrix-lead-source" className="w-full" aria-invalid={!!errors?.sourceId}>
+            <SelectValue
+              placeholder={
+                !portalId ? "Pick a portal first"
+                  : sourcesQ.isLoading ? "Loading…"
+                  : "Select source"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {sourcesQ.data?.map((s) => (
+              <SelectItem key={s.statusId} value={s.statusId}>{s.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors?.sourceId && (
+          <p role="alert" className="text-xs text-destructive">{errors.sourceId}</p>
+        )}
+      </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="bitrix-lead-status">Status</Label>

@@ -2,14 +2,6 @@
 
 import * as React from "react";
 
-import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { FieldMapper } from "./FieldMapper";
 
 interface BitrixUpdateLeadConfigProps {
@@ -54,26 +46,14 @@ export function BitrixUpdateLeadConfig({
         placeholder="Updated lead title"
       />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="bitrix-update-lead-status">Status</Label>
-        <Select
-          value={statusId}
-          onValueChange={(value) => {
-            if (value !== null) onChange({ ...config, statusId: value });
-          }}
-        >
-          <SelectTrigger id="bitrix-update-lead-status" className="w-full">
-            <SelectValue placeholder="No change" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">No change</SelectItem>
-            <SelectItem value="NEW">New</SelectItem>
-            <SelectItem value="IN_PROCESS">In process</SelectItem>
-            <SelectItem value="PROCESSED">Processed</SelectItem>
-            <SelectItem value="CONVERTED">Converted</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <FieldMapper
+        label="Status"
+        value={statusId}
+        onChange={(value) => onChange({ ...config, statusId: value })}
+        upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
+        placeholder="NEW, IN_PROCESS, CONVERTED, or {{status}}"
+      />
 
       <FieldMapper
         label="Comments"

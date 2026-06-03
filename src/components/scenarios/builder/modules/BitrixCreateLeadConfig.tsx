@@ -2,14 +2,6 @@
 
 import * as React from "react";
 
-import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { FieldMapper } from "./FieldMapper";
 import { BitrixPortalSelector } from "./BitrixPortalSelector";
 
@@ -107,39 +99,16 @@ export function BitrixCreateLeadConfig({
         placeholder="123 Main St, Springfield"
       />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="bitrix-lead-source">
-          Source
-          <span className="ml-1 text-destructive" aria-hidden="true">
-            *
-          </span>
-        </Label>
-        <Select
-          value={sourceId}
-          onValueChange={(value) => {
-            if (value) onChange({ ...config, sourceId: value });
-          }}
-        >
-          <SelectTrigger
-            id="bitrix-lead-source"
-            className="w-full"
-            aria-invalid={!!errors?.sourceId}
-          >
-            <SelectValue placeholder="Select source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="WEB">Website</SelectItem>
-            <SelectItem value="CALL">Inbound call</SelectItem>
-            <SelectItem value="EMAIL">Email</SelectItem>
-            <SelectItem value="OTHER">Other</SelectItem>
-          </SelectContent>
-        </Select>
-        {errors?.sourceId ? (
-          <p role="alert" className="text-xs text-destructive">
-            {errors.sourceId}
-          </p>
-        ) : null}
-      </div>
+      <FieldMapper
+        label="Source"
+        value={sourceId}
+        onChange={(value) => onChange({ ...config, sourceId: value })}
+        upstreamColumns={prevStepOutputColumns}
+        panelVisible={panelVisible}
+        placeholder="WEB, CALL, EMAIL, or {{utmsource}}"
+        required
+        error={errors?.sourceId}
+      />
 
       <FieldMapper
         label="Comments"

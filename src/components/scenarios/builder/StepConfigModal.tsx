@@ -160,7 +160,8 @@ export function StepConfigModal({
       const readsSheet =
         candidate.moduleType === "trigger.watch.sheets_new_rows" ||
         candidate.moduleType === "sheets.find_rows" ||
-        candidate.moduleType === "sheets.get_row";
+        candidate.moduleType === "sheets.get_row" ||
+        candidate.moduleType === "sheets.get_all_rows";
       return (
         readsSheet &&
         typeof candidate.config.spreadsheetId === "string" &&

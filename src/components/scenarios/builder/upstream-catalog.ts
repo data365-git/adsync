@@ -35,7 +35,8 @@ function isSheetReadModule(moduleType: ModuleType): boolean {
   return (
     moduleType === "trigger.watch.sheets_new_rows" ||
     moduleType === "sheets.find_rows" ||
-    moduleType === "sheets.get_row"
+    moduleType === "sheets.get_row" ||
+    moduleType === "sheets.get_all_rows"
   );
 }
 

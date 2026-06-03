@@ -268,7 +268,7 @@ export async function readTabRows(
   spreadsheetId: string,
   tabName: string,
 ): Promise<Array<Record<string, unknown>>> {
-  if (!tabName || !tabName.trim()) {
+  if (!tabName?.trim()) {
     throw new Error("MISSING_TAB_NAME: tab name is required to read rows from a Google Sheet.");
   }
   const client = await getAuthedClient(userId);

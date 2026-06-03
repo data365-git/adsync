@@ -3,6 +3,8 @@ import { TopBar } from "~/components/layout/TopBar";
 import { CommandPalette } from "~/components/palette/CommandPalette";
 import { CommandPaletteProvider } from "~/components/palette/CommandPaletteProvider";
 import { auth } from "~/server/auth";
+import { db } from "~/server/db";
+import { seedDefaultScenarios } from "~/server/onboarding";
 import type { User } from "~/server/mocks/types";
 
 export default async function DashboardLayout({
@@ -11,6 +13,17 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
+
+  // First-visit onboarding: seed a template scenario when the user has none.
+  // Cheap COUNT on every load; the seed only fires for a truly empty account.
+  if (session?.user?.id) {
+    const scenarioCount = await db.scenario.count({
+      where: { userId: session.user.id },
+    });
+    if (scenarioCount === 0) {
+      await seedDefaultScenarios(session.user.id);
+    }
+  }
 
   const user: User = {
     id: session?.user?.id ?? "",

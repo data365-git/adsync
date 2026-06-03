@@ -35,7 +35,7 @@ async function main() {
   const portal = await db.bitrixPortal.findFirstOrThrow({
     where: { userId: user.id },
     select: { id: true, domain: true },
-    orderBy: { createdAt: "desc" },
+    orderBy: { connectedAt: "desc" },
   });
 
   console.log(`Using portal: ${portal.domain} (${portal.id})`);

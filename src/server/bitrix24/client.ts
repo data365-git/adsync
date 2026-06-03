@@ -228,8 +228,8 @@ export async function createLead(
   const fields: Record<string, unknown> = {
     TITLE: input.title,
     NAME: input.name,
-    SOURCE_ID: input.sourceId,
   };
+  if (input.sourceId) fields.SOURCE_ID = input.sourceId;
   if (input.lastName) fields.LAST_NAME = input.lastName;
   if (input.phone) {
     fields.PHONE = [{ VALUE: input.phone, VALUE_TYPE: "WORK" }];

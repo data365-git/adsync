@@ -51,7 +51,13 @@ function getMetaRecord(meta: unknown): Record<string, unknown> {
 }
 
 function getCompletedLog(logs: RunLog[]): RunLog | undefined {
-  return logs.find((log) => log.message.startsWith("Completed step"));
+  // Match by durationMs presence — the reliable signal a step finished.
+  // Message-based matching misses steps that returned a custom message
+  // (e.g. "0 upstream rows; skipped") instead of the default "Completed step…".
+  return logs.find((log) => {
+    const meta = getMetaRecord(log.meta);
+    return typeof meta.durationMs === "number";
+  });
 }
 
 function getStartingLog(logs: RunLog[]): RunLog | undefined {
